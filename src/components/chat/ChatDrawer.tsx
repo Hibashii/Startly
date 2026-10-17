@@ -48,10 +48,13 @@ export function ChatDrawer() {
         ))}
         {thinking && (
           <StartlyLine>
-            <span className="inline-flex gap-1 pt-2" aria-label="Startly is thinking" role="status">
-              {[0, 150, 300].map((d) => (
-                <span key={d} className="size-1.5 animate-bounce rounded-full bg-mut" style={{ animationDelay: `${d}ms` }} />
-              ))}
+            <span className="inline-flex items-center gap-2.5 pt-1" role="status">
+              <span className="inline-flex gap-1" aria-hidden>
+                {[0, 150, 300].map((d) => (
+                  <span key={d} className="size-1.5 animate-bounce rounded-full bg-mut" style={{ animationDelay: `${d}ms` }} />
+                ))}
+              </span>
+              <span className="status-line text-[13.5px] text-mut">Rearranging your day…</span>
             </span>
           </StartlyLine>
         )}

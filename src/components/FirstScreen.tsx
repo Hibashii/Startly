@@ -3,6 +3,7 @@ import { useStore } from '@/state/store'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { ERRORS } from '@/lib/messages'
+import { PlanningPreview } from './PlanningPreview'
 
 const STEPS = ['Dump everything', 'Get your timetable', 'Tell me when things change']
 
@@ -23,6 +24,14 @@ export function FirstScreen() {
 
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) submit(e)
+  }
+
+  if (thinking) {
+    return (
+      <main className="flex flex-1 flex-col items-center justify-center px-6 pb-[60px]">
+        <PlanningPreview dump={text.trim()} />
+      </main>
+    )
   }
 
   return (
@@ -49,7 +58,6 @@ export function FirstScreen() {
             value={text}
             onChange={(e) => setText(e.target.value)}
             onKeyDown={onKeyDown}
-            disabled={thinking}
             aria-label="Tell me everything you have to do"
             placeholder="Tell me everything you have to do…"
             className="max-h-[40vh] min-h-[84px] resize-none border-0 bg-transparent p-1 text-[17px] text-ink shadow-none placeholder:text-mut focus-visible:ring-0 md:text-[17px] dark:bg-transparent"
@@ -57,10 +65,10 @@ export function FirstScreen() {
           <div className="mt-1 flex justify-end">
             <Button
               type="submit"
-              disabled={!text.trim() || thinking}
-              className="h-auto rounded-full px-5 py-3 text-[15.5px] font-semibold"
+              disabled={!text.trim()}
+              className="press h-auto rounded-full px-5 py-3 text-[15.5px] font-semibold"
             >
-              {thinking ? 'Planning…' : 'Plan my day →'}
+              Plan my day →
             </Button>
           </div>
         </div>

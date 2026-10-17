@@ -7,6 +7,8 @@ export function Timetable() {
   const blocks = useStore((s) => s.blocks[today]) ?? []
   const tasks = useStore((s) => s.tasks)
   const flash = useStore((s) => s.flash)
+  const justPlanned = useStore((s) => s.justPlanned)
+  const thinking = useStore((s) => s.thinking)
   const byId = new Map(tasks.map((t) => [t.id, t]))
 
   const work = blocks.filter((b) => b.type === 'task' || b.type === 'fixed')
@@ -24,9 +26,15 @@ export function Timetable() {
           {work.length ? `${formatDuration(planned)} planned · until ${clock(until)}` : 'Nothing planned yet'}
         </p>
       </div>
-      <ol className="m-0 list-none p-0" aria-label="Today's timetable">
-        {blocks.map((b) => (
-          <TaskCard key={`${b.taskId ?? b.type}-${b.start}`} block={b} task={b.taskId ? byId.get(b.taskId) : undefined} flash={!!b.taskId && flash.includes(b.taskId)} />
+      <ol className={`m-0 list-none p-0 ${thinking ? 'softened' : 'unsoftened'}`} aria-label="Today's timetable" aria-busy={thinking}>
+        {blocks.map((b, i) => (
+          <TaskCard
+            key={`${b.taskId ?? b.type}-${b.start}`}
+            block={b}
+            task={b.taskId ? byId.get(b.taskId) : undefined}
+            flash={!!b.taskId && flash.includes(b.taskId)}
+            enterDelay={justPlanned ? i * 55 : undefined}
+          />
         ))}
       </ol>
       {notPlaced.length > 0 && (

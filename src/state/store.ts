@@ -24,6 +24,8 @@ interface Ui {
   failed: { text: string; error: 'rate_limited' | 'unavailable' } | null
   /** Task ids that just moved or arrived: their cards glow briefly, then fade. */
   flash: string[]
+  /** The first plan just arrived: its cards rise in one by one. */
+  justPlanned: boolean
 }
 
 interface Actions {
@@ -62,6 +64,7 @@ export const useStore = create<Store>()(
       thinking: false,
       failed: null,
       flash: [],
+      justPlanned: false,
 
       setChatOpen: (chatOpen) => set({ chatOpen }),
 
@@ -118,10 +121,12 @@ export const useStore = create<Store>()(
           thinking: false,
           chatOpen: true,
           flash,
+          justPlanned: changed && cur.tasks.length === 0,
           chat: { ...cur.chat, messages: [...cur.chat.messages, reply] },
         })
         if (note) toast(note)
         if (flash.length) setTimeout(() => set({ flash: [] }), 2600)
+        if (get().justPlanned) setTimeout(() => set({ justPlanned: false }), 1500)
         return { ok: true }
       },
     }),

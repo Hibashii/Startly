@@ -3,7 +3,7 @@ import type { Block, Task } from '@/types'
 import { clock, formatDuration, toMin } from '@/lib/time'
 import { cn } from '@/lib/utils'
 
-export function TaskCard({ block, task, flash }: { block: Block; task?: Task; flash?: boolean }) {
+export function TaskCard({ block, task, flash, enterDelay }: { block: Block; task?: Task; flash?: boolean; enterDelay?: number }) {
   const rest = block.type === 'lunch' || block.type === 'break'
   const done = task?.status === 'done'
   const name = rest ? (block.type === 'lunch' ? 'Lunch' : 'Break') : (task?.title ?? '')
@@ -16,7 +16,9 @@ export function TaskCard({ block, task, flash }: { block: Block; task?: Task; fl
         rest && 'min-h-9 border border-dashed bg-transparent py-[7px] text-mut',
         done && 'opacity-60',
         flash && 'flash',
+        enterDelay !== undefined && 'enter',
       )}
+      style={enterDelay !== undefined ? { animationDelay: `${enterDelay}ms` } : undefined}
       data-flash={flash || undefined}
     >
       {rest ? <span /> : <span className="size-[17px] rounded-[5px] border-[1.5px] border-mut" aria-hidden />}
