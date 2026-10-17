@@ -3,6 +3,7 @@ import { MoreHorizontal } from 'lucide-react'
 import type { Accent } from '@/types'
 import { useStore } from '@/state/store'
 import { cn } from '@/lib/utils'
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 
 /** The "softer" palette: [light, dark] accent for each color. */
 export const ACCENTS: { id: Accent; name: string; light: string; dark: string }[] = [
@@ -19,12 +20,15 @@ export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
   const accent = useStore((s) => s.settings.accent)
   const setAccent = useStore((s) => s.setAccent)
   const setTheme = useStore((s) => s.setTheme)
+  const startFresh = useStore((s) => s.startFresh)
   const [open, setOpen] = useState(false)
+  const [confirm, setConfirm] = useState(false)
   const root = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
-    const outside = (e: PointerEvent) => !root.current?.contains(e.target as Node) && setOpen(false)
+    // (Not while the "Start fresh?" dialog is open: it lives outside the menu.)
+    const outside = (e: PointerEvent) => !confirm && !root.current?.contains(e.target as Node) && setOpen(false)
     const escape = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
     document.addEventListener('pointerdown', outside)
     document.addEventListener('keydown', escape)
@@ -32,7 +36,7 @@ export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
       document.removeEventListener('pointerdown', outside)
       document.removeEventListener('keydown', escape)
     }
-  }, [open])
+  }, [open, confirm])
 
   const dark = theme === 'dark'
   const current = ACCENTS.find((a) => a.id === accent)!
@@ -88,8 +92,41 @@ export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
               <span className={cn('absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform', dark && 'translate-x-4')} />
             </button>
           </div>
+          <div className="mt-3 border-t pt-2">
+            <button
+              type="button"
+              onClick={() => setConfirm(true)}
+              className="w-full cursor-pointer rounded-lg px-2 py-1.5 text-left text-[13px] font-medium text-[#c4363b] hover:bg-blk dark:text-[#ff9592]"
+            >
+              Start fresh…
+            </button>
+          </div>
         </div>
       )}
+      <Dialog open={confirm} onOpenChange={setConfirm}>
+        <DialogContent showCloseButton={false} className="max-w-[380px] rounded-[20px] border bg-card p-6 text-ink">
+          <DialogTitle className="text-[18px] font-bold">Start fresh?</DialogTitle>
+          <DialogDescription className="text-[14.5px] text-mut">
+            This deletes your plan, your chat and your free times, and takes you back to the first screen. Your color and mode stay. It can't be undone.
+          </DialogDescription>
+          <div className="mt-2 flex justify-end gap-2">
+            <button type="button" onClick={() => setConfirm(false)} className="press cursor-pointer rounded-full border px-4 py-2 text-sm font-medium hover:bg-blk">
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                startFresh()
+                setConfirm(false)
+                setOpen(false)
+              }}
+              className="press cursor-pointer rounded-full bg-[#e5484d] px-4 py-2 text-sm font-semibold text-white"
+            >
+              Delete everything
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

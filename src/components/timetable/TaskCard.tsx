@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { Check, Pin } from 'lucide-react'
+import confetti from 'canvas-confetti'
 import type { Block, Task } from '@/types'
 import type { NowState } from '@/scheduler/now'
 import { useStore } from '@/state/store'
@@ -46,7 +47,10 @@ export function TaskCard({ block, task, flash, enterDelay, now }: Props) {
           role="checkbox"
           aria-checked={done}
           aria-label={`Done: ${task.title}`}
-          onClick={() => toggleDone(task.id)}
+          onClick={(e) => {
+            if (!done) burst(e.currentTarget)
+            toggleDone(task.id)
+          }}
           className={cn(
             'press grid size-[17px] cursor-pointer place-items-center rounded-[5px] border-[1.5px] border-mut transition-colors',
             done && 'border-acc bg-acc text-accink',
@@ -95,6 +99,24 @@ export function TaskCard({ block, task, flash, enterDelay, now }: Props) {
       )}
     </li>
   )
+}
+
+/** A little burst of confetti from the checkbox you just ticked. */
+function burst(el: HTMLElement) {
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+  const r = el.getBoundingClientRect()
+  const acc = getComputedStyle(document.documentElement).getPropertyValue('--acc').trim()
+  confetti({
+    particleCount: 26,
+    spread: 70,
+    startVelocity: 22,
+    gravity: 0.9,
+    ticks: 90,
+    scalar: 0.7,
+    origin: { x: (r.left + r.width / 2) / window.innerWidth, y: (r.top + r.height / 2) / window.innerHeight },
+    colors: [acc, '#f9a8d4', '#fcd34d'],
+    disableForReducedMotion: true,
+  })
 }
 
 function Pill({ children, onClick, strong }: { children: ReactNode; onClick: () => void; strong?: boolean }) {

@@ -76,6 +76,9 @@ Build mode: fast — the learner asked to be shown each checkpoint only after te
 
 ## Final Review
 
+- [x] Clear the chat (keeps the plan) — button in the chat header
+- [x] Start fresh from the ⋯ menu, with an "Are you sure?" (keeps color and mode) — localStorage meant she couldn't get back to the first screen
+- [x] More motivating check-offs: a confetti burst from the checkbox, a bold accent-colored cheer that follows progress ("Halfway there 💪", "One more to go 🔥") with "2 of 4 done" dots, and a bigger confetti finale
 - [ ] Final review complete — feedback resolved and learner confirms ready to ship
 
 ## Code Tour and App Map

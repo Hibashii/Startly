@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { X } from 'lucide-react'
+import { Eraser, X } from 'lucide-react'
 import { useStore } from '@/state/store'
 import { Avatar } from '@/components/Avatar'
 import { ERRORS } from '@/lib/messages'
@@ -14,6 +14,7 @@ export function ChatDrawer() {
   const thinking = useStore((s) => s.thinking)
   const failed = useStore((s) => s.failed)
   const send = useStore((s) => s.send)
+  const clearChat = useStore((s) => s.clearChat)
   const end = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -35,9 +36,19 @@ export function ChatDrawer() {
         Startly
         <button
           type="button"
+          onClick={clearChat}
+          disabled={!messages.length || thinking}
+          aria-label="Clear chat"
+          title="Clear chat (your plan stays)"
+          className="ml-auto grid size-8 cursor-pointer place-items-center rounded-full text-mut hover:bg-blk disabled:cursor-default disabled:opacity-30"
+        >
+          <Eraser className="size-4" />
+        </button>
+        <button
+          type="button"
           onClick={() => setOpen(false)}
           aria-label="Close chat"
-          className="ml-auto grid size-8 cursor-pointer place-items-center rounded-full text-mut hover:bg-blk"
+          className="grid size-8 cursor-pointer place-items-center rounded-full text-mut hover:bg-blk"
         >
           <X className="size-4" />
         </button>

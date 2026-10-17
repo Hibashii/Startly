@@ -12,10 +12,18 @@ export function Celebration() {
   useEffect(() => {
     if (!celebration || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const accent = getComputedStyle(document.documentElement).getPropertyValue('--acc').trim() || '#5b5bd6'
-    const colors = [accent, '#f9a8d4', '#fcd34d', '#86efac']
-    confetti({ particleCount: 140, spread: 80, startVelocity: 42, origin: { y: 0.3 }, colors, disableForReducedMotion: true })
-    const id = setTimeout(() => confetti({ particleCount: 80, spread: 110, origin: { y: 0.25 }, colors, disableForReducedMotion: true }), 350)
-    return () => clearTimeout(id)
+    const colors = [accent, '#f9a8d4', '#fcd34d', '#86efac', '#93c5fd']
+    // A real finale: a burst in the middle, then both sides keep firing for a moment.
+    confetti({ particleCount: 160, spread: 90, startVelocity: 45, origin: { y: 0.35 }, colors, disableForReducedMotion: true })
+    const end = Date.now() + 1600
+    let frame = 0
+    const sides = () => {
+      confetti({ particleCount: 4, angle: 60, spread: 60, origin: { x: 0, y: 0.7 }, colors, disableForReducedMotion: true })
+      confetti({ particleCount: 4, angle: 120, spread: 60, origin: { x: 1, y: 0.7 }, colors, disableForReducedMotion: true })
+      if (Date.now() < end) frame = requestAnimationFrame(sides)
+    }
+    frame = requestAnimationFrame(sides)
+    return () => cancelAnimationFrame(frame)
   }, [celebration])
 
   return (

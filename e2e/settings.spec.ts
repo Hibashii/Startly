@@ -65,3 +65,27 @@ test('List / Grid: the hour grid places blocks by time, with a line at now', asy
   await page.getByRole('button', { name: 'list' }).click()
   await expect(page.getByRole('list', { name: "Today's timetable" })).toBeVisible()
 })
+
+test('clear the chat: the conversation goes, the plan stays', async ({ page }) => {
+  await planned(page)
+  await page.getByRole('button', { name: 'Clear chat' }).click()
+  await expect(page.locator('[data-role=assistant]')).toHaveCount(0)
+  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
+  await expect(page.getByRole('list', { name: "Today's timetable" }).locator(':scope > li')).not.toHaveCount(0)
+})
+
+test('Start fresh asks first; Cancel keeps everything, Delete everything goes back to the first screen (color stays)', async ({ page }) => {
+  await planned(page)
+  await page.getByRole('button', { name: 'Settings' }).click()
+  await page.getByRole('radio', { name: 'Plum' }).click()
+  await page.getByRole('button', { name: 'Start fresh…' }).click()
+  await page.getByRole('button', { name: 'Cancel' }).click()
+  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
+  // Cancel goes back to the open menu.
+  await page.getByRole('button', { name: 'Start fresh…' }).click()
+  await page.getByRole('button', { name: 'Delete everything' }).click()
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Start here/)
+  await page.reload()
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Start here/)
+  expect(await accentOf(page)).toBe('#8e4ec6')
+})

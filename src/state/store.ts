@@ -8,7 +8,7 @@ import { applyActions, type AnyAction, type ApplyResult } from '@/scheduler/appl
 import { dayName, dayOf, plusDays } from '@/scheduler/days'
 import { dayComplete } from '@/scheduler/now'
 import { addItem, dropItem, greeting, leftovers, morningQuestion } from '@/scheduler/morning'
-import { CELEBRATIONS, ENCOURAGEMENTS, pick } from '@/lib/messages'
+import { CELEBRATIONS, cheerLine, pick } from '@/lib/messages'
 import { diffToday, toastText } from '@/scheduler/diff'
 import { findQuestion, measureAnswer, type QuestionOption } from '@/scheduler/questions'
 import { endOfDayFor, reshuffleToday } from '@/scheduler/schedule'
@@ -50,6 +50,8 @@ interface Ui {
   weekOpen: boolean
   /** Every task of the day is checked: confetti and a message. */
   celebration: { message: string; quote: string } | null
+  /** The cheer after checking a task: a line that follows your progress, and how far along the day is. */
+  cheer: { id: number; line: string; done: number; total: number } | null
   /** List (default) or an hour grid like a calendar day view. */
   view: 'list' | 'grid'
 }
@@ -67,6 +69,10 @@ interface Actions {
   closeCelebration: () => void
   /** On a new day: a fresh chat with a greeting, the plan kept, and a question about yesterday's unchecked tasks. */
   morningReset: () => void
+  /** Empty the conversation (the plan stays). */
+  clearChat: () => void
+  /** Delete everything and go back to the first screen (color and mode stay). */
+  startFresh: () => void
   /** "Choose": add the picked tasks to today, drop the rest. */
   answerChoose: (keepIds: string[]) => void
   setAccent: (accent: Settings['accent']) => void
@@ -238,6 +244,7 @@ export const useStore = create<Store>()(
         selectedDate: null,
         weekOpen: false,
         celebration: null,
+        cheer: null,
         view: 'list',
 
         toggleDone: (taskId) => {
@@ -268,9 +275,15 @@ export const useStore = create<Store>()(
           set({ tasks, blocks: reshuffled.blocks, flash: moved })
           if (moved.length) setTimeout(() => set({ flash: [] }), 2600)
           if (dayComplete(reshuffled.blocks[today] ?? [], tasks) && s.lastCelebratedDate !== today) {
-            set({ celebration: pick(CELEBRATIONS), lastCelebratedDate: today })
+            set({ celebration: pick(CELEBRATIONS), lastCelebratedDate: today, cheer: null })
           } else {
-            toast(pick(ENCOURAGEMENTS))
+            // How far along today is: tasks and appointments on today's timetable.
+            const ids = new Set((reshuffled.blocks[today] ?? []).filter((b) => b.taskId).map((b) => b.taskId!))
+            const todays = tasks.filter((t) => ids.has(t.id))
+            const done = todays.filter((t) => t.status === 'done').length
+            const cheer = { id: Date.now(), line: cheerLine(done, todays.length), done, total: todays.length }
+            set({ cheer })
+            setTimeout(() => get().cheer?.id === cheer.id && set({ cheer: null }), 2400)
           }
         },
 
@@ -311,6 +324,26 @@ export const useStore = create<Store>()(
           const plan = applyActions(planOf(s), [], today, nowMin).plan
           set({ ...plan, dayEnds: plan.dayEnds ?? {}, pending: null })
           askMorning(today, true, at)
+        },
+
+        clearChat: () => {
+          set((s) => ({ pending: null, failed: null, chat: { ...s.chat, messages: [] } }))
+          toast('✓ Chat cleared')
+        },
+
+        startFresh: () => {
+          const { settings } = get()
+          set({
+            ...fresh(),
+            settings: { ...fresh().settings, accent: settings.accent, theme: settings.theme },
+            chatOpen: false,
+            weekOpen: false,
+            selectedDate: null,
+            flash: [],
+            cheer: null,
+            celebration: null,
+            failed: null,
+          })
         },
 
         answerChoose: (keepIds) => {

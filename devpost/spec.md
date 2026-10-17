@@ -63,7 +63,7 @@ Implementation details I picked from those choices (you can veto them): Zustand 
 - **Setup:** `npm install`, then copy `.env.example` → `.env` and set `OPENAI_API_KEY=` (and optionally `OPENAI_MODEL=`). `.env` is already in `.gitignore`. Agents never read it.
 - **Start:** `npm run dev` → Vite on http://localhost:5173 (it forwards `/api/*` to Express on http://localhost:3001). Open **http://localhost:5173**.
 - **Tests:** `npm test` runs the scheduler tests.
-- **Reset to a fresh first screen:** the ⋯ menu doesn't do this. Clear the site's localStorage in DevTools (Application → Local Storage).
+- **Reset to a fresh first screen:** ⋯ menu → **Start fresh…** (asks first; keeps your color and mode). The chat alone can be cleared from its header.
 - **Submission:** a short **demo video** of the local app plus a **public GitHub repo**. Both are required.
 - **Deployment: Vercel, at the end** (once the app works locally, in `6-ship` or as the last build step). You chose it to share a link and to learn how Vercel works.
   - **Deploy-ready from day one:** the Express app lives in `server/app.ts` (routes only, no `listen`). `server/index.ts` starts it locally on :3001, and `api/index.ts` exports the same app for Vercel. Vite builds the front-end to `dist/`, which Vercel serves statically.

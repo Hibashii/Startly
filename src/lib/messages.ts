@@ -5,16 +5,20 @@ export const ERRORS: Record<string, string> = {
   unavailable: "I couldn't reach my brain just now. Try again?",
 }
 
-/** Short, varied pop-ups when a task is checked. */
-export const ENCOURAGEMENTS = [
-  'Nice! One down 🎉',
-  'Done. Keep the momentum ✨',
-  "That's one less thing on your mind.",
-  'Checked. On to the next one 💪',
-  'Look at you go 🙌',
-  'Progress, not perfection. Well done.',
-  'Another one done ✅',
-]
+/** The cheer when a task is checked: the words follow your progress through the day. */
+const CHEERS = {
+  first: ['Great start! 🚀', 'First one down 🎯', "And we're off 🏁", 'Momentum: unlocked ⚡️'],
+  half: ['Halfway there 💪', 'Half the day, done 🔥', "You're over the hump 🏔️"],
+  lastOne: ['One more to go 🔥', "Last one. You've got this 💪", 'Final stretch 🏁'],
+  any: ['Nice! One down 🎉', 'You ran that one 💪', 'Keep the momentum ✨', 'Done and dusted ✅', 'Look at you go 🙌', 'On a roll 🔥', "That's how it's done ⚡️"],
+}
+
+export function cheerLine(done: number, total: number) {
+  if (done === 1) return pick(CHEERS.first)
+  if (total - done === 1) return pick(CHEERS.lastOne)
+  if (done * 2 >= total && (done - 1) * 2 < total) return pick(CHEERS.half)
+  return pick(CHEERS.any)
+}
 
 /** When every task of the day is checked: a touching message and a discipline quote. */
 export const CELEBRATIONS = [

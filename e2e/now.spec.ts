@@ -62,7 +62,9 @@ test('check off with a pop-up, uncheck undoes; last one → confetti dialog; Res
   const box = (name: string) => page.getByRole('checkbox', { name: `Done: ${name}` })
   await box('Hackathon').click()
   await expect(box('Hackathon')).toHaveAttribute('aria-checked', 'true')
-  await expect(page.locator('[data-sonner-toast]')).toHaveCount(1)
+  // The cheer: a progress-aware line and how far along the day is.
+  await expect(page.getByRole('status').filter({ hasText: '1 of 3 done' })).toBeVisible()
+  await expect(page.getByRole('status').filter({ hasText: /Great start|First one down|And we're off|Momentum/ })).toBeVisible()
   await box('Hackathon').click()
   await expect(box('Hackathon')).toHaveAttribute('aria-checked', 'false')
   for (const n of ['Hackathon', 'Gym', 'Review notes']) await box(n).click()
@@ -118,4 +120,11 @@ test('checking a part of a split task finishes it all', async ({ page }) => {
   await expect.poll(() => rows(page)).toContainEqual(expect.stringMatching(/Hackathon \(cont\.\)/))
   await page.getByRole('checkbox', { name: 'Done: Hackathon', exact: true }).click()
   await expect.poll(() => rows(page)).not.toContainEqual(expect.stringMatching(/Hackathon \(cont\.\)/))
+})
+
+test('the cheer follows your progress: "One more to go" before the last one', async ({ page }) => {
+  await day(page, '14:10')
+  await page.getByRole('checkbox', { name: 'Done: Hackathon' }).click()
+  await page.getByRole('checkbox', { name: 'Done: Gym' }).click()
+  await expect(page.getByRole('status').filter({ hasText: '2 of 3 done' })).toContainText(/One more to go|Last one|Final stretch/)
 })
