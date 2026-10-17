@@ -188,6 +188,28 @@ export function applyActions(plan: Plan, actions: Action[], today: string, nowMi
         applied++
         break
       }
+      case 'set_end_of_day': {
+        // "until midnight" arrives as "24:00" or "00:00": both mean the end of today.
+        const time = a.time === '00:00' || a.time === '24:00' ? '24:00' : a.time
+        if (time !== '24:00' && (!isTime(time) || toMin(time) < toMin('12:00'))) {
+          skipped.push(a)
+          break
+        }
+        plan = { ...plan, settings: { ...plan.settings, endOfDay: time } }
+        applied++
+        break
+      }
+      case 'move_to_day': {
+        const t = find(a.id)
+        if (!t || t.kind !== 'task' || !isDate(a.date) || a.date < today) {
+          skipped.push(a)
+          break
+        }
+        // Today → re-placed today; a later day → kept for that day (shown in the week strip).
+        replace({ ...t, date: a.date > today ? a.date : null, start: null })
+        applied++
+        break
+      }
       default:
         // Multi-day actions (move_to_day, set_availability, plan_days, …) arrive in build step 3.
         skipped.push(a)

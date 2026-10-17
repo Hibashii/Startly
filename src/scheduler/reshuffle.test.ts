@@ -216,4 +216,30 @@ describe('review fixes (slice 2)', () => {
       expect(d.moved, `at ${time}`).toEqual([])
     }
   })
+
+  it('"stay up until midnight" accepts 24:00 / 00:00 and fits what did not fit', () => {
+    const { plan: before, unplaced } = applyActions(empty(), [add('A', 240), add('Groceries', 45)], TODAY, toMin('18:45'))
+    expect(unplaced).toEqual([byTitle(before, 'Groceries').id])
+    for (const time of ['24:00', '00:00']) {
+      const { plan } = applyActions(before, [{ type: 'set_end_of_day', time }], TODAY, toMin('18:50'))
+      expect(plan.settings.endOfDay).toBe('24:00')
+      expect(byTitle(plan, 'Groceries').start).not.toBeNull()
+    }
+  })
+
+  it('move_to_day: today re-places it, a later day keeps it for that day', () => {
+    const before = demoDay()
+    const gym = byTitle(before, 'Gym').id
+    const { plan: later } = applyActions(before, [{ type: 'move_to_day', id: gym, date: '2026-10-18' }], TODAY, toMin('14:00'))
+    expect(byTitle(later, 'Gym')).toMatchObject({ date: '2026-10-18', start: null })
+    const { plan: back } = applyActions(later, [{ type: 'move_to_day', id: gym, date: TODAY }], TODAY, toMin('14:00'))
+    expect(byTitle(back, 'Gym').date).toBe(TODAY)
+  })
+
+  it('a past break with no work before it anymore is dropped', () => {
+    const before = demoDay() // Hack 14:00–16:00, break 16:00–16:15, …
+    const { plan } = applyActions(before, [{ type: 'started_at', id: byTitle(before, 'Hackathon').id, start: '16:30', remainingMin: 120 }], TODAY, toMin('16:35'))
+    const breaks = plan.blocks[TODAY].filter((b) => b.type === 'break')
+    expect(breaks.every((b) => toMin(b.start) >= toMin('16:30'))).toBe(true)
+  })
 })

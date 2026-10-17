@@ -10,6 +10,9 @@ export function Timetable() {
 
   const work = blocks.filter((b) => b.type === 'task' || b.type === 'fixed')
   const planned = work.reduce((sum, b) => sum + toMin(b.end) - toMin(b.start), 0)
+  const endOfDay = useStore((s) => s.settings.endOfDay)
+  // Tasks that didn't fit anywhere are never invisible.
+  const notPlaced = tasks.filter((t) => t.kind === 'task' && t.status === 'todo' && t.date === null)
   const until = blocks.reduce((max, b) => (b.end > max ? b.end : max), '')
 
   return (
@@ -25,6 +28,19 @@ export function Timetable() {
           <TaskCard key={`${b.taskId ?? b.type}-${b.start}`} block={b} task={b.taskId ? byId.get(b.taskId) : undefined} />
         ))}
       </ol>
+      {notPlaced.length > 0 && (
+        <div className="mt-7">
+          <h3 className="m-0 mb-1 text-sm font-semibold text-mut">Doesn't fit before {endOfDay}</h3>
+          <ul className="m-0 list-none p-0" aria-label="Doesn't fit today">
+            {notPlaced.map((t) => (
+              <li key={t.id} className="my-1.5 flex items-center justify-between rounded-xl border border-dashed px-4 py-2.5 text-mut">
+                <span>{t.title}</span>
+                <span className="text-[13px]">{formatDuration(t.durationMin)}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </section>
   )
 }

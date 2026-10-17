@@ -12,6 +12,7 @@ export function buildContext(plan: Plan, messages: ChatMessage[], pending: unkno
     today: dateKey(at),
     tasks: plan.tasks.map(({ id, title, kind, date, start, durationMin, status, deadline, priority }) => ({
       id, title, kind, date, start, durationMin, status, deadline, priority,
+      onTimetable: date !== null && (start !== null || date > dateKey(at)),
     })),
     availability: plan.availability,
     endOfDay: plan.settings.endOfDay,

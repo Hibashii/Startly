@@ -81,3 +81,20 @@ test('Ask Startly toggles the drawer', async ({ page }) => {
   await pill.click()
   await expect(page.getByLabel('Message Startly')).toBeVisible()
 })
+
+test('a task that does not fit is listed under the timetable, never invisible', async ({ page }) => {
+  await freshApp(page, '21:00')
+  const sent = await mockAssistant(page, { body: { reply: 'Here you go.', actions: [task('Hackathon', 90), task('Groceries', 45)] } }, { body: { reply: 'It does not fit today.', actions: [] } })
+  await page.getByLabel('Tell me everything you have to do').fill('hackathon 1h30, groceries')
+  await page.keyboard.press('Enter')
+  const notFit = page.getByRole('list', { name: "Doesn't fit today" })
+  await expect(notFit).toContainText('Groceries')
+  await expect(page.getByText("Doesn't fit before 23:00")).toBeVisible()
+  // Startly is told it's not on the timetable.
+  await page.getByLabel('Message Startly').fill("you didn't add groceries")
+  await page.getByLabel('Message Startly').press('Enter')
+  await expect.poll(() => sent.length).toBe(2)
+  const tasks = (sent[1] as { context: { tasks: { title: string; onTimetable: boolean }[] } }).context.tasks
+  expect(tasks.find((t) => t.title === 'Groceries')?.onTimetable).toBe(false)
+  expect(tasks.find((t) => t.title === 'Hackathon')?.onTimetable).toBe(true)
+})

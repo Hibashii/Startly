@@ -103,7 +103,9 @@ export function scheduleDay(input: DayInput): DayResult {
   const overlapsWork = (b: Block) => work.some((s) => s.start < toMin(b.end) && s.end > toMin(b.start))
   for (const b of prevBlocks) {
     // A past lunch/break stays, unless a task now covers that time (e.g. "I started at 16:00").
-    if ((b.type === 'lunch' || b.type === 'break') && toMin(b.start) < fromMin && !overlapsWork(b)) {
+    // A past break only makes sense right after work that's still there.
+    const followsWork = b.type === 'lunch' || work.some((s) => s.end === toMin(b.start))
+    if ((b.type === 'lunch' || b.type === 'break') && toMin(b.start) < fromMin && !overlapsWork(b) && followsWork) {
       locked.push({ start: toMin(b.start), end: toMin(b.end), block: b })
       if (b.type === 'lunch') lunchTaken = true
     }

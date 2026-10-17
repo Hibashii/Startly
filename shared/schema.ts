@@ -69,6 +69,7 @@ export const ContextTask = z.object({
   status: z.enum(['todo', 'done']),
   deadline: z.string().nullable(),
   priority,
+  onTimetable: z.boolean().describe('false = it did not fit anywhere, the user cannot see it on a timetable'),
 })
 
 export const AssistantContext = z.object({
