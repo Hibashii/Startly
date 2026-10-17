@@ -59,7 +59,7 @@ Build mode: fast — the learner asked to be shown each checkpoint only after te
   Learner check: Open ⋯, try a few colors and switch to dark mode, then reload. Switch to Grid and see if the day reads like a calendar.
   Commit: `Settings menu with accents and dark mode, grid view`
 
-- [ ] **6. Coming back the next morning**
+- [x] **6. Coming back the next morning**
   Becomes usable: On a new day, the chat starts fresh with a "Good morning" from Startly while the plan stays. If yesterday had unchecked tasks, it lists them with **Add both / Choose / Drop them**. Startly's replies include a short discipline nudge with a quote when it fits (e.g. you plan to start late on a packed day), and respects rest.
   Why now: It needs a day's worth of real state (tasks, checks, chat) to be meaningful, so it comes last. It completes the "coming back" step of the journey.
   PRD ref: `prd.md > The Core Journey` (step 7), `prd.md > The Assistant Chat`
@@ -107,3 +107,6 @@ Activity mode:
 - "Keep it" measures how late the day must run when you answer, and only for today (`dayEnds`); questions expire at midnight; a reply that doesn't answer keeps the question open — found by real-model conversations and code review.
 - A later day laid out in advance is redone when it arrives (`preplanned`), and anything that no longer fits on a laid-out later day is listed as "Doesn't fit on <day>".
 - Checking a task finishes all its parts and, if it was still running, ends it now so the next tasks move up; "→ Tomorrow" merges a split task back into one; "Not started" starts on the current 5-minute mark; the celebration waits for "Doesn't fit" tasks too — found by code review of slice 4.
+- Yesterday's unchecked tasks are no longer carried over automatically (slice 1 did that); they wait on their day until the morning question is answered, and that question survives other messages (asked again if another question interrupts it). Split parts count as one leftover.
+- "Today" is the planning day, not the calendar date: a day that runs past midnight (e.g. until 1 am) stays the same day until it ends (`dayOf`) — found by review: at 00:05 the app reset and called the 00:15 task a leftover.
+- Discipline nudges only on a late start of a packed day, never on a light evening — the real model nudged on a light evening.

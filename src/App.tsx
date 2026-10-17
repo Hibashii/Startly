@@ -1,5 +1,5 @@
 import { useEffect, useSyncExternalStore } from 'react'
-import { useStore } from '@/state/store'
+import { useDay, useStore } from '@/state/store'
 import { TopBar } from '@/components/TopBar'
 import { FirstScreen } from '@/components/FirstScreen'
 import { MainScreen } from '@/components/MainScreen'
@@ -17,6 +17,23 @@ export default function App() {
   // First visit follows the computer's mode until the user picks one.
   const systemDark = useSyncExternalStore(subscribe, () => darkQuery.matches)
   const theme = settings.theme ?? (systemDark ? 'dark' : 'light')
+
+  // A new day: fresh chat + greeting, on load, when the tab comes back, and when midnight passes.
+  const morningReset = useStore((s) => s.morningReset)
+  const { today } = useDay()
+  useEffect(() => {
+    morningReset()
+    // Startly is waiting on a question: open the chat so it's seen.
+    const { pending, setChatOpen } = useStore.getState()
+    if (pending && pending.date === today) setChatOpen(true)
+    const onFocus = () => morningReset()
+    window.addEventListener('focus', onFocus)
+    document.addEventListener('visibilitychange', onFocus)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      document.removeEventListener('visibilitychange', onFocus)
+    }
+  }, [morningReset, today])
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme

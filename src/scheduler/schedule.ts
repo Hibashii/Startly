@@ -227,11 +227,7 @@ export const endOfDayFor = (plan: Plan, date: string) => plan.dayEnds?.[date] ??
 
 /** Re-place today from `fromMin` (now) to the end of the day and write the result back into the plan. */
 export function reshuffleToday(plan: Plan, today: string, fromMin: number): ReshuffleResult {
-  // Unfinished tasks left on a past day come back to be placed today.
-  const carried = plan.tasks.map((t) =>
-    t.kind === 'task' && t.status === 'todo' && t.date !== null && t.date < today ? { ...t, date: null, start: null } : t,
-  )
-  plan = { ...plan, tasks: carried }
+  // (Unfinished tasks from a past day stay there until you answer Startly's morning question.)
   const result = scheduleDay({
     date: today,
     tasks: plan.tasks,

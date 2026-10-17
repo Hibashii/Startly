@@ -137,7 +137,11 @@ const failures = [
     },
   ]),
   await scenario('A late day: Startly asks, you answer in words', [
-    { at: '19:30', say: 'hackathon 2h, then review notes 1h', check: (p) => (onTimetable(p, /review/i) ? null : 'review notes should fit') },
+    {
+      at: '19:30',
+      say: 'hackathon 2h, then review notes 1h',
+      check: (p, reply) => (!onTimetable(p, /review/i) ? 'review notes should fit' : /["“”].+["“”]/.test(reply) ? 'no nudge on a light evening' : null),
+    },
     {
       at: '19:40',
       say: 'the hackathon needs one more hour',
@@ -147,6 +151,13 @@ const failures = [
       at: '19:41',
       say: 'ok keep it, I will stay up',
       check: (p) => (onTimetable(p, /review/i) && p.tasks.some((t) => /hack/i.test(t.title) && t.durationMin === 180) ? null : 'hack should be 3h and review notes still today'),
+    },
+  ]),
+  await scenario('Discipline nudge on a packed day with a late start', [
+    {
+      at: '09:00',
+      say: "I'll start at 12:00 today. I have to apply to 4 jobs, finish the hackathon, revise 3 chapters, gym and groceries",
+      check: (_p, reply) => (/["“”].+["“”]/.test(reply) ? null : 'expected a short nudge with a quote'),
     },
   ]),
   await scenario('Demo story: started late', [

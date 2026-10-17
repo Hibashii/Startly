@@ -1,7 +1,7 @@
 import { format, parseISO } from 'date-fns'
 import { Pin } from 'lucide-react'
-import { useStore } from '@/state/store'
-import { clock, dateKey, formatDuration, toMin, useNow } from '@/lib/time'
+import { useDay, useStore } from '@/state/store'
+import { clock, formatDuration, toMin } from '@/lib/time'
 import { plusDays, windowsFor } from '@/scheduler/days'
 import { endOfDayFor } from '@/scheduler/schedule'
 import { planOf } from '@/state/store'
@@ -12,11 +12,9 @@ import { cn } from '@/lib/utils'
 import { dayComplete, nowState } from '@/scheduler/now'
 
 export function Timetable() {
-  const at = useNow()
-  const today = dateKey(at)
-  const nowMin = at.getHours() * 60 + at.getMinutes()
+  const { today, nowMin } = useDay()
   const selected = useStore((s) => s.selectedDate)
-  const date = selected < today ? today : selected // past days aren't viewable
+  const date = !selected || selected < today ? today : selected // past days aren't viewable
   const isToday = date === today
   const dayBlocks = useStore((s) => s.blocks[date])
   const blocks = dayBlocks ?? []

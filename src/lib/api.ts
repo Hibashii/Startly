@@ -1,18 +1,20 @@
 import type { AssistantContext, AssistantResponse } from '../../shared/schema'
 import type { ChatMessage, Plan } from '@/types'
-import { clockOf, dateKey } from './time'
-import { format } from 'date-fns'
+import { toHHMM } from './time'
+import { dayOf } from '@/scheduler/days'
+import { format, parseISO } from 'date-fns'
 
 export type AskResult = { ok: true; data: AssistantResponse } | { ok: false; error: 'rate_limited' | 'unavailable' }
 
 export function buildContext(plan: Plan, messages: ChatMessage[], pending: unknown, at: Date): AssistantContext {
+  const { today, nowMin } = dayOf(at, plan)
   return {
-    now: `${dateKey(at)}T${clockOf(at)}`,
-    weekday: format(at, 'EEEE'),
-    today: dateKey(at),
+    now: `${today}T${toHHMM(nowMin)}`, // past midnight on a late day: "24:30"
+    weekday: format(parseISO(today), 'EEEE'),
+    today,
     tasks: plan.tasks.map(({ id, title, kind, date, start, durationMin, status, deadline, priority }) => ({
       id, title, kind, date, start, durationMin, status, deadline, priority,
-      onTimetable: date !== null && (start !== null || date > dateKey(at)),
+      onTimetable: date !== null && (start !== null || date > today),
     })),
     availability: plan.availability,
     endOfDay: plan.settings.endOfDay,

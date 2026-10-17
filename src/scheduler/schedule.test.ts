@@ -137,12 +137,10 @@ describe('reshuffleToday', () => {
 })
 
 describe('review fixes', () => {
-  it('brings yesterday\'s unfinished tasks back to today', () => {
+  it('leaves yesterday\'s unfinished tasks where they are until the morning question is answered', () => {
     const old = task('Unfinished', 60, { date: '2026-10-16', start: '18:00' })
-    const doneOld = task('Done yesterday', 60, { date: '2026-10-16', start: '17:00', status: 'done' })
-    const { plan } = reshuffleToday(emptyPlan([old, doneOld]), TODAY, toMin('10:00'))
-    expect(plan.tasks.find((t) => t.id === old.id)).toMatchObject({ date: TODAY, start: '10:00' })
-    expect(plan.tasks.find((t) => t.id === doneOld.id)).toMatchObject({ date: '2026-10-16' })
+    const { plan } = reshuffleToday(emptyPlan([old, task('Today', 30)]), TODAY, toMin('10:00'))
+    expect(plan.tasks.find((t) => t.id === old.id)).toMatchObject({ date: '2026-10-16', start: '18:00' })
   })
 
   it('a late task can run past midnight (shown as 00:30 in the app)', () => {

@@ -38,7 +38,13 @@ export interface ChatMessage {
   text: string
   moved?: { id?: string; title: string; from: string; to: string }[] // code-written: what moved
   notes?: string[] // code-written: removed, didn't fit…
-  question?: { pendingId: string; text: string; options: { id: string; label: string }[]; answered?: string } // Startly asks
+  question?: {
+    pendingId: string
+    text: string
+    options: { id: string; label: string }[]
+    choose?: { id: string; title: string; partIds: string[] }[] // "Choose": one checkbox per task
+    answered?: string
+  } // Startly asks
 }
 
 export interface Settings {

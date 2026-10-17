@@ -1,7 +1,8 @@
 import { addDays, format, parseISO } from 'date-fns'
 import type { Plan, Task, Window } from '@/types'
 import { toMin } from '@/lib/time'
-import { scheduleDay } from './schedule'
+import { endOfDayFor, scheduleDay } from './schedule'
+import { dateKey } from '@/lib/time'
 
 // Days after today: free time, overflow by deadline, and laying a day out hour by hour.
 
@@ -82,4 +83,16 @@ export function planDay(plan: Plan, date: string): { plan: Plan; unplaced: strin
   })
   const next = tasks.map((t) => (r.starts[t.id] !== undefined && t.kind === 'task' ? { ...t, start: r.starts[t.id], preplanned: true } : t))
   return { plan: { ...plan, tasks: next, blocks: { ...plan.blocks, [date]: r.blocks } }, unplaced: r.unplaced }
+}
+
+/**
+ * Which planning day it is. A day that runs past midnight ("until 1 am" = "25:00") is still that day
+ * until it ends: at 00:30 it's yesterday at "24:30", not a new day.
+ */
+export function dayOf(at: Date, plan: Plan): { today: string; nowMin: number } {
+  const calendar = dateKey(at)
+  const min = at.getHours() * 60 + at.getMinutes()
+  const yesterday = plusDays(calendar, -1)
+  const end = toMin(endOfDayFor(plan, yesterday))
+  return end > 24 * 60 && min + 24 * 60 < end ? { today: yesterday, nowMin: min + 24 * 60 } : { today: calendar, nowMin: min }
 }

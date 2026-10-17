@@ -1,12 +1,12 @@
 import { format, parseISO } from 'date-fns'
-import { useStore } from '@/state/store'
-import { dateKey, formatDuration, useNow } from '@/lib/time'
+import { useDay, useStore } from '@/state/store'
+import { formatDuration } from '@/lib/time'
 import { plusDays } from '@/scheduler/days'
 import { cn } from '@/lib/utils'
 
 /** A rolling 7 days that always starts with today: how much is planned, and 📌 for fixed appointments. */
 export function WeekStrip() {
-  const today = dateKey(useNow())
+  const { today } = useDay()
   const tasks = useStore((s) => s.tasks)
   const selected = useStore((s) => s.selectedDate)
   const select = useStore((s) => s.selectDate)
@@ -19,7 +19,7 @@ export function WeekStrip() {
           const onDay = tasks.filter((t) => t.date === d && t.status === 'todo')
           const minutes = onDay.reduce((sum, t) => sum + t.durationMin, 0)
           const pinned = onDay.some((t) => t.kind === 'fixed')
-          const isSel = d === selected
+          const isSel = d === (selected ?? today)
           return (
             <li key={d}>
               <button

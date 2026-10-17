@@ -94,9 +94,9 @@ test('a reply that does not answer keeps the question open; a question from yest
   await expect(page.getByText('Until about 23:45.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Keep it' })).toBeEnabled()
 
-  // Next morning: the question no longer applies.
+  // Next morning: a fresh chat; yesterday's question is gone and can't be answered anymore.
   await page.clock.setFixedTime(new Date('2026-10-18T09:00:00'))
   await page.reload()
-  await page.getByRole('button', { name: 'Ask Startly' }).click()
-  await expect(page.getByRole('button', { name: 'Keep it' })).toBeDisabled()
+  await expect(page.locator('[data-role=assistant]').first()).toContainText(/Good morning/)
+  await expect(page.getByRole('button', { name: 'Keep it' })).toHaveCount(0)
 })
