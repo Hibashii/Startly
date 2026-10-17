@@ -50,6 +50,11 @@ export const Action = z.discriminatedUnion('type', [
     windows: z.array(z.object({ start: hhmm, end: hhmm })),
   }),
   z.object({ type: z.literal('set_end_of_day'), time: hhmm.describe('"01:00" = 1 am tonight') }),
+  z.object({
+    type: z.literal('set_breaks'),
+    afterMin: z.number().int().describe('a break after this many minutes of back-to-back work; 0 = between every task'),
+    lengthMin: z.number().int().describe('break length in minutes'),
+  }),
   z.object({ type: z.literal('plan_days'), dates: z.array(ymd) }),
   z.object({ type: z.literal('resolve_pending'), optionId: z.string() }),
 ])
@@ -86,6 +91,8 @@ export const AssistantContext = z.object({
   availability: z.record(z.string(), z.array(z.object({ start: z.string(), end: z.string() }))),
   endOfDay: z.string(),
   pending: z.unknown().nullable(),
+  timetable: z.array(z.string()).describe("today's timetable as the app placed it, e.g. \"19:55-20:55 Prepare for interview\", \"20:55-21:10 break\""),
+  breaks: z.object({ afterMin: z.number(), lengthMin: z.number() }),
   recentMessages: z.array(z.object({ role: z.enum(['user', 'assistant']), text: z.string() })),
 })
 export type AssistantContext = z.infer<typeof AssistantContext>

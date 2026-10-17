@@ -2,6 +2,7 @@ import type { AssistantContext, AssistantResponse } from '../../shared/schema'
 import type { ChatMessage, Plan } from '@/types'
 import { toHHMM } from './time'
 import { dayOf } from '@/scheduler/days'
+import { DEFAULT_BREAKS } from '@/scheduler/schedule'
 import { format, parseISO } from 'date-fns'
 
 export type AskResult = { ok: true; data: AssistantResponse } | { ok: false; error: 'rate_limited' | 'unavailable' }
@@ -19,6 +20,12 @@ export function buildContext(plan: Plan, messages: ChatMessage[], pending: unkno
     availability: plan.availability,
     endOfDay: plan.settings.endOfDay,
     pending: pending ?? null,
+    timetable: (plan.blocks[today] ?? []).map((b) => {
+      const name = b.taskId ? (plan.tasks.find((t) => t.id === b.taskId)?.title ?? '') : b.type
+      const done = plan.tasks.find((t) => t.id === b.taskId)?.status === 'done' ? ' (done)' : ''
+      return `${b.start}-${b.end} ${name}${done}`
+    }),
+    breaks: plan.settings.breaks ?? DEFAULT_BREAKS,
     recentMessages: messages.slice(-10).map((m) => ({ role: m.role, text: m.text })),
   }
 }

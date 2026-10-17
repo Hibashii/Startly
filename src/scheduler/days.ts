@@ -78,6 +78,7 @@ export function planDay(plan: Plan, date: string): { plan: Plan; unplaced: strin
     prevBlocks: [],
     window: { start: w[0].start, end: w[w.length - 1].end },
     gaps,
+    breaks: plan.settings.breaks,
     fromMin: toMin(w[0].start),
     includeUnplaced: false,
   })

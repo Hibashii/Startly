@@ -51,6 +51,7 @@ export interface Settings {
   accent: Accent
   theme: 'light' | 'dark' | null
   endOfDay: string // "HH:MM", may pass midnight: "25:00" = 1 am
+  breaks?: { afterMin: number; lengthMin: number } // a break after this much back-to-back work (0 = between every task)
 }
 
 export interface Plan {

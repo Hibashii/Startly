@@ -297,6 +297,15 @@ export function applyActions(plan: Plan, actions: AnyAction[], today: string, no
         applied++
         break
       }
+      case 'set_breaks': {
+        if (a.afterMin < 0 || a.afterMin > 240 || a.lengthMin < 5 || a.lengthMin > 60) {
+          skipped.push(a)
+          break
+        }
+        plan = { ...plan, settings: { ...plan.settings, breaks: { afterMin: a.afterMin, lengthMin: a.lengthMin } } }
+        applied++
+        break
+      }
       case 'set_day_end': {
         // "Keep it": today runs later, just this once.
         plan = { ...plan, dayEnds: { ...plan.dayEnds, [a.date]: a.time } }

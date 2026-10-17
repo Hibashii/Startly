@@ -80,10 +80,18 @@ describe('scheduleDay', () => {
     expect(r.blocks.some((b) => b.type === 'lunch')).toBe(false)
   })
 
-  it('takes a 15 min break after about 90 min of back-to-back work', () => {
-    const r = day([task('A', 60), task('B', 60), task('C', 30)], '14:00')
+  it('takes a 15 min break after about 60 min of back-to-back work', () => {
+    const r = day([task('A', 30), task('B', 30), task('C', 30)], '14:00')
     expect(r.blocks.map((b) => b.type)).toEqual(['task', 'task', 'break', 'task'])
-    expect(r.blocks[2]).toMatchObject({ start: '16:00', end: '16:15' })
+    expect(r.blocks[2]).toMatchObject({ start: '15:00', end: '15:15' })
+  })
+
+  it('your own break rule: a break between every task', () => {
+    const r = scheduleDay({
+      date: TODAY, tasks: [task('A', 30), task('B', 30), task('C', 30)], prevBlocks: [], window: { start: '00:00', end: '23:00' },
+      fromMin: toMin('14:00'), includeUnplaced: true, breaks: { afterMin: 0, lengthMin: 10 },
+    })
+    expect(r.blocks.map((b) => `${b.type} ${b.start}`)).toEqual(['task 14:00', 'break 14:30', 'task 14:40', 'break 15:10', 'task 15:20'])
   })
 
   it('orders by deadline, then priority, then order', () => {
@@ -130,7 +138,7 @@ describe('reshuffleToday', () => {
     const byId = Object.fromEntries(next.tasks.map((t) => [t.id, t]))
     expect(byId[a.id].start).toBe('09:00')
     expect(byId[b.id].start).toBe('13:30')
-    expect(byId[c.id].start).toBe('14:30')
+    expect(byId[c.id].start).toBe('14:45') // after a break: B ran an hour
     expect(next.blocks[TODAY].filter((x) => x.type === 'lunch')).toHaveLength(1)
     assertNoOverlap(next.blocks[TODAY])
   })

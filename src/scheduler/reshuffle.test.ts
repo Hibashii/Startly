@@ -347,3 +347,12 @@ describe('review fixes (slice 4)', () => {
     expect(byTitle(plan, 'A')).toMatchObject({ date: '2026-10-18', durationMin: 60 })
   })
 })
+
+describe('final review: breaks', () => {
+  it('"I can\'t do two things one after the other" → set_breaks puts a break between the two tasks', () => {
+    const { plan: before } = applyActions(empty(), [add('Interview prep', 60), add('RAG project', 60)], TODAY, toMin('19:55'))
+    const { plan } = applyActions(before, [{ type: 'set_breaks', afterMin: 0, lengthMin: 15 }], TODAY, toMin('19:56'))
+    expect(plan.blocks[TODAY].map((b) => b.type)).toEqual(['task', 'break', 'task'])
+    expect(plan.settings.breaks).toEqual({ afterMin: 0, lengthMin: 15 })
+  })
+})

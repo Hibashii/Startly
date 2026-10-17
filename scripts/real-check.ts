@@ -160,6 +160,19 @@ const failures = [
       check: (_p, reply) => (/["“”].+["“”]/.test(reply) ? null : 'expected a short nudge with a quote'),
     },
   ]),
+  await scenario('Asking for breaks between tasks (the AI sees the real timetable)', [
+    { at: '19:55', say: "Hey i have interview to prepare and a rag project to create or start at least i don't know with what to start!", check: () => null },
+    {
+      at: '19:57',
+      say: "can you add a break tho i can't do 2 things one after the other!",
+      check: (p) => {
+        const types = (p.blocks[TODAY] ?? []).map((b) => b.type)
+        const i = types.indexOf('task')
+        const j = types.indexOf('task', i + 1)
+        return i >= 0 && j > i && types.slice(i + 1, j).includes('break') ? null : `expected a break between the two tasks, got ${types.join(', ')}`
+      },
+    },
+  ]),
   await scenario('Demo story: started late', [
     {
       at: '13:00',

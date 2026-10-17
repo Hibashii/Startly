@@ -4,7 +4,7 @@ import { createApp } from './app'
 
 const context = {
   now: '2026-10-17T12:30', weekday: 'Saturday', today: '2026-10-17', tasks: [], availability: {},
-  endOfDay: '23:00', pending: null, recentMessages: [],
+  endOfDay: '23:00', pending: null, recentMessages: [], timetable: [], breaks: { afterMin: 60, lengthMin: 15 },
 }
 const good = { reply: 'Done.', order: null, actions: [{ type: 'add_fixed', title: 'Interview', date: '2026-10-21', start: '11:30', end: '12:00' }] }
 

@@ -79,6 +79,9 @@ Build mode: fast — the learner asked to be shown each checkpoint only after te
 - [x] Clear the chat (keeps the plan) — button in the chat header
 - [x] Start fresh from the ⋯ menu, with an "Are you sure?" (keeps color and mode) — localStorage meant she couldn't get back to the first screen
 - [x] More motivating check-offs: a confetti burst from the checkbox, a bold accent-colored cheer that follows progress ("Halfway there 💪", "One more to go 🔥") with "2 of 4 done" dots, and a bigger confetti finale
+- [x] Grid view: short (checked-early) tasks are readable, hour lines stay behind checked cards, the now line follows the layout
+- [x] "Start fresh…" aligned with "Dark mode" (no icon: no other menu row has one; red already signals care)
+- [x] Breaks: the AI sees today's real timetable (`context.timetable`) and can change the break rule in plain words (`set_breaks`, default now a break after ~60 min) — it had promised a break the code never placed
 - [ ] Final review complete — feedback resolved and learner confirms ready to ship
 
 ## Code Tour and App Map
@@ -113,3 +116,4 @@ Activity mode:
 - Yesterday's unchecked tasks are no longer carried over automatically (slice 1 did that); they wait on their day until the morning question is answered, and that question survives other messages (asked again if another question interrupts it). Split parts count as one leftover.
 - "Today" is the planning day, not the calendar date: a day that runs past midnight (e.g. until 1 am) stays the same day until it ends (`dayOf`) — found by review: at 00:05 the app reset and called the 00:15 task a leftover.
 - Discipline nudges only on a late start of a packed day, never on a light evening — the real model nudged on a light evening.
+- The AI now receives today's actual timetable and the break rule; breaks became a setting the AI can change (`set_breaks`), default after ~60 min — in the final review the AI promised a break that the code (90-min rule) never placed.

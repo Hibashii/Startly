@@ -89,3 +89,17 @@ test('Start fresh asks first; Cancel keeps everything, Delete everything goes ba
   await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Start here/)
   expect(await accentOf(page)).toBe('#8e4ec6')
 })
+
+test('grid: a 5-minute block is still readable and never overlaps the next one', async ({ page }) => {
+  await freshApp(page, '14:00')
+  await mockAssistant(page, { body: { reply: 'ok', order: null, actions: [task('Quick call', 5), task('Email', 5), task('Hackathon', 60)] } })
+  await page.getByLabel('Tell me everything you have to do').fill('x')
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
+  await page.getByRole('button', { name: 'grid' }).click()
+  const items = page.getByRole('list', { name: 'Hour grid' }).getByRole('listitem')
+  const boxes = await items.evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, h: r.height } }))
+  for (const b of boxes) expect(b.h).toBeGreaterThanOrEqual(20)
+  for (let i = 1; i < boxes.length; i++) expect(boxes[i].top).toBeGreaterThanOrEqual(boxes[i - 1].bottom)
+  await expect(items.filter({ hasText: 'Quick call' })).toContainText('14:00–14:05')
+})

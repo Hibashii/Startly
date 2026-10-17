@@ -231,7 +231,7 @@ Action =
   | { type: 'plan_days', dates: string[] }                 // "plan my weekend", "plan tomorrow"
   | { type: 'resolve_pending', optionId }
 ```
-Context sent with each message: `{ now: "2026-10-17T16:05", weekday, today, tasks (id, title, date, start, duration, status, deadline, priority), availability, endOfDay, pending, recentMessages (last 10) }`.
+Context sent with each message: `{ now: "2026-10-17T16:05", weekday, today, tasks (id, title, date, start, duration, status, deadline, priority, onTimetable), timetable (today's blocks as placed, breaks included), breaks, availability, endOfDay, pending, recentMessages (last 10) }`. The AI also returns `order` (its suggested order of the day) and can send `set_breaks`.
 
 ## File Structure
 ```

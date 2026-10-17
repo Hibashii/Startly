@@ -96,7 +96,7 @@ export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
             <button
               type="button"
               onClick={() => setConfirm(true)}
-              className="w-full cursor-pointer rounded-lg px-2 py-1.5 text-left text-[13px] font-medium text-[#c4363b] hover:bg-blk dark:text-[#ff9592]"
+              className="-mx-2 w-[calc(100%+1rem)] cursor-pointer rounded-lg px-2 py-1.5 text-left text-[13px] font-semibold text-[#c4363b] hover:bg-blk dark:text-[#ff9592]"
             >
               Start fresh…
             </button>

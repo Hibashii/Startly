@@ -7,7 +7,8 @@ export const LUNCH_MIN = 45
 export const LUNCH_FROM = toMin('12:30')
 export const LUNCH_UNTIL = toMin('14:00')
 export const BREAK_MIN = 15
-export const BREAK_AFTER = 90
+export const BREAK_AFTER = 60
+export const DEFAULT_BREAKS = { afterMin: BREAK_AFTER, lengthMin: BREAK_MIN }
 
 const PRIORITY_RANK = { high: 0, medium: 1, low: 2 } as const
 
@@ -50,6 +51,7 @@ export interface DayInput {
   fromMin: number // nothing before this is re-placed (today: now)
   includeUnplaced: boolean // also place tasks with no date yet (today only)
   gaps?: Window[] // times inside the window you're not free (e.g. between two free windows)
+  breaks?: { afterMin: number; lengthMin: number } // your break rule (default: 15 min after ~60 min of work)
 }
 
 export interface DayResult {
@@ -69,6 +71,8 @@ export interface DayResult {
  */
 export function scheduleDay(input: DayInput): DayResult {
   const { date, tasks, prevBlocks, window } = input
+  const breakAfter = Math.max(input.breaks?.afterMin ?? BREAK_AFTER, 1) // 0 = between every task
+  const breakLen = input.breaks?.lengthMin ?? BREAK_MIN
   const winStart = toMin(window.start)
   const winEnd = toMin(window.end)
   const fromMin = Math.max(input.fromMin, winStart)
@@ -179,9 +183,9 @@ export function scheduleDay(input: DayInput): DayResult {
       streak = 0
       continue
     }
-    if (i < 0 && streak >= BREAK_AFTER && cursor + BREAK_MIN <= limit) {
-      placed.push(span(date, cursor, cursor + BREAK_MIN, 'break'))
-      cursor += BREAK_MIN
+    if (i < 0 && streak >= breakAfter && cursor + breakLen <= limit) {
+      placed.push(span(date, cursor, cursor + breakLen, 'break'))
+      cursor += breakLen
       streak = 0
       continue
     }
@@ -233,6 +237,7 @@ export function reshuffleToday(plan: Plan, today: string, fromMin: number): Resh
     tasks: plan.tasks,
     prevBlocks: plan.blocks[today] ?? [],
     window: { start: '00:00', end: endOfDayFor(plan, today) },
+    breaks: plan.settings.breaks,
     fromMin,
     includeUnplaced: true,
   })
