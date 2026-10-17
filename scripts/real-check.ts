@@ -3,7 +3,8 @@
 // and checks what the timetable actually shows — not just that the AI answered.
 import { existsSync } from 'node:fs'
 import { callAssistant } from '../server/assistant'
-import { applyActions } from '../src/scheduler/applyActions'
+import { applyActions, type AnyAction } from '../src/scheduler/applyActions'
+import { findQuestion, measureAnswer, type Question } from '../src/scheduler/questions'
 import { buildContext } from '../src/lib/api'
 import type { ChatMessage, Plan } from '../src/types'
 
@@ -22,16 +23,36 @@ const show = (p: Plan) =>
 async function scenario(name: string, steps: { at: string; say: string; check: Check }[]) {
   let plan = fresh()
   const messages: ChatMessage[] = []
+  let pending: { q: Question; base: AnyAction[]; order: string[] | null } | null = null
   let failures = 0
   console.log(`\n▶ ${name}`)
   for (const step of steps) {
     const at = new Date(`${TODAY}T${step.at}:00`)
-    const res = await callAssistant(step.say, buildContext(plan, messages, null, at))
-    const r = applyActions(plan, res.actions, TODAY, at.getHours() * 60 + at.getMinutes(), res.order)
-    if (r.applied > 0) plan = r.plan
+    const nowMin = at.getHours() * 60 + at.getMinutes()
+    const forAi = pending && { question: pending.q.text, options: pending.q.options.map(({ id, label }) => ({ id, label })) }
+    const res = await callAssistant(step.say, buildContext(plan, messages, forAi, at))
+    let asked = ''
+    const resolve = res.actions.find((a) => a.type === 'resolve_pending')
+    // Same flow as the app: answering the open question applies that prepared answer.
+    const p = pending
+    const option = resolve && p?.q.options.find((o) => o.id === resolve.optionId)
+    const simulate = (extra: AnyAction[]) => applyActions(plan, [...(p?.base ?? []), ...extra], TODAY, nowMin, p?.order ?? null)
+    const [actions, order]: [AnyAction[], string[] | null] =
+      p && option ? [[...p.base, ...measureAnswer(option.extra, TODAY, simulate)], p.order] : [res.actions, res.order]
+    pending = null
+    const run = (extra: AnyAction[] = []) => applyActions(plan, [...actions, ...extra], TODAY, nowMin, order)
+    const r = run()
+    if (r.applied > 0) {
+      const q = findQuestion(plan, r, TODAY, run)
+      if (q) {
+        asked = `\n        asks: ${q.text} [${q.options.map((o) => o.label).join(' / ')}]`
+        pending = { q, base: q.blocking ? actions : [], order: q.blocking ? order : null }
+      }
+      if (!q?.blocking) plan = r.plan
+    }
     messages.push({ id: String(messages.length), role: 'user', text: step.say }, { id: String(messages.length + 1), role: 'assistant', text: res.reply })
     const fail = step.check(plan, res.reply)
-    console.log(`  ${step.at} you: ${step.say}\n        startly: ${res.reply}\n        actions: ${res.actions.map((a) => a.type).join(', ') || '—'}   order: ${res.order?.join(' → ') ?? '—'}\n        timetable: ${show(plan)}\n        ${fail ? `✗ ${fail}` : '✓'}`)
+    console.log(`  ${step.at} you: ${step.say}\n        startly: ${res.reply}\n        actions: ${res.actions.map((a) => a.type).join(', ') || '—'}   order: ${res.order?.join(' → ') ?? '—'}${asked}\n        timetable: ${show(plan)}\n        ${fail ? `✗ ${fail}` : '✓'}`)
     if (fail) failures++
   }
   return failures
@@ -98,6 +119,34 @@ const failures = [
         const first = (p.blocks[TODAY] ?? []).find((b) => b.type === 'task')
         return /hackathon/i.test(p.tasks.find((t) => t.id === first?.taskId)?.title ?? '') ? null : 'the hackathon should now come first'
       },
+    },
+  ]),
+  await scenario('Free time and planning tomorrow', [
+    {
+      at: '10:00',
+      say: 'I work 9 to 5 on weekdays, free after 18:00 until 23:00. Tomorrow (sunday) I am free from 14:00 to 20:00. Plan tomorrow: revise chapter 4 for 2h, laundry, call grandma',
+      check: (p) => {
+        const sun = '2026-10-18'
+        if (JSON.stringify(p.availability.mon) !== JSON.stringify([{ start: '18:00', end: '23:00' }])) return `monday free time should be 18:00–23:00, got ${JSON.stringify(p.availability.mon)}`
+        const blocks = p.blocks[sun] ?? []
+        if (!blocks.some((b) => b.type === 'task')) return 'sunday should be laid out hour by hour'
+        if (blocks.some((b) => b.start < '14:00' || b.end > '20:00')) return 'sunday blocks must stay inside 14:00–20:00'
+        if (p.tasks.filter((t) => t.date === sun).length < 3) return 'the 3 tasks should be on sunday'
+        return null
+      },
+    },
+  ]),
+  await scenario('A late day: Startly asks, you answer in words', [
+    { at: '19:30', say: 'hackathon 2h, then review notes 1h', check: (p) => (onTimetable(p, /review/i) ? null : 'review notes should fit') },
+    {
+      at: '19:40',
+      say: 'the hackathon needs one more hour',
+      check: (p) => (p.tasks.find((t) => /hack/i.test(t.title))?.durationMin === 120 ? null : 'nothing should change until I answer'),
+    },
+    {
+      at: '19:41',
+      say: 'ok keep it, I will stay up',
+      check: (p) => (onTimetable(p, /review/i) && p.tasks.some((t) => /hack/i.test(t.title) && t.durationMin === 180) ? null : 'hack should be 3h and review notes still today'),
     },
   ]),
   await scenario('Demo story: started late', [

@@ -29,7 +29,7 @@ Build mode: fast — the learner asked to be shown each checkpoint only after te
   Learner check: With your plan from slice 1, open **Ask Startly** and tell it something went wrong today, in your own words. Watch the timetable shift, the toast appear, and the chat say what moved. Then try "delete [a task]".
   Commit: `Reshuffle the day from chat with toast and moved summary`
 
-- [ ] **3. It asks instead of guessing, and overflow goes to later days**
+- [x] **3. It asks instead of guessing, and overflow goes to later days**
   Becomes usable: If a change would push the day past 23:00, Startly asks "That puts you until 23:40. OK, or should I move '…' to tomorrow?" with **Keep it / Move it**, and nothing changes until you answer. A task that doesn't fit today and has a later deadline goes to the next day with free time (and the chat says where and why). One with no deadline makes Startly ask **Tomorrow / Drop it**. "Plan tomorrow" or "plan my weekend" works; if it doesn't know your free time for a day, it asks. Clicking the date opens the rolling 7-day week strip (planned hours, 📌), and clicking a day shows that day's tasks.
   Why now: "Asks instead of guessing" is the second half of the kernel, and overflow + week strip are what make those answers visible. It depends on `reshuffle` from slice 2.
   PRD ref: `prd.md > Planning the Day` (criteria 3–4, "plan tomorrow"), `prd.md > Reshuffling When the Day Changes` (criterion 3), `prd.md > Main Screen` (week strip), `prd.md > States and Boundaries` (week strip)
@@ -103,3 +103,6 @@ Activity mode:
 - Finish-by times (`endBy`), an end of day past midnight ("25:00" = 1 am), and `set_end_of_day`/`move_to_day` pulled forward from slice 3 — the learner's own test needed "before 20:00, the shop closes" and "I can stay until 1 am".
 - Moved cards now glow briefly (accent tint) — the learner asked to see what moved; PRD decision updated.
 - Startly suggests the order of the day (`order` in the AI response → task `rank`), and the code enforces hard limits — the learner decided at the checkpoint that planning the order is the AI's job; a task "started" under 15 min ago can still be reordered.
+- "Doesn't fit, tomorrow or drop it?" doesn't hold the rest of the change back (the plan still appears); only a change that pushes a task already on today's timetable off the day waits for the answer — on a first dump, blocking hid the whole timetable.
+- "Keep it" measures how late the day must run when you answer, and only for today (`dayEnds`); questions expire at midnight; a reply that doesn't answer keeps the question open — found by real-model conversations and code review.
+- A later day laid out in advance is redone when it arrives (`preplanned`), and anything that no longer fits on a laid-out later day is listed as "Doesn't fit on <day>".

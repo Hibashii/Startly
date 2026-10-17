@@ -15,6 +15,7 @@ export interface Task {
   status: 'todo' | 'done'
   order: number // stable tiebreak
   rank?: number | null // Startly's suggested position in today's order (null = no suggestion)
+  preplanned?: boolean // its start came from laying out a later day in advance (redone when that day comes)
   partOf?: string // set on "X (cont.)": the rest of task X after it was split
 }
 
@@ -37,6 +38,7 @@ export interface ChatMessage {
   text: string
   moved?: { id?: string; title: string; from: string; to: string }[] // code-written: what moved
   notes?: string[] // code-written: removed, didn't fit…
+  question?: { pendingId: string; text: string; options: { id: string; label: string }[]; answered?: string } // Startly asks
 }
 
 export interface Settings {
@@ -48,6 +50,7 @@ export interface Settings {
 export interface Plan {
   tasks: Task[]
   blocks: Record<string, Block[]>
-  availability: Record<string, Window[]>
+  availability: Record<string, Window[]> // free time, by date "YYYY-MM-DD" or weekday "mon".."sun"
   settings: Settings
+  dayEnds?: Record<string, string> // one-day end-of-day overrides ("keep it, I'll stay until 23:40")
 }

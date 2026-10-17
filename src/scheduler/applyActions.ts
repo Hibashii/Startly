@@ -1,13 +1,34 @@
 import type { Action } from '../../shared/schema'
-import type { Plan, Task } from '@/types'
+import type { Plan, Task, Window } from '@/types'
 import { dateKey, roundUp5, toHHMM, toMin } from '@/lib/time'
 import { reshuffleToday } from './schedule'
+import { WEEKDAYS, overflowLater, planDay, weekdayKey } from './days'
+
+/** Actions only the app itself sends (answers to Startly's questions), never the AI. */
+export type InternalAction =
+  | { type: 'set_day_end'; date: string; time: string }
+  | { type: 'remove_one'; id: string } // drop just this part ("X (cont.)"), not the whole task
+export type AnyAction = Action | InternalAction
 
 export interface ApplyResult {
   plan: Plan
   applied: number
-  skipped: Action[]
-  unplaced: string[]
+  skipped: AnyAction[]
+  unplaced: string[] // didn't fit today and couldn't go to a later day
+  movedLater: { id: string; date: string }[] // overflowed to a later day before its deadline
+  needFreeTime: { id: string; date: string }[] // could go later, but free time that day is unknown
+  unknownDays: string[] // "plan Sunday" but free time on Sunday is unknown
+  plannedDays: string[] // later days laid out hour by hour
+  laterUnplaced: { id: string; date: string }[] // on a laid-out later day, but it doesn't fit there
+}
+
+const isWindow = (w: Window) =>
+  /^([01]\d|2[0-3]):[0-5]\d$/.test(w.start) && /^(([01]\d|2[0-3]):[0-5]\d|24:00)$/.test(w.end) && toMin(w.end) > toMin(w.start)
+const availabilityKey = (key: string) => {
+  const k = key.trim().toLowerCase()
+  if (/^\d{4}-\d{2}-\d{2}$/.test(k)) return k
+  const day = WEEKDAYS.find((d) => k.startsWith(d))
+  return day ?? null
 }
 
 const isTime = (s: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(s)
@@ -20,12 +41,23 @@ const isDate = (s: string | null) => {
 }
 
 /** AI actions → task changes → scheduler. Invalid actions are skipped, valid ones applied. */
-export function applyActions(plan: Plan, actions: Action[], today: string, nowMin: number, order: string[] | null = null): ApplyResult {
+export function applyActions(plan: Plan, actions: AnyAction[], today: string, nowMin: number, order: string[] | null = null): ApplyResult {
+  // A day laid out in advance is redone when it arrives: those times were a plan, not work under way.
+  // (Done first, so nothing below mistakes them for tasks already started.)
+  if (plan.tasks.some((t) => t.date === today && t.preplanned)) {
+    const { [today]: _old, ...blocks } = plan.blocks
+    plan = {
+      ...plan,
+      blocks,
+      tasks: plan.tasks.map((t) => (t.date === today && t.preplanned ? { ...t, start: t.status === 'todo' ? null : t.start, preplanned: false } : t)),
+    }
+  }
   let tasks = [...plan.tasks]
   const before = new Set(tasks.map((t) => t.id))
   let nextId = tasks.reduce((n, t) => Math.max(n, Number(t.id.slice(1)) || 0), 0) + 1
   let nextOrder = tasks.reduce((n, t) => Math.max(n, t.order), -1) + 1
-  const skipped: Action[] = []
+  const skipped: AnyAction[] = []
+  const planDays = new Set<string>()
   let applied = 0
   const find = (id: string) => tasks.find((t) => t.id === id)
   const replace = (next: Task) => {
@@ -163,7 +195,7 @@ export function applyActions(plan: Plan, actions: Action[], today: string, nowMi
         })
         tasks.push(...rests)
         // Started earlier: it keeps that time. Starting now or later: that time is held.
-        replace({ ...t, durationMin, date: today, start: a.start, status: 'todo', preferredStart: future ? a.start : null })
+        replace({ ...t, durationMin, date: today, start: a.start, status: 'todo', preferredStart: future ? a.start : null, preplanned: false })
         applied++
         break
       }
@@ -203,7 +235,9 @@ export function applyActions(plan: Plan, actions: Action[], today: string, nowMi
           skipped.push(a)
           break
         }
-        plan = { ...plan, settings: { ...plan.settings, endOfDay: time } }
+        // A new usual end replaces today's one-off "keep it" override.
+        const { [today]: _dropped, ...dayEnds } = plan.dayEnds ?? {}
+        plan = { ...plan, dayEnds, settings: { ...plan.settings, endOfDay: time } }
         applied++
         break
       }
@@ -218,8 +252,48 @@ export function applyActions(plan: Plan, actions: Action[], today: string, nowMi
         applied++
         break
       }
+      case 'set_availability': {
+        const key = availabilityKey(a.key)
+        if (!key || !a.windows.every(isWindow)) {
+          skipped.push(a)
+          break
+        }
+        plan = { ...plan, availability: { ...plan.availability, [key]: a.windows } }
+        if (!a.windows.length) {
+          // Not free that day (or that weekday) anymore: its layout goes, its tasks wait as a list.
+          const affected = (d: string) => d > today && (d === key || weekdayKey(d) === key)
+          plan = { ...plan, blocks: Object.fromEntries(Object.entries(plan.blocks).filter(([d]) => !affected(d))) }
+        }
+        applied++
+        break
+      }
+      case 'plan_days': {
+        const dates = a.dates.filter((d) => isDate(d) && d > today)
+        if (!dates.length && !a.dates.includes(today)) {
+          skipped.push(a)
+          break
+        }
+        dates.forEach((d) => planDays.add(d))
+        applied++
+        break
+      }
+      case 'remove_one': {
+        if (!find(a.id)) {
+          skipped.push(a)
+          break
+        }
+        tasks = tasks.filter((t) => t.id !== a.id)
+        applied++
+        break
+      }
+      case 'set_day_end': {
+        // "Keep it": today runs later, just this once.
+        plan = { ...plan, dayEnds: { ...plan.dayEnds, [a.date]: a.time } }
+        applied++
+        break
+      }
       default:
-        // Multi-day actions (move_to_day, set_availability, plan_days, …) arrive in build step 3.
+        // resolve_pending is handled by the store (it picks one of the prepared answers).
         skipped.push(a)
     }
   }
@@ -247,8 +321,38 @@ export function applyActions(plan: Plan, actions: Action[], today: string, nowMi
   }
 
   if (applied) tasks = splitBlocked(tasks, today, nowMin, continuation)
-  const { plan: next, unplaced } = reshuffleToday({ ...plan, tasks }, today, nowMin)
-  return { plan: next, applied, skipped, unplaced }
+  const today_ = reshuffleToday({ ...plan, tasks }, today, nowMin)
+  // What doesn't fit today and is due later goes to a later day with free time.
+  const over = overflowLater(today_.plan, today_.unplaced, today)
+  let next = over.plan
+  const later = new Set(over.movedLater.map((m) => m.id))
+
+  // Later days you asked to plan, or already laid out, are (re)laid out hour by hour.
+  const unknownDays: string[] = []
+  const plannedDays: string[] = []
+  const laterUnplaced: ApplyResult['laterUnplaced'] = []
+  const laidOut = Object.keys(next.blocks).filter((d) => d > today) // a key in blocks = that day was planned
+  for (const d of [...new Set([...planDays, ...laidOut])].sort()) {
+    const r = planDay(next, d)
+    if (!r) {
+      if (planDays.has(d)) unknownDays.push(d)
+      continue
+    }
+    next = r.plan
+    plannedDays.push(d)
+    laterUnplaced.push(...r.unplaced.map((id) => ({ id, date: d })))
+  }
+  return {
+    plan: next,
+    applied,
+    skipped,
+    unplaced: today_.unplaced.filter((id) => !later.has(id)),
+    movedLater: over.movedLater,
+    needFreeTime: over.needFreeTime,
+    unknownDays,
+    plannedDays: plannedDays.filter((d) => planDays.has(d)),
+    laterUnplaced,
+  }
 }
 
 /**

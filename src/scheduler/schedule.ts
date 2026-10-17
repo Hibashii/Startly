@@ -39,6 +39,7 @@ interface Span {
   start: number
   end: number
   block: Block
+  hidden?: boolean // time you're not free (between free windows): blocks placement, not drawn
 }
 
 export interface DayInput {
@@ -48,6 +49,7 @@ export interface DayInput {
   window: Window
   fromMin: number // nothing before this is re-placed (today: now)
   includeUnplaced: boolean // also place tasks with no date yet (today only)
+  gaps?: Window[] // times inside the window you're not free (e.g. between two free windows)
 }
 
 export interface DayResult {
@@ -97,6 +99,7 @@ export function scheduleDay(input: DayInput): DayResult {
   // Safety net: a task under way never draws over something that can't move.
   // (applyActions splits such tasks first, so normally nothing is cut here.)
   const locked: Span[] = [...solid]
+  for (const g of input.gaps ?? []) locked.push({ ...span(date, toMin(g.start), toMin(g.end), 'fixed'), hidden: true })
   for (const t of inProgress.sort((a, b) => toMin(a.start!) - toMin(b.start!))) {
     const st = toMin(t.start!)
     const end = taskEnd(t)
@@ -138,7 +141,7 @@ export function scheduleDay(input: DayInput): DayResult {
     // Step over a locked block the cursor is inside of.
     const inside = locked.find((s) => s.start <= cursor && cursor < s.end)
     if (inside) {
-      const isRest = inside.block.type === 'lunch' || inside.block.type === 'break'
+      const isRest = inside.hidden || inside.block.type === 'lunch' || inside.block.type === 'break' // time you're not free counts as rest
       if (isRest) streak = 0
       else if (cursor > inside.start) streak = workedUpTo(inside.start) + (inside.end - inside.start)
       else streak += inside.end - inside.start
@@ -196,7 +199,7 @@ export function scheduleDay(input: DayInput): DayResult {
     cursor = jumpTo
   }
 
-  const blocks = [...locked, ...placed].sort((a, b) => a.start - b.start).map((s) => s.block)
+  const blocks = [...locked, ...placed].filter((s) => !s.hidden).sort((a, b) => a.start - b.start).map((s) => s.block)
   return { blocks, starts, unplaced: queue.map((t) => t.id) }
 }
 
@@ -214,6 +217,9 @@ export interface ReshuffleResult {
   unplaced: string[]
 }
 
+/** Today's end: a one-day "keep it, I'll stay later" override, else the usual end of day. */
+export const endOfDayFor = (plan: Plan, date: string) => plan.dayEnds?.[date] ?? plan.settings.endOfDay
+
 /** Re-place today from `fromMin` (now) to the end of the day and write the result back into the plan. */
 export function reshuffleToday(plan: Plan, today: string, fromMin: number): ReshuffleResult {
   // Unfinished tasks left on a past day come back to be placed today.
@@ -225,7 +231,7 @@ export function reshuffleToday(plan: Plan, today: string, fromMin: number): Resh
     date: today,
     tasks: plan.tasks,
     prevBlocks: plan.blocks[today] ?? [],
-    window: { start: '00:00', end: plan.settings.endOfDay },
+    window: { start: '00:00', end: endOfDayFor(plan, today) },
     fromMin,
     includeUnplaced: true,
   })
@@ -235,7 +241,7 @@ export function reshuffleToday(plan: Plan, today: string, fromMin: number): Resh
     if (start !== undefined) {
       // Once under way, a held time has done its job.
       const preferredStart = toMin(start) < fromMin ? null : t.preferredStart
-      return { ...t, date: today, start, preferredStart }
+      return { ...t, date: today, start, preferredStart, preplanned: false }
     }
     if (unplaced.has(t.id)) return { ...t, date: null, start: null }
     return t

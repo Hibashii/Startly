@@ -1,4 +1,5 @@
 import type { Task } from '@/types'
+import { shortDay } from './days'
 
 export interface Moved {
   id: string
@@ -34,7 +35,10 @@ export function diffToday(before: Task[], after: Task[], today: string): Diff {
     const wasToday = old.date === today && old.start !== null
     const isToday = t.date === today && t.start !== null
     if (wasToday && isToday && old.start !== t.start) moved.push({ id: t.id, title: t.title, from: old.start!, to: t.start! })
-    else if (wasToday && !isToday) moved.push({ id: t.id, title: t.title, from: old.start!, to: 'not today' })
+    else if (wasToday && !isToday) {
+      const to = t.date && t.date > today ? shortDay(t.date) : 'not today'
+      moved.push({ id: t.id, title: t.title, from: old.start!, to })
+    }
   }
   const removed = before.filter((t) => !next.has(t.id)).map((t) => t.title)
   moved.sort((a, b) => (a.from < b.from ? -1 : 1))
