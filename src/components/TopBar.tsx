@@ -1,13 +1,13 @@
 import { format } from 'date-fns'
 import { Avatar } from './Avatar'
 import { useStore } from '@/state/store'
-import { now } from '@/lib/time'
+import { useNow } from '@/lib/time'
 import { cn } from '@/lib/utils'
 
 export function TopBar({ main }: { main: boolean }) {
   const chatOpen = useStore((s) => s.chatOpen)
   const setChatOpen = useStore((s) => s.setChatOpen)
-  const at = now()
+  const at = useNow()
 
   return (
     <header className="relative z-10 grid h-[60px] flex-none grid-cols-[1fr_auto_1fr] items-center border-b bg-bg px-[22px]">

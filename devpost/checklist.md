@@ -19,7 +19,7 @@ Build mode: fast — the learner asked to be shown each checkpoint only after te
   Learner check: Run `npm run dev`, open http://localhost:5173, type your real day the way you'd tell ChatGPT (include one appointment with a time), press **Plan my day →**. You should see an hour-by-hour list with lunch and a break you didn't ask for, and the appointment exactly where you said. Reload: it's still there.
   Commit: `Dump to timetable: scaffold, AI actions, scheduler, first + main screen`
 
-- [ ] **2. Talk to it and the day reshuffles (the kernel)**
+- [x] **2. Talk to it and the day reshuffles (the kernel)**
   Becomes usable: The **Ask Startly** pill opens the chat drawer on the right. Tell it "I only started the hackathon at 16:00, it needs 2h", "add: call the bank, 30 min", "delete groceries" or "put the gym in the morning", and the rest of the day re-places itself with no overlaps. A dark pill toast says "↻ Reshuffled 3 tasks" and the chat lists exactly what moved. When OpenAI fails or rate-limits, Startly says so with a Retry, and the plan is untouched.
   Why now: This is the unique kernel, "a living timetable you change by talking to it", so it lands right after there's a timetable to change. Everything after this builds on `reshuffle` and the chat.
   PRD ref: `prd.md > The Core Journey` (step 5), `prd.md > Reshuffling When the Day Changes` (criteria 1, 2, 4), `prd.md > The Assistant Chat` (full conversation, avatar)
@@ -96,3 +96,5 @@ Activity mode:
 - `.env` is loaded in `server/index.ts` with `process.loadEnvFile` — Node 20.17 has no `--env-file-if-exists` flag.
 - GPT-6 Luna confirmed: the `gpt-6-luna` id works with `responses.parse` + `zodTextFormat` (real calls returned valid actions and resolved "Wednesday" to the right date). No fallback needed.
 - For deploy (`6-ship`): Vercel needs a `vercel.json` rewrite `/api/(.*)` → `/api`, and the server's extensionless ESM imports must be checked (bundle or `.js` extensions) — found in the slice 1 code review.
+- Split tasks become real tasks "X (cont.)" (new optional `Task.partOf`) — the build found that a task under way can run into a fixed meeting, be interrupted by a switch, or need more time after its slot; keeping the rest as its own saved task stops it drifting, lets it be reported when it doesn't fit, and lets delete/extend handle all parts.
+- A `preferredStart` is a hold (later tasks must fit before it, it beats lunch/breaks) and is cleared once the task has started — "start X at 16:15" wasn't honoured otherwise.

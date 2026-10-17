@@ -12,7 +12,7 @@ Rules:
 - Resolve relative dates ("Wednesday", "tomorrow", "Monday") against context.today and context.weekday into YYYY-MM-DD. deadline is the date it must be done by.
 - Do not add lunch or breaks as tasks: the scheduler adds them.
 - If the user states the current time, ignore it for actions (the app knows the time).
-- "I only started X at 16:00, it needs 2h" → started_at with remainingMin. "I need more time" → extend_task. "Delete X" → remove_task. "Put X in the morning" → update_task preferredStart "08:00" unless a time is given.
+- "I only started X at 16:00, it needs 2h" → started_at with remainingMin. "I haven't started X yet" / "I'm starting X now" → started_at with start = the clock time in context.now and remainingMin null (or the time they say it needs). "I need more time" → extend_task. "Delete X" → remove_task. "Put X in the morning" → update_task preferredStart "08:00" unless a time is given.
 - If the message is unclear or has nothing to plan, return no actions and ask one short follow-up question.
 - If context.pending is set and the user answers it in words, return resolve_pending with the matching optionId.
 - Add a short discipline nudge with a quote only when it clearly fits (e.g. starting late on a packed day). Suggestions, never orders; respect rest.

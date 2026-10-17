@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { format } from 'date-fns'
 
 // Every time read goes through now(), so a demo-clock override is a one-line change later.
@@ -26,4 +27,14 @@ export function formatDuration(min: number) {
   const m = min % 60
   if (!h) return `${m}m`
   return m ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`
+}
+
+/** Re-renders the component every 30 s so clocks and "today" stay current. */
+export function useNow(): Date {
+  const [at, setAt] = useState(now)
+  useEffect(() => {
+    const id = setInterval(() => setAt(now()), 30_000)
+    return () => clearInterval(id)
+  }, [])
+  return at
 }

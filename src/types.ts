@@ -13,6 +13,7 @@ export interface Task {
   start: string | null // "HH:MM", set by the scheduler (or fixed)
   status: 'todo' | 'done'
   order: number // stable tiebreak
+  partOf?: string // set on "X (cont.)": the rest of task X after it was split
 }
 
 export interface Block {
@@ -32,7 +33,8 @@ export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   text: string
-  moved?: { title: string; from: string; to: string }[]
+  moved?: { title: string; from: string; to: string }[] // code-written: what moved
+  notes?: string[] // code-written: removed, didn't fit…
 }
 
 export interface Settings {

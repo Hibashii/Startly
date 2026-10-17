@@ -2,13 +2,9 @@ import { useState, type FormEvent, type KeyboardEvent } from 'react'
 import { useStore } from '@/state/store'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { ERRORS } from '@/lib/messages'
 
 const STEPS = ['Dump everything', 'Get your timetable', 'Tell me when things change']
-
-export const ERRORS: Record<string, string> = {
-  rate_limited: "That's a lot of messages for one hour. Give me a few minutes.",
-  unavailable: "I couldn't reach my brain just now. Try again?",
-}
 
 export function FirstScreen() {
   const send = useStore((s) => s.send)

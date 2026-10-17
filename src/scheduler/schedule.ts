@@ -60,7 +60,8 @@ export function scheduleDay(input: DayInput): DayResult {
   const winEnd = toMin(window.end)
   const fromMin = Math.max(input.fromMin, winStart)
 
-  const locked: Span[] = []
+  const solid: Span[] = [] // fixed appointments and done tasks: never move, never cut
+  const inProgress: Task[] = [] // started before now and not done: keep their start
   const starts: Record<string, string> = {}
   const toPlace: Task[] = []
 
@@ -68,20 +69,41 @@ export function scheduleDay(input: DayInput): DayResult {
     const onDay = t.date === date || (t.date === null && input.includeUnplaced)
     if (!onDay) continue
     if (t.kind === 'fixed') {
-      if (t.start) locked.push(span(date, toMin(t.start), toMin(t.start) + t.durationMin, 'fixed', t.id))
+      if (t.start) solid.push(span(date, toMin(t.start), toMin(t.start) + t.durationMin, 'fixed', t.id))
       continue
     }
-    const keeps = t.date === date && t.start !== null && (t.status === 'done' || toMin(t.start) < fromMin)
-    if (keeps) {
-      locked.push(span(date, toMin(t.start!), taskEnd(t), 'task', t.id))
+    const placedHere = t.date === date && t.start !== null
+    if (placedHere && t.status === 'done') {
+      solid.push(span(date, toMin(t.start!), taskEnd(t), 'task', t.id))
       starts[t.id] = t.start!
+    } else if (placedHere && toMin(t.start!) < fromMin) {
+      inProgress.push(t)
     } else if (t.status === 'todo') {
       toPlace.push(t)
     }
   }
+
+  // Safety net: a task under way never draws over something that can't move.
+  // (applyActions splits such tasks first, so normally nothing is cut here.)
+  const locked: Span[] = [...solid]
+  for (const t of inProgress.sort((a, b) => toMin(a.start!) - toMin(b.start!))) {
+    const st = toMin(t.start!)
+    const end = taskEnd(t)
+    if (locked.some((o) => o.start <= st && st < o.end)) {
+      toPlace.push(t)
+      continue
+    }
+    const cut = Math.min(end, ...locked.filter((o) => o.start > st && o.start < end).map((o) => o.start))
+    locked.push(span(date, st, cut, 'task', t.id))
+    starts[t.id] = t.start!
+  }
+
   let lunchTaken = false
+  const work = [...locked]
+  const overlapsWork = (b: Block) => work.some((s) => s.start < toMin(b.end) && s.end > toMin(b.start))
   for (const b of prevBlocks) {
-    if ((b.type === 'lunch' || b.type === 'break') && toMin(b.start) < fromMin) {
+    // A past lunch/break stays, unless a task now covers that time (e.g. "I started at 16:00").
+    if ((b.type === 'lunch' || b.type === 'break') && toMin(b.start) < fromMin && !overlapsWork(b)) {
       locked.push({ start: toMin(b.start), end: toMin(b.end), block: b })
       if (b.type === 'lunch') lunchTaken = true
     }
@@ -91,38 +113,50 @@ export function scheduleDay(input: DayInput): DayResult {
   const queue = [...toPlace].sort(compareTasks)
   const placed: Span[] = []
   const lunchFits = winStart <= LUNCH_UNTIL && winEnd >= LUNCH_FROM + LUNCH_MIN
+  // Minutes of back-to-back work in the kept blocks that end exactly at `t` (so breaks stay put on later reshuffles).
+  const workedUpTo = (t: number): number => {
+    const prev = locked.find((s) => s.end === t && s.block.type !== 'lunch' && s.block.type !== 'break')
+    return prev ? prev.end - prev.start + workedUpTo(prev.start) : 0
+  }
   let cursor = roundUp5(fromMin)
-  let streak = 0 // minutes of back-to-back work since the last rest
+  let streak = workedUpTo(cursor) // minutes of back-to-back work since the last rest
 
   while (queue.length && cursor < winEnd) {
     // Step over a locked block the cursor is inside of.
     const inside = locked.find((s) => s.start <= cursor && cursor < s.end)
     if (inside) {
       const isRest = inside.block.type === 'lunch' || inside.block.type === 'break'
-      streak = isRest ? 0 : streak + (inside.end - cursor)
+      if (isRest) streak = 0
+      else if (cursor > inside.start) streak = workedUpTo(inside.start) + (inside.end - inside.start)
+      else streak += inside.end - inside.start
       cursor = inside.end
       continue
     }
     const next = locked.find((s) => s.start > cursor)
-    const limit = Math.min(next ? next.start : winEnd, winEnd)
+    // A preferred time still ahead is held: whatever goes before it has to fit before it.
+    const holds = queue.map((t) => (t.preferredStart ? toMin(t.preferredStart) : Infinity)).filter((m) => m > cursor)
+    const limit = Math.min(next ? next.start : winEnd, winEnd, ...holds)
 
-    if (lunchFits && !lunchTaken && cursor >= LUNCH_FROM && cursor < LUNCH_UNTIL && cursor + LUNCH_MIN <= limit) {
+    // A task whose preferred time has arrived takes the slot first (before lunch or a break).
+    const fits = (t: Task) => cursor + t.durationMin <= limit
+    let i = queue.findIndex((t) => t.preferredStart !== null && toMin(t.preferredStart) <= cursor && fits(t))
+
+    if (i < 0 && lunchFits && !lunchTaken && cursor >= LUNCH_FROM && cursor < LUNCH_UNTIL && cursor + LUNCH_MIN <= limit) {
       placed.push(span(date, cursor, cursor + LUNCH_MIN, 'lunch'))
       cursor += LUNCH_MIN
       lunchTaken = true
       streak = 0
       continue
     }
-    if (streak >= BREAK_AFTER && cursor + BREAK_MIN <= limit) {
+    if (i < 0 && streak >= BREAK_AFTER && cursor + BREAK_MIN <= limit) {
       placed.push(span(date, cursor, cursor + BREAK_MIN, 'break'))
       cursor += BREAK_MIN
       streak = 0
       continue
     }
 
-    const i = queue.findIndex(
-      (t) => (!t.preferredStart || toMin(t.preferredStart) <= cursor) && cursor + t.durationMin <= limit,
-    )
+    // Otherwise the next one in order that fits.
+    if (i < 0) i = queue.findIndex((t) => !t.preferredStart && fits(t))
     if (i >= 0) {
       const t = queue.splice(i, 1)[0]
       placed.push(span(date, cursor, cursor + t.durationMin, 'task', t.id))
@@ -132,11 +166,8 @@ export function scheduleDay(input: DayInput): DayResult {
       continue
     }
 
-    // Nothing fits here: jump to the next preferred start in this gap, or past the gap.
-    const prefs = queue
-      .map((t) => (t.preferredStart ? toMin(t.preferredStart) : Infinity))
-      .filter((m) => m > cursor && m < limit)
-    const jumpTo = prefs.length ? roundUp5(Math.min(...prefs)) : limit
+    // Nothing fits here: jump to the end of this gap (a held time or the next locked block).
+    const jumpTo = roundUp5(limit)
     if (jumpTo - cursor >= BREAK_MIN) streak = 0
     if (jumpTo >= winEnd) break
     cursor = jumpTo
@@ -177,7 +208,12 @@ export function reshuffleToday(plan: Plan, today: string, fromMin: number): Resh
   })
   const unplaced = new Set(result.unplaced)
   const tasks = plan.tasks.map((t) => {
-    if (result.starts[t.id] !== undefined) return { ...t, date: today, start: result.starts[t.id] }
+    const start = result.starts[t.id]
+    if (start !== undefined) {
+      // Once under way, a held time has done its job.
+      const preferredStart = toMin(start) < fromMin ? null : t.preferredStart
+      return { ...t, date: today, start, preferredStart }
+    }
     if (unplaced.has(t.id)) return { ...t, date: null, start: null }
     return t
   })

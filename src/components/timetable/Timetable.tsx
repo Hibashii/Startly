@@ -1,9 +1,9 @@
 import { useStore } from '@/state/store'
-import { dateKey, formatDuration, now, toMin } from '@/lib/time'
+import { dateKey, formatDuration, toMin, useNow } from '@/lib/time'
 import { TaskCard } from './TaskCard'
 
 export function Timetable() {
-  const today = dateKey(now())
+  const today = dateKey(useNow())
   const blocks = useStore((s) => s.blocks[today]) ?? []
   const tasks = useStore((s) => s.tasks)
   const byId = new Map(tasks.map((t) => [t.id, t]))
@@ -22,7 +22,7 @@ export function Timetable() {
       </div>
       <ol className="m-0 list-none p-0" aria-label="Today's timetable">
         {blocks.map((b) => (
-          <TaskCard key={b.taskId ?? `${b.type}-${b.start}`} block={b} task={b.taskId ? byId.get(b.taskId) : undefined} />
+          <TaskCard key={`${b.taskId ?? b.type}-${b.start}`} block={b} task={b.taskId ? byId.get(b.taskId) : undefined} />
         ))}
       </ol>
     </section>
