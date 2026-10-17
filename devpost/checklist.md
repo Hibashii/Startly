@@ -9,7 +9,7 @@ Build mode: fast — the learner asked to be shown each checkpoint only after te
 
 ## Slices
 
-- [ ] **1. Dump your day, get today's timetable (and it's still there on reload)**
+- [x] **1. Dump your day, get today's timetable (and it's still there on reload)**
   Becomes usable: Open the app → the first screen (hook, 1-2-3 steps, big input) → type a plain-language dump with a fixed appointment → **Plan my day →** → the main screen shows today's timetable as list cards, with lunch and a break you didn't type, and the appointment at its exact time. Reload the page and the plan is still there.
   Why now: It covers the two biggest risks at once: the unfamiliar AI model (does the Luna id exist, and do `responses.parse` + `zodTextFormat` return valid actions?) and the scheduler, which is the "code decides" half of the architecture. Bootstrapping (Vite, Tailwind v4, shadcn, Express, Vitest, the deploy-ready `server/app.ts` / `api/index.ts` split) is folded in here, and so is the look: tokens copied from `startly-design.html`, pure white light mode, SF Pro.
   PRD ref: `prd.md > The Core Journey` (steps 1–3, 7), `prd.md > Planning the Day` (first two criteria), `prd.md > First-Time Screen`, `prd.md > States and Boundaries` (unclear dump, persistence)
@@ -91,4 +91,8 @@ Reflection:
 Activity mode: 
 
 ## Revisions
-
+- Vitest 3 instead of the latest Vitest — the latest needs Node 22, and this laptop runs Node 20.17. Same API for our tests.
+- Browser checks run as committed `@playwright/test` specs (`npm run e2e`, API mocked) instead of only the Playwright MCP — the MCP browser was locked by another session, and committed specs can be rerun every slice.
+- `.env` is loaded in `server/index.ts` with `process.loadEnvFile` — Node 20.17 has no `--env-file-if-exists` flag.
+- GPT-6 Luna confirmed: the `gpt-6-luna` id works with `responses.parse` + `zodTextFormat` (real calls returned valid actions and resolved "Wednesday" to the right date). No fallback needed.
+- For deploy (`6-ship`): Vercel needs a `vercel.json` rewrite `/api/(.*)` → `/api`, and the server's extensionless ESM imports must be checked (bundle or `.js` extensions) — found in the slice 1 code review.

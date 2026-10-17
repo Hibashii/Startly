@@ -1,0 +1,38 @@
+import type { AssistantContext, AssistantResponse } from '../../shared/schema'
+import type { ChatMessage, Plan } from '@/types'
+import { clockOf, dateKey } from './time'
+import { format } from 'date-fns'
+
+export type AskResult = { ok: true; data: AssistantResponse } | { ok: false; error: 'rate_limited' | 'unavailable' }
+
+export function buildContext(plan: Plan, messages: ChatMessage[], pending: unknown, at: Date): AssistantContext {
+  return {
+    now: `${dateKey(at)}T${clockOf(at)}`,
+    weekday: format(at, 'EEEE'),
+    today: dateKey(at),
+    tasks: plan.tasks.map(({ id, title, kind, date, start, durationMin, status, deadline, priority }) => ({
+      id, title, kind, date, start, durationMin, status, deadline, priority,
+    })),
+    availability: plan.availability,
+    endOfDay: plan.settings.endOfDay,
+    pending: pending ?? null,
+    recentMessages: messages.slice(-10).map((m) => ({ role: m.role, text: m.text })),
+  }
+}
+
+/** The only place the browser talks to the server. */
+export async function askStartly(message: string, context: AssistantContext): Promise<AskResult> {
+  try {
+    const res = await fetch('/api/assistant', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, context }),
+      signal: AbortSignal.timeout(30_000),
+    })
+    if (res.status === 429) return { ok: false, error: 'rate_limited' }
+    if (!res.ok) return { ok: false, error: 'unavailable' }
+    return { ok: true, data: (await res.json()) as AssistantResponse }
+  } catch {
+    return { ok: false, error: 'unavailable' }
+  }
+}
