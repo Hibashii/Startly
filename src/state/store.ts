@@ -85,7 +85,7 @@ export const useStore = create<Store>()(
 
         const cur = get()
         const today = dateKey(at)
-        const result = applyActions(planOf(cur), res.data.actions, today, toMin(clockOf(at)))
+        const result = applyActions(planOf(cur), res.data.actions, today, toMin(clockOf(at)), res.data.order ?? null)
         const reply: ChatMessage = { id: mid(), role: 'assistant', text: res.data.reply }
         const changed = result.applied > 0
 

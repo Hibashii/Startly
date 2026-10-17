@@ -102,3 +102,4 @@ Activity mode:
 - Real-model conversation checks (`npm run check:real`) added to every slice's verification — mocked browser tests and single real calls missed a realistic multi-message evening.
 - Finish-by times (`endBy`), an end of day past midnight ("25:00" = 1 am), and `set_end_of_day`/`move_to_day` pulled forward from slice 3 — the learner's own test needed "before 20:00, the shop closes" and "I can stay until 1 am".
 - Moved cards now glow briefly (accent tint) — the learner asked to see what moved; PRD decision updated.
+- Startly suggests the order of the day (`order` in the AI response → task `rank`), and the code enforces hard limits — the learner decided at the checkpoint that planning the order is the AI's job; a task "started" under 15 min ago can still be reordered.

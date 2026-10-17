@@ -271,3 +271,58 @@ describe('review fixes (slice 2)', () => {
     noOverlap(plan.blocks[TODAY])
   })
 })
+
+describe("Startly's suggested order", () => {
+  const seq = (p: Plan) =>
+    p.blocks[TODAY].filter((b) => b.type === 'task').map((b) => p.tasks.find((t) => t.id === b.taskId)!.title)
+
+  it('follows the order Startly suggests, using titles for tasks it just added', () => {
+    const { plan } = applyActions(empty(), [add('Interview prep', 90), add('Hackathon', 120), add('Gym', 60), add('Groceries', 45)],
+      TODAY, toMin('17:00'), ['Gym', 'groceries', 'Interview prep', 'Hackathon'])
+    expect(seq(plan)).toEqual(['Gym', 'Groceries', 'Interview prep', 'Hackathon'])
+  })
+
+  it('a later message can reorder existing tasks by id', () => {
+    const { plan: before } = applyActions(empty(), [add('A', 30), add('B', 30), add('C', 30)], TODAY, toMin('15:00'))
+    const ids = ['C', 'A', 'B'].map((t) => byTitle(before, t).id)
+    const r = applyActions(before, [], TODAY, toMin('15:00'), ids)
+    expect(r.applied).toBe(1)
+    expect(seq(r.plan)).toEqual(['C', 'A', 'B'])
+  })
+
+  it('a finish-by time still wins over the suggested order', () => {
+    const { plan } = applyActions(empty(), [
+      add('Hackathon', 120),
+      { type: 'add_task', title: 'Groceries', durationMin: 45, priority: 'low', deadline: null, preferredStart: null, endBy: '20:00', date: null },
+    ], TODAY, toMin('18:30'), ['Hackathon', 'Groceries'])
+    const g = byTitle(plan, 'Groceries')
+    expect(toMin(g.start!) + g.durationMin).toBeLessThanOrEqual(toMin('20:00'))
+  })
+
+  it('fixed appointments stay put whatever the order', () => {
+    const { plan } = applyActions(empty(), [add('A', 60), add('B', 60), { type: 'add_fixed', title: 'Call', date: TODAY, start: '15:30', end: '16:00' }],
+      TODAY, toMin('15:00'), ['B', 'A'])
+    expect(byTitle(plan, 'Call').start).toBe('15:30')
+    noOverlap(plan.blocks[TODAY])
+  })
+
+  it('unknown names in the order are ignored; tasks it left out come after', () => {
+    const { plan } = applyActions(empty(), [add('A', 30), add('B', 30), add('C', 30)], TODAY, toMin('15:00'), ['C', 'Nonsense'])
+    expect(seq(plan)).toEqual(['C', 'A', 'B'])
+  })
+
+  it('a task that "started" minutes ago (right after planning) can still be reordered', () => {
+    const { plan: before } = applyActions(empty(), [add('Interview prep', 90), add('Hackathon', 120)], TODAY, toMin('16:30'))
+    const ids = ['Hackathon', 'Interview prep'].map((t) => byTitle(before, t).id)
+    const { plan } = applyActions(before, [], TODAY, toMin('16:32'), ids)
+    expect(seq(plan)).toEqual(['Hackathon', 'Interview prep'])
+    noOverlap(plan.blocks[TODAY])
+  })
+
+  it('a task under way for a while is not moved by a new order', () => {
+    const { plan: before } = applyActions(empty(), [add('Interview prep', 90), add('Hackathon', 120)], TODAY, toMin('16:30'))
+    const ids = ['Hackathon', 'Interview prep'].map((t) => byTitle(before, t).id)
+    const { plan } = applyActions(before, [], TODAY, toMin('17:15'), ids)
+    expect(byTitle(plan, 'Interview prep').start).toBe('16:30')
+  })
+})

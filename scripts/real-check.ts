@@ -27,11 +27,11 @@ async function scenario(name: string, steps: { at: string; say: string; check: C
   for (const step of steps) {
     const at = new Date(`${TODAY}T${step.at}:00`)
     const res = await callAssistant(step.say, buildContext(plan, messages, null, at))
-    const r = applyActions(plan, res.actions, TODAY, at.getHours() * 60 + at.getMinutes())
+    const r = applyActions(plan, res.actions, TODAY, at.getHours() * 60 + at.getMinutes(), res.order)
     if (r.applied > 0) plan = r.plan
     messages.push({ id: String(messages.length), role: 'user', text: step.say }, { id: String(messages.length + 1), role: 'assistant', text: res.reply })
     const fail = step.check(plan, res.reply)
-    console.log(`  ${step.at} you: ${step.say}\n        startly: ${res.reply}\n        actions: ${res.actions.map((a) => a.type).join(', ') || '—'}\n        timetable: ${show(plan)}\n        ${fail ? `✗ ${fail}` : '✓'}`)
+    console.log(`  ${step.at} you: ${step.say}\n        startly: ${res.reply}\n        actions: ${res.actions.map((a) => a.type).join(', ') || '—'}   order: ${res.order?.join(' → ') ?? '—'}\n        timetable: ${show(plan)}\n        ${fail ? `✗ ${fail}` : '✓'}`)
     if (fail) failures++
   }
   return failures
@@ -76,6 +76,27 @@ const failures = [
         if (p.settings.endOfDay !== '25:00') return `end of day should be 25:00 (1 am), got ${p.settings.endOfDay}`
         if (p.tasks.some((t) => t.kind === 'task' && !t.date)) return 'everything should fit by 1 am'
         return null
+      },
+    },
+  ]),
+  await scenario('Startly plans a sensible order (errands together, before the shop closes)', [
+    {
+      at: '16:30',
+      say: 'prepare for interview 1h30, finish hackathon project 2h, gym, get groceries',
+      check: (p) => {
+        const seq = (p.blocks[TODAY] ?? []).filter((b) => b.type === 'task').map((b) => p.tasks.find((t) => t.id === b.taskId)!.title)
+        const g = seq.findIndex((t) => /grocer/i.test(t)), gym = seq.findIndex((t) => /gym/i.test(t))
+        if (g < 0 || gym < 0) return 'gym and groceries should both be planned'
+        if (Math.abs(g - gym) !== 1) return `errands should be next to each other, got ${seq.join(' → ')}`
+        return null
+      },
+    },
+    {
+      at: '16:32',
+      say: 'actually do the hackathon first, it is the most important',
+      check: (p) => {
+        const first = (p.blocks[TODAY] ?? []).find((b) => b.type === 'task')
+        return /hackathon/i.test(p.tasks.find((t) => t.id === first?.taskId)?.title ?? '') ? null : 'the hackathon should now come first'
       },
     },
   ]),

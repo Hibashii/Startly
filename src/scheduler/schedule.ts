@@ -11,14 +11,18 @@ export const BREAK_AFTER = 90
 
 const PRIORITY_RANK = { high: 0, medium: 1, low: 2 } as const
 
-/** finish-by time today (earliest first) → deadline (soonest first, none last) → priority (high → low) → order */
+/**
+ * Startly's suggested order first (rank); tasks without one come after, by
+ * deadline (soonest first, none last) → priority (high → low) → the order they were added.
+ * Hard limits (fixed times, holds, finish-by times, end of day) are enforced while placing, whatever the order.
+ */
 export function compareTasks(a: Task, b: Task) {
-  const ae = a.endBy ?? null
-  const be = b.endBy ?? null
-  if (ae !== be) {
-    if (!ae) return 1
-    if (!be) return -1
-    return toMin(ae) - toMin(be)
+  const ar = a.rank ?? null
+  const br = b.rank ?? null
+  if (ar !== br) {
+    if (ar === null) return 1
+    if (br === null) return -1
+    return ar - br
   }
   if (a.deadline !== b.deadline) {
     if (!a.deadline) return 1
@@ -150,8 +154,15 @@ export function scheduleDay(input: DayInput): DayResult {
     // A task must end before the next locked block, a held time, and its own finish-by time.
     const fits = (t: Task) => cursor + t.durationMin <= Math.min(limit, t.endBy ? toMin(t.endBy) : Infinity)
     let i = queue.findIndex((t) => t.preferredStart !== null && toMin(t.preferredStart) <= cursor && fits(t))
-    // A finish-by task that would miss its time if lunch or a break came first goes now.
-    if (i < 0) i = queue.findIndex((t) => !t.preferredStart && t.endBy && fits(t) && cursor + LUNCH_MIN + t.durationMin > toMin(t.endBy))
+    // A finish-by task that would miss its time if lunch, a break or the next task in order came first goes now.
+    if (i < 0) {
+      const nextUp = queue.find((t) => !t.preferredStart && fits(t))
+      const wait = Math.max(LUNCH_MIN, nextUp && !nextUp.endBy ? nextUp.durationMin : 0)
+      const urgent = queue
+        .filter((t) => !t.preferredStart && t.endBy && fits(t) && cursor + wait + t.durationMin > toMin(t.endBy))
+        .sort((a, b) => toMin(a.endBy!) - toMin(b.endBy!))[0]
+      if (urgent) i = queue.indexOf(urgent)
+    }
 
     if (i < 0 && lunchFits && !lunchTaken && cursor >= LUNCH_FROM && cursor < LUNCH_UNTIL && cursor + LUNCH_MIN <= limit) {
       placed.push(span(date, cursor, cursor + LUNCH_MIN, 'lunch'))

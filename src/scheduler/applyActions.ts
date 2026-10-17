@@ -20,8 +20,9 @@ const isDate = (s: string | null) => {
 }
 
 /** AI actions → task changes → scheduler. Invalid actions are skipped, valid ones applied. */
-export function applyActions(plan: Plan, actions: Action[], today: string, nowMin: number): ApplyResult {
+export function applyActions(plan: Plan, actions: Action[], today: string, nowMin: number, order: string[] | null = null): ApplyResult {
   let tasks = [...plan.tasks]
+  const before = new Set(tasks.map((t) => t.id))
   let nextId = tasks.reduce((n, t) => Math.max(n, Number(t.id.slice(1)) || 0), 0) + 1
   let nextOrder = tasks.reduce((n, t) => Math.max(n, t.order), -1) + 1
   const skipped: Action[] = []
@@ -220,6 +221,28 @@ export function applyActions(plan: Plan, actions: Action[], today: string, nowMi
       default:
         // Multi-day actions (move_to_day, set_availability, plan_days, …) arrive in build step 3.
         skipped.push(a)
+    }
+  }
+
+  // Startly's suggested order for today: ids, or exact titles for tasks it just added.
+  if (order?.length) {
+    const added = tasks.filter((t) => !before.has(t.id))
+    const ids = order
+      .map((ref) => find(ref)?.id ?? added.find((t) => t.title.toLowerCase() === ref.trim().toLowerCase())?.id)
+      .filter((id): id is string => !!id)
+    if (ids.length) {
+      const rank = new Map(ids.map((id, i) => [id, i]))
+      // A task that "started" only minutes ago (e.g. right after planning) hasn't really begun: it can still move.
+      const GRACE = 15
+      const justStarted = (t: Task) => !!t.start && t.date === today && toMin(t.start) < nowMin && toMin(t.start) >= nowMin - GRACE
+      const reorderable = (t: Task) =>
+        t.kind === 'task' && t.status === 'todo' && (t.date === today || t.date === null) && (!(t.start && toMin(t.start) < nowMin) || justStarted(t))
+      tasks = tasks.map((t) => {
+        if (!reorderable(t)) return t
+        const moved = { ...t, rank: rank.get(t.id) ?? null }
+        return justStarted(t) && rank.has(t.id) ? { ...moved, date: null, start: null } : moved
+      })
+      applied++
     }
   }
 

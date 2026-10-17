@@ -58,6 +58,10 @@ export type Action = z.infer<typeof Action>
 export const AssistantResponse = z.object({
   reply: z.string(),
   actions: z.array(Action),
+  order: z
+    .array(z.string())
+    .nullable()
+    .describe("Today's suggested order: ids of today's todo tasks not started yet (new tasks: their exact title), first to last. null = keep the current order."),
 })
 export type AssistantResponse = z.infer<typeof AssistantResponse>
 

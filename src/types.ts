@@ -14,6 +14,7 @@ export interface Task {
   start: string | null // "HH:MM", set by the scheduler (or fixed)
   status: 'todo' | 'done'
   order: number // stable tiebreak
+  rank?: number | null // Startly's suggested position in today's order (null = no suggestion)
   partOf?: string // set on "X (cont.)": the rest of task X after it was split
 }
 

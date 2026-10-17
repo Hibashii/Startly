@@ -332,6 +332,7 @@ Free Hobby plan. Static `dist/` + one function (`api/index.ts`) wrapping the Exp
 - **Stack:** React + Vite + TypeScript + Express. You use Vite and React already, and Next.js is new to you. You asked me to recommend and accepted it.
 - **AI provider:** the OpenAI API with your own prepaid key (Claude's API isn't available to you outside work). The key lives in `.env`, which is gitignored, and agents never read it.
 - **"The AI translates, the code schedules"** (option B). You agreed: the AI says *what* to schedule, and the code places and reshuffles.
+- **The AI suggests the order of the day** (changed during the build, your call): "that's why we added the AI." With each reply it returns `order` (today's tasks first to last), guessing sensible limits itself (shops closing, gym hours) and saying what it assumed. The code still places every block and enforces the hard limits: fixed times, finish-by times, holds, end of day, no overlaps. You correct it in plain words.
 - **Storage:** localStorage for the PoC, with a database later once the full app works.
 - **Usual end time** (from `prd.md > Open Questions`): **23:00 by default, changeable by telling Startly** ("I stop at 22:00" → `set_end_of_day`). No settings screen for it.
 - **Time:** the browser's real time now. The `?now=` demo override is added only when you prepare the demo.
