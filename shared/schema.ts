@@ -14,7 +14,8 @@ export const Action = z.discriminatedUnion('type', [
     durationMin: z.number().int(),
     priority,
     deadline: ymd.nullable(),
-    preferredStart: hhmm.nullable(),
+    preferredStart: hhmm.nullable().describe('not before this time ("gym in the morning")'),
+    endBy: hhmm.nullable().describe('must be finished by this time today ("before 20:00, the shop closes")'),
     date: ymd.nullable().describe('only if the user asked for a specific day; otherwise null'),
   }),
   z.object({
@@ -32,6 +33,7 @@ export const Action = z.discriminatedUnion('type', [
     priority: priority.nullable(),
     deadline: ymd.nullable(),
     preferredStart: hhmm.nullable(),
+    endBy: hhmm.nullable(),
   }),
   z.object({ type: z.literal('remove_task'), id: z.string() }),
   z.object({
@@ -47,7 +49,7 @@ export const Action = z.discriminatedUnion('type', [
     key: z.string().describe('a date "YYYY-MM-DD" or a weekday "mon".."sun"'),
     windows: z.array(z.object({ start: hhmm, end: hhmm })),
   }),
-  z.object({ type: z.literal('set_end_of_day'), time: hhmm }),
+  z.object({ type: z.literal('set_end_of_day'), time: hhmm.describe('"01:00" = 1 am tonight') }),
   z.object({ type: z.literal('plan_days'), dates: z.array(ymd) }),
   z.object({ type: z.literal('resolve_pending'), optionId: z.string() }),
 ])

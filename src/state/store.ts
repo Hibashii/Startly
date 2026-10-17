@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type { Block, ChatMessage, Plan, Settings, Task, Window } from '@/types'
 import { askStartly, buildContext } from '@/lib/api'
-import { clockOf, dateKey, now, toMin } from '@/lib/time'
+import { clock, clockOf, dateKey, now, toMin } from '@/lib/time'
 import { applyActions } from '@/scheduler/applyActions'
 import { diffToday, toastText } from '@/scheduler/diff'
 import { toast } from 'sonner'
@@ -22,6 +22,8 @@ interface Ui {
   thinking: boolean
   /** The last message that couldn't reach Startly (shown with Retry, not saved). */
   failed: { text: string; error: 'rate_limited' | 'unavailable' } | null
+  /** Task ids that just moved or arrived: their cards glow briefly, then fade. */
+  flash: string[]
 }
 
 interface Actions {
@@ -59,6 +61,7 @@ export const useStore = create<Store>()(
       chatOpen: false,
       thinking: false,
       failed: null,
+      flash: [],
 
       setChatOpen: (chatOpen) => set({ chatOpen }),
 
@@ -90,6 +93,7 @@ export const useStore = create<Store>()(
           reply.text = "Sorry, I didn't quite get that. Could you say it another way?"
         }
         let note: string | null = null
+        let flash: string[] = []
         if (changed) {
           // Written by code from the actual change, so it's always accurate.
           const diff = diffToday(cur.tasks, result.plan.tasks, today)
@@ -98,20 +102,26 @@ export const useStore = create<Store>()(
           const titles = (ids: string[]) => ids.map((id) => result.plan.tasks.find((t) => t.id === id)?.title).filter(Boolean)
           const notes: string[] = []
           if (diff.removed.length) notes.push(`Removed: ${diff.removed.join(', ')}.`)
-          if (newlyUnplaced.length) notes.push(`These don't fit before ${cur.settings.endOfDay} today: ${titles(newlyUnplaced).join(', ')}.`)
+          if (newlyUnplaced.length) notes.push(`These don't fit before ${clock(result.plan.settings.endOfDay)} today: ${titles(newlyUnplaced).join(', ')}.`)
           const moved = diff.moved.filter((m) => m.to !== 'not today')
           if (moved.length) reply.moved = moved
           if (notes.length) reply.notes = notes
-          if (cur.tasks.length) note = toastText(diff) // no toast for the very first plan
+          if (cur.tasks.length) {
+            // No toast or glow for the very first plan.
+            note = toastText(diff)
+            flash = [...moved.map((m) => m.id), ...diff.addedIds]
+          }
         }
 
         set({
           ...(changed ? result.plan : {}),
           thinking: false,
           chatOpen: true,
+          flash,
           chat: { ...cur.chat, messages: [...cur.chat.messages, reply] },
         })
         if (note) toast(note)
+        if (flash.length) setTimeout(() => set({ flash: [] }), 2600)
         return { ok: true }
       },
     }),

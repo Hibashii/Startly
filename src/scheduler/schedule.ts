@@ -11,8 +11,15 @@ export const BREAK_AFTER = 90
 
 const PRIORITY_RANK = { high: 0, medium: 1, low: 2 } as const
 
-/** deadline (soonest first, none last) → priority (high → low) → existing order */
+/** finish-by time today (earliest first) → deadline (soonest first, none last) → priority (high → low) → order */
 export function compareTasks(a: Task, b: Task) {
+  const ae = a.endBy ?? null
+  const be = b.endBy ?? null
+  if (ae !== be) {
+    if (!ae) return 1
+    if (!be) return -1
+    return toMin(ae) - toMin(be)
+  }
   if (a.deadline !== b.deadline) {
     if (!a.deadline) return 1
     if (!b.deadline) return -1
@@ -140,8 +147,11 @@ export function scheduleDay(input: DayInput): DayResult {
     const limit = Math.min(next ? next.start : winEnd, winEnd, ...holds)
 
     // A task whose preferred time has arrived takes the slot first (before lunch or a break).
-    const fits = (t: Task) => cursor + t.durationMin <= limit
+    // A task must end before the next locked block, a held time, and its own finish-by time.
+    const fits = (t: Task) => cursor + t.durationMin <= Math.min(limit, t.endBy ? toMin(t.endBy) : Infinity)
     let i = queue.findIndex((t) => t.preferredStart !== null && toMin(t.preferredStart) <= cursor && fits(t))
+    // A finish-by task that would miss its time if lunch or a break came first goes now.
+    if (i < 0) i = queue.findIndex((t) => !t.preferredStart && t.endBy && fits(t) && cursor + LUNCH_MIN + t.durationMin > toMin(t.endBy))
 
     if (i < 0 && lunchFits && !lunchTaken && cursor >= LUNCH_FROM && cursor < LUNCH_UNTIL && cursor + LUNCH_MIN <= limit) {
       placed.push(span(date, cursor, cursor + LUNCH_MIN, 'lunch'))
@@ -179,10 +189,10 @@ export function scheduleDay(input: DayInput): DayResult {
   return { blocks, starts, unplaced: queue.map((t) => t.id) }
 }
 
-const DAY_END = 24 * 60
+const DAY_END = 30 * 60 // 06:00 the next morning: the latest a day can run
 
 function span(date: string, start: number, end: number, type: Block['type'], taskId?: string): Span {
-  end = Math.min(end, DAY_END) // a late task never shows as "24:30"
+  end = Math.min(end, DAY_END)
   const block: Block = { date, start: toHHMM(start), end: toHHMM(end), type }
   if (taskId) block.taskId = taskId
   return { start, end, block }

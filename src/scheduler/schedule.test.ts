@@ -11,7 +11,7 @@ function task(title: string, durationMin: number, extra: Partial<Task> = {}): Ta
   n++
   return {
     id: `t${n}`, title, kind: 'task', durationMin, priority: 'medium', deadline: null,
-    preferredStart: null, date: null, start: null, status: 'todo', order: n, ...extra,
+    preferredStart: null, endBy: null, date: null, start: null, status: 'todo', order: n, ...extra,
   }
 }
 function fixed(title: string, start: string, end: string, date = TODAY): Task {
@@ -145,15 +145,15 @@ describe('review fixes', () => {
     expect(plan.tasks.find((t) => t.id === doneOld.id)).toMatchObject({ date: '2026-10-16' })
   })
 
-  it('never shows a block ending after 24:00', () => {
+  it('a late task can run past midnight (shown as 00:30 in the app)', () => {
     const late = task('Late', 60, { date: TODAY, start: '23:30' })
     const r = day([late], '23:45')
-    expect(r.blocks[0]).toMatchObject({ start: '23:30', end: '24:00' })
+    expect(r.blocks[0]).toMatchObject({ start: '23:30', end: '24:30' })
   })
 
   it('places a task with a past date today and skips a past or impossible appointment', () => {
     const { plan, skipped } = applyActions(emptyPlan([]), [
-      { type: 'add_task', title: 'Old date', durationMin: 30, priority: 'low', deadline: null, preferredStart: null, date: '2026-10-10' },
+      { type: 'add_task', title: 'Old date', durationMin: 30, priority: 'low', deadline: null, preferredStart: null, endBy: null, date: '2026-10-10' },
       { type: 'add_fixed', title: 'Past', date: '2026-10-10', start: '10:00', end: '11:00' },
       { type: 'add_fixed', title: 'Impossible', date: '2026-13-45', start: '10:00', end: '11:00' },
     ], TODAY, toMin('10:00'))
@@ -165,10 +165,10 @@ describe('review fixes', () => {
 describe('applyActions (dump)', () => {
   it('turns a dump into today\'s timetable with the appointment at its time', () => {
     const { plan, applied } = applyActions(emptyPlan([]), [
-      { type: 'add_task', title: 'Apply to 3 jobs', durationMin: 135, priority: 'high', deadline: null, preferredStart: null, date: null },
-      { type: 'add_task', title: 'Hackathon', durationMin: 120, priority: 'medium', deadline: null, preferredStart: null, date: null },
-      { type: 'add_task', title: 'Gym', durationMin: 60, priority: 'medium', deadline: null, preferredStart: null, date: null },
-      { type: 'add_task', title: 'Groceries', durationMin: 45, priority: 'medium', deadline: null, preferredStart: null, date: null },
+      { type: 'add_task', title: 'Apply to 3 jobs', durationMin: 135, priority: 'high', deadline: null, preferredStart: null, endBy: null, date: null },
+      { type: 'add_task', title: 'Hackathon', durationMin: 120, priority: 'medium', deadline: null, preferredStart: null, endBy: null, date: null },
+      { type: 'add_task', title: 'Gym', durationMin: 60, priority: 'medium', deadline: null, preferredStart: null, endBy: null, date: null },
+      { type: 'add_task', title: 'Groceries', durationMin: 45, priority: 'medium', deadline: null, preferredStart: null, endBy: null, date: null },
       { type: 'add_fixed', title: 'Dentist', date: TODAY, start: '15:00', end: '15:30' },
     ], TODAY, toMin('10:00'))
     expect(applied).toBe(5)
@@ -183,7 +183,7 @@ describe('applyActions (dump)', () => {
   it('skips invalid actions and applies the valid ones', () => {
     const { applied, skipped } = applyActions(emptyPlan([]), [
       { type: 'add_fixed', title: 'Bad', date: TODAY, start: '25:00', end: '26:00' },
-      { type: 'add_task', title: 'Ok', durationMin: 30, priority: 'low', deadline: null, preferredStart: null, date: null },
+      { type: 'add_task', title: 'Ok', durationMin: 30, priority: 'low', deadline: null, preferredStart: null, endBy: null, date: null },
     ], TODAY, toMin('10:00'))
     expect(applied).toBe(1)
     expect(skipped).toHaveLength(1)

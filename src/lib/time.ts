@@ -17,6 +17,12 @@ export const toHHMM = (min: number) => {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
+/** A timetable time for display: "25:15" (past midnight) shows as "01:15". */
+export const clock = (hhmm: string) => {
+  const [h, m] = hhmm.split(':')
+  return `${String(Number(h) % 24).padStart(2, '0')}:${m}`
+}
+
 export const dateKey = (d: Date) => format(d, 'yyyy-MM-dd')
 export const clockOf = (d: Date) => format(d, 'HH:mm')
 export const roundUp5 = (min: number) => Math.ceil(min / 5) * 5

@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import type { ChatMessage as Msg } from '@/types'
 import { Avatar } from '@/components/Avatar'
+import { clock } from '@/lib/time'
 
 export function UserBubble({ children, faded }: { children: ReactNode; faded?: boolean }) {
   return (
@@ -34,7 +35,7 @@ export function ChatMessage({ message }: { message: Msg }) {
             <li key={m.title + m.from} className="flex justify-between gap-3 text-sm">
               {m.title}
               <span className="text-[13px] text-mut tabular-nums">
-                {m.from} → {m.to}
+                {clock(m.from)} → {m.to === 'not today' ? m.to : clock(m.to)}
               </span>
             </li>
           ))}

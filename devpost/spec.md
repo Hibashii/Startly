@@ -178,6 +178,8 @@ interface Task {
   priority: Priority
   deadline: string | null  // "YYYY-MM-DD"
   preferredStart: string | null // "HH:MM", from "put gym in the morning"
+  endBy?: string | null     // "HH:MM", must be finished by ("the shop closes at 20:00")
+  partOf?: string           // on "X (cont.)": the rest of task X after a split
   date: string | null      // day it's scheduled on (null = unplaced)
   start: string | null     // "HH:MM", set by the scheduler (or fixed)
   status: 'todo' | 'done'
@@ -194,7 +196,7 @@ interface AppState {
   tasks: Task[]
   blocks: Record<string, Block[]>          // by date
   availability: Record<string, { start: string; end: string }[]> // by date or "mon".."sun"
-  settings: { accent: Accent; theme: 'light' | 'dark' | null; endOfDay: string /* "23:00" */ }
+  settings: { accent: Accent; theme: 'light' | 'dark' | null; endOfDay: string /* "23:00"; past midnight = "25:00" */ }
   chat: { date: string; messages: ChatMessage[] }
   pending: { proposal: Partial<AppState>; question: string; options: Option[] } | null
   lastCelebratedDate: string | null
@@ -217,9 +219,9 @@ Defined once in `shared/schema.ts` (Zod) and used by both sides. Structured outp
 ```ts
 AssistantResponse = { reply: string, actions: Action[] }
 Action =
-  | { type: 'add_task', title, durationMin, priority, deadline|null, preferredStart|null, date|null }
+  | { type: 'add_task', title, durationMin, priority, deadline|null, preferredStart|null, endBy|null, date|null }
   | { type: 'add_fixed', title, date, start, end }
-  | { type: 'update_task', id, title|null, durationMin|null, priority|null, deadline|null, preferredStart|null }
+  | { type: 'update_task', id, title|null, durationMin|null, priority|null, deadline|null, preferredStart|null, endBy|null }
   | { type: 'remove_task', id }
   | { type: 'started_at', id, start, remainingMin|null }   // "I only started X at 16:00, it needs 2h"
   | { type: 'extend_task', id, extraMin }                  // "I need more time"

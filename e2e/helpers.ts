@@ -23,7 +23,7 @@ export async function mockAssistant(page: Page, ...responses: { status?: number;
 }
 
 export const task = (title: string, durationMin: number) => ({
-  type: 'add_task', title, durationMin, priority: 'medium', deadline: null, preferredStart: null, date: null,
+  type: 'add_task', title, durationMin, priority: 'medium', deadline: null, preferredStart: null, endBy: null, date: null,
 })
 
 export const rows = (page: Page) =>

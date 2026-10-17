@@ -8,7 +8,8 @@ export interface Task {
   durationMin: number
   priority: Priority
   deadline: string | null // "YYYY-MM-DD"
-  preferredStart: string | null // "HH:MM"
+  preferredStart: string | null // "HH:MM": not before (a hold)
+  endBy?: string | null // "HH:MM": must be finished by ("the shop closes at 20:00")
   date: string | null // day it's scheduled on (null = unplaced)
   start: string | null // "HH:MM", set by the scheduler (or fixed)
   status: 'todo' | 'done'
@@ -33,14 +34,14 @@ export interface ChatMessage {
   id: string
   role: 'user' | 'assistant'
   text: string
-  moved?: { title: string; from: string; to: string }[] // code-written: what moved
+  moved?: { id?: string; title: string; from: string; to: string }[] // code-written: what moved
   notes?: string[] // code-written: removed, didn't fit…
 }
 
 export interface Settings {
   accent: Accent
   theme: 'light' | 'dark' | null
-  endOfDay: string
+  endOfDay: string // "HH:MM", may pass midnight: "25:00" = 1 am
 }
 
 export interface Plan {

@@ -98,3 +98,7 @@ Activity mode:
 - For deploy (`6-ship`): Vercel needs a `vercel.json` rewrite `/api/(.*)` → `/api`, and the server's extensionless ESM imports must be checked (bundle or `.js` extensions) — found in the slice 1 code review.
 - Split tasks become real tasks "X (cont.)" (new optional `Task.partOf`) — the build found that a task under way can run into a fixed meeting, be interrupted by a switch, or need more time after its slot; keeping the rest as its own saved task stops it drifting, lets it be reported when it doesn't fit, and lets delete/extend handle all parts.
 - A `preferredStart` is a hold (later tasks must fit before it, it beats lunch/breaks) and is cleared once the task has started — "start X at 16:15" wasn't honoured otherwise.
+- Tasks that don't fit are listed under the timetable, and the AI context marks each task `onTimetable` — at the first checkpoint the learner couldn't see an unplaced task and Startly insisted it was "already on the list".
+- Real-model conversation checks (`npm run check:real`) added to every slice's verification — mocked browser tests and single real calls missed a realistic multi-message evening.
+- Finish-by times (`endBy`), an end of day past midnight ("25:00" = 1 am), and `set_end_of_day`/`move_to_day` pulled forward from slice 3 — the learner's own test needed "before 20:00, the shop closes" and "I can stay until 1 am".
+- Moved cards now glow briefly (accent tint) — the learner asked to see what moved; PRD decision updated.

@@ -66,7 +66,9 @@ Source: `scope.md > The POC Boundary`.
 Source: `scope.md > The Unique Kernel`.
 - She can tell the assistant what happened in natural language: "not started yet," "I'm not done, I need more time," "add: call the bank, 30 min," or "put the gym in the morning."
 - The **Now** task has quick buttons that appear on hover: **Need more time**, **Not started**, **→ Tomorrow**.
-- After a change, the rest of the day reshuffles. There's **no persistent highlight**. A short toast says what happened ("↻ Reshuffled 3 tasks"), and the chat lists what moved.
+- After a change, the rest of the day reshuffles. Moved cards **glow softly in the accent color and fade back** after about 2 seconds (no persistent highlight). A short toast says what happened ("↻ Reshuffled 3 tasks"), and the chat lists what moved.
+- She can give time limits in plain words: "groceries before 20:00, the shop closes" (finished by), "gym after 18:00" (not before), and "I can stay up until 1 am" (the day runs past midnight).
+- A task that doesn't fit is never invisible: it's listed under the timetable as "Doesn't fit before 23:00".
 - When a change creates a real tradeoff (the day would run late, something no longer fits), the assistant **asks instead of guessing**.
 - **Deleting a task**, changing its duration, or moving it is done by asking the assistant.
   - [ ] Saying "I only started [task] at 16:00 and it needs 2 hours" moves every later task so nothing overlaps, and the chat names what moved.
@@ -120,7 +122,7 @@ Source: `scope.md > The Unique Kernel`.
 ## Product Decisions
 - **Layout I:** timetable in the center, chat as a drawer on the right, week from the date. She found the other layouts either too busy or missing the full conversation. Days on top, rather than a side column, keep the laptop screen from being squeezed into three columns.
 - **Show things only when needed:** a minimal first-time screen, week hidden by default, quick buttons on hover. Her reason: "if we have a lot of things the user will get lost."
-- **No highlight for moved tasks**, just a toast. She'll see the reshuffle anyway, and the orange highlight felt like warnings.
+- **A short fading glow on moved tasks, plus a toast** (changed during the build): after trying it, she wanted to see what moved. The glow uses the accent tint and leaves on its own; the rejected orange "warning" highlight stays out.
 - **Rename by click; delete and other changes via the assistant:** keeps v1 small.
 - **Checking off is in v1** (moved from scope's *Later*). Her reason: "the feeling of checking a task makes me happy and motivates me to continue."
 - **The chat resets daily and the plan persists.** Old conversation becomes clutter, and the plan is what matters.

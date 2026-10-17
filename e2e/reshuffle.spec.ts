@@ -34,8 +34,11 @@ test('started late → the day reshuffles, a toast appears then goes, and the ch
   await expect(moved).toContainText('Hackathon')
   await expect(moved).toContainText('Gym')
   await expect(moved).toContainText('14:00 → 16:00')
+  // Moved cards glow, then the glow leaves.
+  await expect(page.locator('li[data-flash]')).not.toHaveCount(0)
   await page.clock.runFor(4000)
   await expect(toast).toBeHidden()
+  await expect(page.locator('li[data-flash]')).toHaveCount(0)
 
   // The context sent to the AI carries the plan and the conversation.
   const ctx = (sent[1] as { context: { tasks: { id: string }[]; recentMessages: unknown[] } }).context

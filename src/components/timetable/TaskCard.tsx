@@ -1,9 +1,9 @@
 import { Pin } from 'lucide-react'
 import type { Block, Task } from '@/types'
-import { formatDuration, toMin } from '@/lib/time'
+import { clock, formatDuration, toMin } from '@/lib/time'
 import { cn } from '@/lib/utils'
 
-export function TaskCard({ block, task }: { block: Block; task?: Task }) {
+export function TaskCard({ block, task, flash }: { block: Block; task?: Task; flash?: boolean }) {
   const rest = block.type === 'lunch' || block.type === 'break'
   const done = task?.status === 'done'
   const name = rest ? (block.type === 'lunch' ? 'Lunch' : 'Break') : (task?.title ?? '')
@@ -15,11 +15,13 @@ export function TaskCard({ block, task }: { block: Block; task?: Task }) {
         'my-1.5 grid min-h-11 grid-cols-[18px_112px_1fr_auto] items-center gap-3.5 rounded-xl bg-blk px-4 py-[11px]',
         rest && 'min-h-9 border border-dashed bg-transparent py-[7px] text-mut',
         done && 'opacity-60',
+        flash && 'flash',
       )}
+      data-flash={flash || undefined}
     >
       {rest ? <span /> : <span className="size-[17px] rounded-[5px] border-[1.5px] border-mut" aria-hidden />}
       <time className="text-sm whitespace-nowrap text-mut tabular-nums">
-        {block.start}–{block.end}
+        {clock(block.start)}–{clock(block.end)}
       </time>
       <span className={cn('flex items-center gap-1.5', rest ? 'font-normal' : 'font-medium', done && 'text-mut line-through')}>
         {name}

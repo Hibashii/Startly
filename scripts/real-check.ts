@@ -59,6 +59,26 @@ const failures = [
       check: (p) => (onTimetable(p, /grocer/i) && count(p, /grocer/i) === 1 ? null : 'groceries should now be on the timetable, once'),
     },
   ]),
+  await scenario('Shop closes at 20:00, can stay up until 1 am', [
+    {
+      at: '17:45',
+      say: 'prepare for interview 1h30 due monday, finish hackathon project 2h due wednesday, gym, get groceries',
+      check: () => null,
+    },
+    {
+      at: '17:56',
+      say: 'okay then put the groceries before 20 because it closes at 20 and i need to do them! as for the finish hackathon i can stay a bit late max till 1 am',
+      check: (p) => {
+        const g = p.tasks.find((t) => /grocer/i.test(t.title))
+        if (!g?.start || g.date !== TODAY) return 'groceries should be on today\'s timetable'
+        const [h, m] = g.start.split(':').map(Number)
+        if (h * 60 + m + g.durationMin > 20 * 60) return `groceries ends after 20:00 (starts ${g.start})`
+        if (p.settings.endOfDay !== '25:00') return `end of day should be 25:00 (1 am), got ${p.settings.endOfDay}`
+        if (p.tasks.some((t) => t.kind === 'task' && !t.date)) return 'everything should fit by 1 am'
+        return null
+      },
+    },
+  ]),
   await scenario('Demo story: started late', [
     {
       at: '13:00',

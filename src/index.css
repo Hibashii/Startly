@@ -118,6 +118,15 @@
   from { background-size: 0% 100%; }
   to { background-size: 100% 100%; }
 }
+/* A card that just moved glows in the accent tint, then fades back (no loud "warning" color) */
+.flash {
+  animation: flash 2.4s ease-out both;
+}
+@keyframes flash {
+  0%, 35% { background-color: var(--tint); box-shadow: inset 3px 0 0 var(--acc); }
+  100% { background-color: var(--blk); box-shadow: inset 3px 0 0 transparent; }
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .highlight { animation: none; }
+  .highlight, .flash { animation: none; }
 }

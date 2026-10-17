@@ -58,7 +58,7 @@ export function applyActions(plan: Plan, actions: Action[], today: string, nowMi
   for (const a of actions) {
     switch (a.type) {
       case 'add_task': {
-        if (!a.title.trim() || a.durationMin < 5 || a.durationMin > 16 * 60 || !isDate(a.deadline) || !isDate(a.date) || (a.preferredStart && !isTime(a.preferredStart))) {
+        if (!a.title.trim() || a.durationMin < 5 || a.durationMin > 16 * 60 || !isDate(a.deadline) || !isDate(a.date) || (a.preferredStart && !isTime(a.preferredStart)) || (a.endBy && !isTime(a.endBy))) {
           skipped.push(a)
           break
         }
@@ -70,6 +70,7 @@ export function applyActions(plan: Plan, actions: Action[], today: string, nowMi
           priority: a.priority,
           deadline: a.deadline,
           preferredStart: a.preferredStart,
+          endBy: a.endBy,
           date: a.date && a.date > today ? a.date : null, // a past or today's date → today
           start: null,
           status: 'todo',
@@ -102,7 +103,7 @@ export function applyActions(plan: Plan, actions: Action[], today: string, nowMi
       }
       case 'update_task': {
         const t = find(a.id)
-        if (!t || (a.durationMin !== null && (a.durationMin < 5 || a.durationMin > 16 * 60)) || !isDate(a.deadline) || (a.preferredStart && !isTime(a.preferredStart))) {
+        if (!t || (a.durationMin !== null && (a.durationMin < 5 || a.durationMin > 16 * 60)) || !isDate(a.deadline) || (a.preferredStart && !isTime(a.preferredStart)) || (a.endBy && !isTime(a.endBy))) {
           skipped.push(a)
           break
         }
@@ -113,9 +114,10 @@ export function applyActions(plan: Plan, actions: Action[], today: string, nowMi
           priority: a.priority ?? t.priority,
           deadline: a.deadline ?? t.deadline,
           preferredStart: a.preferredStart ?? t.preferredStart,
+          endBy: a.endBy ?? t.endBy ?? null,
         }
-        // A new preferred time means the task should be re-placed, even if it was already under way.
-        if (t.kind === 'task' && a.preferredStart && t.status === 'todo') {
+        // A new time constraint means the task should be re-placed, even if it was already under way.
+        if (t.kind === 'task' && (a.preferredStart || a.endBy) && t.status === 'todo') {
           changed.date = null
           changed.start = null
         }
@@ -189,9 +191,14 @@ export function applyActions(plan: Plan, actions: Action[], today: string, nowMi
         break
       }
       case 'set_end_of_day': {
-        // "until midnight" arrives as "24:00" or "00:00": both mean the end of today.
-        const time = a.time === '00:00' || a.time === '24:00' ? '24:00' : a.time
-        if (time !== '24:00' && (!isTime(time) || toMin(time) < toMin('12:00'))) {
+        // After midnight ("01:00" = 1 am tonight) is stored past 24:00, so the day just runs longer.
+        if (!isTime(a.time) && a.time !== '24:00') {
+          skipped.push(a)
+          break
+        }
+        const m = toMin(a.time)
+        const time = m < toMin('06:00') ? toHHMM(m + 24 * 60) : a.time
+        if (toMin(time) < toMin('12:00')) {
           skipped.push(a)
           break
         }
