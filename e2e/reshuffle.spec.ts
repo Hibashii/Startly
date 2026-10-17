@@ -92,7 +92,7 @@ test('a task that does not fit is listed under the timetable, never invisible', 
   await page.keyboard.press('Enter')
   const notFit = page.getByRole('list', { name: "Doesn't fit today" })
   await expect(notFit).toContainText('Groceries')
-  await expect(page.getByText("Doesn't fit before 23:00")).toBeVisible()
+  await expect(page.getByRole('heading', { name: "Doesn't fit before 23:00" })).toBeVisible()
   // Startly is told it's not on the timetable.
   await page.getByLabel('Message Startly').fill("you didn't add groceries")
   await page.getByLabel('Message Startly').press('Enter')

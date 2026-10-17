@@ -2,6 +2,7 @@ import type { Plan } from '@/types'
 import { clock } from '@/lib/time'
 import type { AnyAction, ApplyResult } from './applyActions'
 import { dayName, plusDays } from './days'
+import { endOfDayFor } from './schedule'
 
 /** "Keep it": let today run exactly as late as needed (measured when the answer is picked). */
 export const AS_NEEDED = 'as-needed'
@@ -44,8 +45,9 @@ export function findQuestion(
   const wasUnplaced = new Set(prev.tasks.filter((t) => t.kind === 'task' && t.status === 'todo' && t.date === null).map((t) => t.id))
   // A task due later that's waiting for your free time gets that question instead.
   const waitingForFreeTime = new Set(result.needFreeTime.map((n) => n.id))
-  const id = result.unplaced.find((x) => !wasUnplaced.has(x) && !waitingForFreeTime.has(x))
-  if (!id) return null
+  const ids = result.unplaced.filter((x) => !wasUnplaced.has(x) && !waitingForFreeTime.has(x))
+  if (!ids.length) return null
+  const id = ids[0]
   const task = result.plan.tasks.find((t) => t.id === id)!
   const before = prev.tasks.find((t) => t.id === id)
   const tomorrow = plusDays(today, 1)
@@ -67,11 +69,22 @@ export function findQuestion(
       }
     }
   }
+  // New tasks that don't fit: one question about all of them, with a real way out (staying later, measured).
+  const tasks = ids.map((x) => result.plan.tasks.find((t) => t.id === x)!)
+  const names = tasks.map((t) => `'${t.title}'`)
+  const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`
+  const one = tasks.length === 1
+  const late = simulate([{ type: 'set_day_end', date: today, time: '30:00' }])
+  const canStay = ids.every((x) => !late.unplaced.includes(x))
+  const until = (late.plan.blocks[today] ?? []).reduce((max, b) => (b.end > max ? b.end : max), '')
+  const end = clock(endOfDayFor(result.plan, today))
+  const ways = [canStay ? `stay until ${clock(until)}` : null, `move ${one ? 'it' : 'them'} to ${dayName(tomorrow)}`, `drop ${one ? 'it' : 'them'}`].filter(Boolean)
   return {
-    text: `'${task.title}' doesn't fit today. ${dayName(tomorrow)}, or drop it?`,
+    text: `${list} ${one ? "doesn't" : "don't"} fit before ${end}. ${ways.join(', ').replace(/^./, (c) => c.toUpperCase()).replace(/, ([^,]*)$/, ', or $1')}?`,
     options: [
-      { id: 'tomorrow', label: dayName(tomorrow), extra: [toTomorrow] },
-      { id: 'drop', label: 'Drop it', extra: [task.partOf ? { type: 'remove_one', id } : { type: 'remove_task', id }] },
+      ...(canStay ? [{ id: 'stay', label: `Stay until ${clock(until)}`, extra: [{ type: 'set_day_end', date: today, time: AS_NEEDED } as AnyAction] }] : []),
+      { id: 'tomorrow', label: dayName(tomorrow), extra: tasks.map((t): AnyAction => ({ type: 'move_to_day', id: t.id, date: tomorrow })) },
+      { id: 'drop', label: one ? 'Drop it' : 'Drop them', extra: tasks.map((t): AnyAction => (t.partOf ? { type: 'remove_one', id: t.id } : { type: 'remove_task', id: t.id })) },
     ],
     blocking: false,
   }

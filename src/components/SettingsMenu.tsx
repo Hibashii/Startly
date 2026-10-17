@@ -107,7 +107,7 @@ export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
         <DialogContent showCloseButton={false} className="max-w-[380px] rounded-[20px] border bg-card p-6 text-ink">
           <DialogTitle className="text-[18px] font-bold">Start fresh?</DialogTitle>
           <DialogDescription className="text-[14.5px] text-mut">
-            This deletes your plan, your chat and your free times, and takes you back to the first screen. Your color and mode stay. It can't be undone.
+            This deletes your plan, your chat and your free times, and takes you back to the first screen. Your preferences stay (color, mode, end of day, breaks). It can't be undone.
           </DialogDescription>
           <div className="mt-2 flex justify-end gap-2">
             <button type="button" onClick={() => setConfirm(false)} className="press cursor-pointer rounded-full border px-4 py-2 text-sm font-medium hover:bg-blk">

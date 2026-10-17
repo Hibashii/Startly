@@ -62,9 +62,9 @@ test('check off with a pop-up, uncheck undoes; last one → confetti dialog; Res
   const box = (name: string) => page.getByRole('checkbox', { name: `Done: ${name}` })
   await box('Hackathon').click()
   await expect(box('Hackathon')).toHaveAttribute('aria-checked', 'true')
-  // The cheer: a progress-aware line and how far along the day is.
-  await expect(page.getByRole('status').filter({ hasText: '1 of 3 done' })).toBeVisible()
+  // The cheer: a line that follows your progress (no count).
   await expect(page.getByRole('status').filter({ hasText: /Great start|First one down|And we're off|Momentum/ })).toBeVisible()
+  await expect(page.getByText(/of 3 done/)).toHaveCount(0)
   await box('Hackathon').click()
   await expect(box('Hackathon')).toHaveAttribute('aria-checked', 'false')
   for (const n of ['Hackathon', 'Gym', 'Review notes']) await box(n).click()
@@ -74,10 +74,10 @@ test('check off with a pop-up, uncheck undoes; last one → confetti dialog; Res
   await dialog.getByRole('button', { name: 'Rest well' }).click()
   await expect(dialog).toBeHidden()
   await expect(page.getByText('Day complete ✓')).toBeVisible()
-  // Once per day.
+  // Uncheck and finish again: the finale plays again.
   await box('Gym').click()
   await box('Gym').click()
-  await expect(dialog).toBeHidden()
+  await expect(dialog).toBeVisible()
 })
 
 test('rename in place: Enter saves, a toast confirms, and it stays renamed after reload', async ({ page }) => {
@@ -126,5 +126,5 @@ test('the cheer follows your progress: "One more to go" before the last one', as
   await day(page, '14:10')
   await page.getByRole('checkbox', { name: 'Done: Hackathon' }).click()
   await page.getByRole('checkbox', { name: 'Done: Gym' }).click()
-  await expect(page.getByRole('status').filter({ hasText: '2 of 3 done' })).toContainText(/One more to go|Last one|Final stretch/)
+  await expect(page.getByRole('status').filter({ hasText: /One more to go|Last one|Final stretch/ })).toBeVisible()
 })

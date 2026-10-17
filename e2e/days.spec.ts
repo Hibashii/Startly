@@ -53,10 +53,10 @@ test('a change that would run late asks first; nothing moves until you answer; K
   await expect(page.getByText('Free time unknown')).toBeVisible()
 })
 
-test("first dump: a new task that doesn't fit → the plan still appears, Startly asks Sunday / Drop it", async ({ page }) => {
+test("first dump: a new task that doesn't fit → the plan still appears, Startly asks Stay / Sunday / Drop it", async ({ page }) => {
   await dump(page, '20:00', { body: { reply: 'Here you go.', order: null, actions: [task('Hack', 150), task('Groceries', 45)] } })
   expect(await rows(page)).toContainEqual(expect.stringMatching(/Hack/))
-  await expect(page.getByText("'Groceries' doesn't fit today. Sunday, or drop it?")).toBeVisible()
+  await expect(page.getByText(/^'Groceries' doesn't fit before 23:00\. Stay until \d\d:\d\d, move it to Sunday, or drop it\?$/)).toBeVisible()
   await expect(page.getByRole('list', { name: "Doesn't fit today" })).toContainText('Groceries')
   await page.getByRole('button', { name: 'Drop it' }).click()
   await expect(page.getByRole('list', { name: "Doesn't fit today" })).toBeHidden()

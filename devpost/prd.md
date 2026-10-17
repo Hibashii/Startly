@@ -84,7 +84,7 @@ Source: `scope.md > The Unique Kernel`.
 
 ### Checking Off and Rewards
 - Each task has a **small checkbox**. Checking it crosses the task out, pops a little confetti burst from the checkbox, and shows a **cheer**: a bold pill in the accent color whose words follow the day's progress ("Great start! 🚀", "Halfway there 💪", "One more to go 🔥") with "3 of 5 done" dots (made more motivating in the final review).
-- When **every task of the day** is checked: **confetti** plus a rewarding, touching message with a discipline quote, chosen from several so it isn't always the same (e.g. "You cooked today. Every box checked. Go rest, you deserve it." with "Discipline is choosing between what you want now and what you want most."). A **Rest well** button closes it.
+- When **every task of the day** is checked (each time it happens, also after unchecking and finishing again): **confetti** plus a rewarding, touching message with a discipline quote, chosen from several so it isn't always the same (e.g. "You cooked today. Every box checked. Go rest, you deserve it." with "Discipline is choosing between what you want now and what you want most."). A **Rest well** button closes it.
   - [ ] Checking a task crosses it out and shows a pop-up. Unchecking undoes it.
   - [ ] Checking the last task of the day shows confetti and a celebration message. Doing it again on another day can show a different message.
 

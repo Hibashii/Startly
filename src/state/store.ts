@@ -274,7 +274,8 @@ export const useStore = create<Store>()(
           const moved = diffToday(s.tasks, tasks, today).moved.map((m) => m.id)
           set({ tasks, blocks: reshuffled.blocks, flash: moved })
           if (moved.length) setTimeout(() => set({ flash: [] }), 2600)
-          if (dayComplete(reshuffled.blocks[today] ?? [], tasks) && s.lastCelebratedDate !== today) {
+          // Every time the day becomes complete (again), the finale.
+          if (dayComplete(reshuffled.blocks[today] ?? [], tasks)) {
             set({ celebration: pick(CELEBRATIONS), lastCelebratedDate: today, cheer: null })
           } else {
             // How far along today is: tasks and appointments on today's timetable.
@@ -335,7 +336,8 @@ export const useStore = create<Store>()(
           const { settings } = get()
           set({
             ...fresh(),
-            settings: { ...fresh().settings, accent: settings.accent, theme: settings.theme },
+            // Your preferences stay: color, mode, usual end of day, break rule.
+            settings: { ...settings },
             chatOpen: false,
             weekOpen: false,
             selectedDate: null,

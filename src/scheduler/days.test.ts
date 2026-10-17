@@ -102,8 +102,9 @@ describe('Startly asks instead of guessing', () => {
 
   it("a new task that doesn't fit and has no deadline → \"Sunday, or drop it?\" (not blocking)", () => {
     const { q, run } = ask(empty(), [add('Hack', 150), add('Groceries', 45)], toMin('20:00'))
-    expect(q).toMatchObject({ text: "'Groceries' doesn't fit today. Sunday, or drop it?", blocking: false })
-    expect(byTitle(run(q!.options[1].extra).plan, 'Groceries')).toBeUndefined()
+    expect(q).toMatchObject({ text: "'Groceries' doesn't fit before 23:00. Stay until 23:30, move it to Sunday, or drop it?", blocking: false }) // the break before it counts
+    expect(q!.options.map((o) => o.label)).toEqual(['Stay until 23:30', 'Sunday', 'Drop it'])
+    expect(byTitle(run(q!.options[2].extra).plan, 'Groceries')).toBeUndefined()
   })
 
   it('no question when everything fits, or when it went to a later day by deadline', () => {
@@ -171,7 +172,7 @@ describe('review fixes (slice 3)', () => {
     const change: AnyAction[] = [{ type: 'extend_task', id: byTitle(plan, 'Work').id, extraMin: 120 }]
     const run = (extra: AnyAction[] = []) => applyActions(plan, [...change, ...extra], TODAY, toMin('22:10'))
     const q = findQuestion(plan, run(), TODAY, run)!
-    expect(q.text).toContain("'Work (cont.)' doesn't fit today")
+    expect(q.text).toContain("'Work (cont.)' doesn't fit before 23:00")
     const dropped = run(q.options.find((o) => o.id === 'drop')!.extra)
     expect(byTitle(dropped.plan, 'Work')).toBeDefined()
     expect(dropped.plan.tasks.some((t) => t.title === 'Work (cont.)')).toBe(false)
@@ -206,5 +207,17 @@ describe('review fixes (slice 3)', () => {
     expect(plan.blocks[SUN]).toBeDefined()
     const r = applyActions(plan, [{ type: 'set_availability', key: 'sunday', windows: [] }], TODAY, toMin('10:05'))
     expect(r.plan.blocks[SUN]).toBeUndefined()
+  })
+})
+
+describe('final review: things that don\'t fit', () => {
+  it('at 22:17, a 2h project and 1h of applications → one question about both, with "Stay until …"', () => {
+    const run = (extra: AnyAction[] = []) => applyActions(empty(), [add('RAG project', 120), add('Apply for jobs', 60), ...extra], TODAY, toMin('22:17'))
+    const q = findQuestion(empty(), run(), TODAY, run)!
+    expect(q.text).toMatch(/^'RAG project' and 'Apply for jobs' don't fit before 23:00\. Stay until 01:\d\d, move them to Sunday, or drop them\?$/)
+    const stay = run(measureAnswer(q.options[0].extra, TODAY, run))
+    expect(stay.unplaced).toEqual([])
+    const sunday = run(q.options[1].extra)
+    expect(sunday.plan.tasks.every((t) => t.date === SUN)).toBe(true)
   })
 })

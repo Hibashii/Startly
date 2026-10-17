@@ -82,6 +82,9 @@ Build mode: fast — the learner asked to be shown each checkpoint only after te
 - [x] Grid view: short (checked-early) tasks are readable, hour lines stay behind checked cards, the now line follows the layout
 - [x] "Start fresh…" aligned with "Dark mode" (no icon: no other menu row has one; red already signals care)
 - [x] Breaks: the AI sees today's real timetable (`context.timetable`) and can change the break rule in plain words (`set_breaks`, default now a break after ~60 min) — it had promised a break the code never placed
+- [x] The finale plays every time the day becomes complete (not once per day); the cheer no longer shows a count; it stays at the bottom (doesn't cover the timetable)
+- [x] Things that don't fit: one question about all of them with "Stay until 01:35 / Sunday / Drop them"; Start fresh keeps preferences (end of day, breaks) — it had reset her 1 am end to 23:00
+- [ ] Languages (French, Arabic, Spanish, German, Dutch): cost explained, waiting for the learner's decision
 - [ ] Final review complete — feedback resolved and learner confirms ready to ship
 
 ## Code Tour and App Map
