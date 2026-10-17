@@ -326,3 +326,24 @@ describe("Startly's suggested order", () => {
     expect(byTitle(plan, 'Interview prep').start).toBe('16:30')
   })
 })
+
+describe('review fixes (slice 4)', () => {
+  it('an old preferred time ("gym in the morning") does not remove a running break', () => {
+    const { plan: before } = applyActions(empty(), [
+      add('A', 90), add('C', 30),
+      { type: 'add_task', title: 'Gym', durationMin: 60, priority: 'medium', deadline: null, preferredStart: '08:00', endBy: null, date: null },
+    ], TODAY, toMin('14:00'))
+    const brk = before.blocks[TODAY].find((x) => x.type === 'break')!
+    const { plan } = applyActions(before, [add('Mail', 15)], TODAY, toMin(brk.start) + 5)
+    expect(plan.blocks[TODAY].some((x) => x.type === 'break' && x.start === brk.start)).toBe(true)
+  })
+
+  it('"→ Tomorrow" on a split task moves it as one task again, with its full remaining time', () => {
+    const { plan: before } = applyActions(empty(), [add('A', 60)], TODAY, toMin('14:00'))
+    const { plan: split } = applyActions(before, [{ type: 'add_fixed', title: 'Call', date: TODAY, start: '14:30', end: '15:00' }], TODAY, toMin('14:10'))
+    expect(split.tasks.some((x) => x.title === 'A (cont.)')).toBe(true)
+    const { plan } = applyActions(split, [{ type: 'move_to_day', id: byTitle(split, 'A').id, date: '2026-10-18' }], TODAY, toMin('14:10'))
+    expect(plan.tasks.some((x) => x.title === 'A (cont.)')).toBe(false)
+    expect(byTitle(plan, 'A')).toMatchObject({ date: '2026-10-18', durationMin: 60 })
+  })
+})

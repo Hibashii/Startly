@@ -26,6 +26,10 @@ export const task = (title: string, durationMin: number) => ({
   type: 'add_task', title, durationMin, priority: 'medium', deadline: null, preferredStart: null, endBy: null, date: null,
 })
 
+/** Each timetable row as "type time name duration" (only the row's own parts, not its buttons or Now tag). */
 export const rows = (page: Page) =>
-  page.getByRole('list', { name: "Today's timetable" }).locator('li')
-    .evaluateAll((els) => els.map((e) => `${(e as HTMLElement).dataset.type} ${(e as HTMLElement).innerText.replace(/\s+/g, ' ').trim()}`))
+  page.getByRole('list', { name: "Today's timetable" }).locator(':scope > li')
+    .evaluateAll((els) => els.map((e) => {
+      const parts = [...e.querySelectorAll('[data-part]')].map((p) => (p as HTMLElement).innerText.trim()).filter(Boolean)
+      return `${(e as HTMLElement).dataset.type} ${parts.join(' ')}`
+    }))

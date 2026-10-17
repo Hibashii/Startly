@@ -115,7 +115,12 @@ export function scheduleDay(input: DayInput): DayResult {
   let lunchTaken = false
   const work = [...locked]
   const overlapsWork = (b: Block) => work.some((s) => s.start < toMin(b.end) && s.end > toMin(b.start))
+  // A task held for right now (you're still working) replaces a break that's still running.
+  // Only holds set during that break count, not an old preferred time like "gym in the morning".
+  const heldDuring = (b: Block) =>
+    toPlace.some((t) => t.preferredStart !== null && toMin(t.preferredStart) >= toMin(b.start) && toMin(t.preferredStart) <= roundUp5(fromMin))
   for (const b of prevBlocks) {
+    if (toMin(b.end) > fromMin && heldDuring(b)) continue
     // A past lunch/break stays, unless a task now covers that time (e.g. "I started at 16:00").
     // A past break only makes sense right after work that's still there.
     const followsWork = b.type === 'lunch' || work.some((s) => s.end === toMin(b.start))

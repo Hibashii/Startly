@@ -39,7 +39,7 @@ Build mode: fast — the learner asked to be shown each checkpoint only after te
   Learner check: Tell Startly a task takes much longer than planned, so the day would end late. It should ask you first. Try both answers. Then say "plan tomorrow, I'm free 18:00–23:00", click today's date and open tomorrow in the week strip.
   Commit: `Ask on tradeoffs, overflow to later days, week strip`
 
-- [ ] **4. Live through the day: Now, check-offs, celebration, rename**
+- [x] **4. Live through the day: Now, check-offs, celebration, rename**
   Becomes usable: The current block shows as the tinted **NOW · 1H40 LEFT** card with hover quick buttons (**Need more time / Not started / → Tomorrow**, no AI call). When a task's time runs out unchecked, it asks "Did you finish …?" with **✓ Done / Need more time / Skip to tomorrow**. Checking a task crosses it out and pops a varied encouraging toast; checking the last task of the day drops confetti and a celebration dialog with a quote and **Rest well**. Clicking a task name renames it in place ("✓ Renamed").
   Why now: The plan and the changes now work; this makes it something you live in during the day. It's mostly UI on top of existing scheduler functions, so it's low risk after the kernel.
   PRD ref: `prd.md > The Core Journey` (steps 4, 6), `prd.md > The Now Task and Unfinished Tasks`, `prd.md > Checking Off and Rewards`, `prd.md > Editing Tasks Directly`
@@ -106,3 +106,4 @@ Activity mode:
 - "Doesn't fit, tomorrow or drop it?" doesn't hold the rest of the change back (the plan still appears); only a change that pushes a task already on today's timetable off the day waits for the answer — on a first dump, blocking hid the whole timetable.
 - "Keep it" measures how late the day must run when you answer, and only for today (`dayEnds`); questions expire at midnight; a reply that doesn't answer keeps the question open — found by real-model conversations and code review.
 - A later day laid out in advance is redone when it arrives (`preplanned`), and anything that no longer fits on a laid-out later day is listed as "Doesn't fit on <day>".
+- Checking a task finishes all its parts and, if it was still running, ends it now so the next tasks move up; "→ Tomorrow" merges a split task back into one; "Not started" starts on the current 5-minute mark; the celebration waits for "Doesn't fit" tasks too — found by code review of slice 4.

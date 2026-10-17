@@ -7,9 +7,12 @@ import { endOfDayFor } from '@/scheduler/schedule'
 import { planOf } from '@/state/store'
 import { useShallow } from 'zustand/react/shallow'
 import { TaskCard } from './TaskCard'
+import { dayComplete, nowState } from '@/scheduler/now'
 
 export function Timetable() {
-  const today = dateKey(useNow())
+  const at = useNow()
+  const today = dateKey(at)
+  const nowMin = at.getHours() * 60 + at.getMinutes()
   const selected = useStore((s) => s.selectedDate)
   const date = selected < today ? today : selected // past days aren't viewable
   const isToday = date === today
@@ -26,6 +29,8 @@ export function Timetable() {
   const work = blocks.filter((b) => b.type === 'task' || b.type === 'fixed')
   const planned = work.reduce((sum, b) => sum + toMin(b.end) - toMin(b.start), 0)
   const until = blocks.reduce((max, b) => (b.end > max ? b.end : max), '')
+  const now = isToday ? nowState(blocks, tasks, nowMin) : null
+  const complete = isToday && dayComplete(blocks, tasks)
   // Tasks that didn't fit anywhere are never invisible.
   const notPlaced = tasks.filter((t) =>
     t.kind === 'task' && t.status === 'todo' && (isToday ? t.date === null : t.date === date && !t.start && dayBlocks !== undefined),
@@ -45,9 +50,11 @@ export function Timetable() {
         <h2 className="m-0 text-[28px] font-bold tracking-[-0.03em]">{title}</h2>
         <p className="m-0 text-sm text-mut">
           {laidOut
-            ? work.length
-              ? `${formatDuration(planned)} planned · until ${clock(until)}`
-              : 'Nothing planned yet'
+            ? complete
+              ? 'Day complete ✓'
+              : work.length
+                ? `${formatDuration(planned)} planned · until ${clock(until)}`
+                : 'Nothing planned yet'
             : [free ? `Free ${free.map((w) => `${clock(w.start)}–${clock(w.end)}`).join(', ')}` : 'Free time unknown', dayMinutes ? `${formatDuration(dayMinutes)} planned` : '']
                 .filter(Boolean)
                 .join(' · ')}
@@ -67,6 +74,7 @@ export function Timetable() {
               task={b.taskId ? byId.get(b.taskId) : undefined}
               flash={!!b.taskId && flash.includes(b.taskId)}
               enterDelay={justPlanned ? i * 55 : undefined}
+              now={now && now.block === b ? now : undefined}
             />
           ))}
         </ol>

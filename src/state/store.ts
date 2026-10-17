@@ -3,12 +3,14 @@ import { persist } from 'zustand/middleware'
 import { toast } from 'sonner'
 import type { Block, ChatMessage, Plan, Settings, Task, Window } from '@/types'
 import { askStartly, buildContext } from '@/lib/api'
-import { clock, clockOf, dateKey, now, toMin } from '@/lib/time'
+import { clock, clockOf, dateKey, now, roundUp5, toHHMM, toMin } from '@/lib/time'
 import { applyActions, type AnyAction, type ApplyResult } from '@/scheduler/applyActions'
-import { dayName } from '@/scheduler/days'
+import { dayName, plusDays } from '@/scheduler/days'
+import { dayComplete } from '@/scheduler/now'
+import { CELEBRATIONS, ENCOURAGEMENTS, pick } from '@/lib/messages'
 import { diffToday, toastText } from '@/scheduler/diff'
 import { findQuestion, measureAnswer, type QuestionOption } from '@/scheduler/questions'
-import { endOfDayFor } from '@/scheduler/schedule'
+import { endOfDayFor, reshuffleToday } from '@/scheduler/schedule'
 
 /** A question Startly asked: the change waits until one of the prepared answers is picked. */
 export interface Pending {
@@ -42,6 +44,8 @@ interface Ui {
   /** Which day the timetable shows, and whether the week strip is open. */
   selectedDate: string
   weekOpen: boolean
+  /** Every task of the day is checked: confetti and a message. */
+  celebration: { message: string; quote: string } | null
 }
 
 interface Actions {
@@ -49,6 +53,12 @@ interface Actions {
   send: (text: string) => Promise<{ ok: boolean; error?: string }>
   /** Answer Startly's question with one of its buttons. */
   answer: (optionId: string) => void
+  /** Check or uncheck a task. */
+  toggleDone: (taskId: string) => void
+  rename: (taskId: string, title: string) => void
+  /** The Now card's buttons, handled by code (no AI call). */
+  quick: (taskId: string, what: 'more' | 'notStarted' | 'tomorrow') => void
+  closeCelebration: () => void
   setChatOpen: (open: boolean) => void
   setWeekOpen: (open: boolean) => void
   selectDate: (date: string) => void
@@ -188,6 +198,65 @@ export const useStore = create<Store>()(
         justPlanned: false,
         selectedDate: dateKey(now()),
         weekOpen: false,
+        celebration: null,
+
+        toggleDone: (taskId) => {
+          const { today, nowMin } = clockNow()
+          const s = get()
+          const task = s.tasks.find((t) => t.id === taskId)
+          if (!task) return
+          if (task.status === 'done') {
+            set({ tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, status: 'todo' as const } : t)) })
+            return
+          }
+          // Checking any part finishes the whole task: parts not started yet go, and one still
+          // running ends now, so the next tasks move up.
+          const root = task.partOf ?? task.id
+          const isPart = (t: Task) => t.id === root || t.partOf === root
+          const notStarted = (t: Task) => t.status === 'todo' && t.date === today && t.start !== null && toMin(t.start) >= nowMin && t.id !== taskId
+          let tasks = s.tasks
+            .filter((t) => !(isPart(t) && notStarted(t)))
+            .map((t) => {
+              if (!isPart(t) || t.status === 'done') return t
+              const running = t.date === today && t.start && toMin(t.start) < nowMin && toMin(t.start) + t.durationMin > nowMin
+              return { ...t, status: 'done' as const, durationMin: running ? Math.max(5, roundUp5(nowMin) - toMin(t.start!)) : t.durationMin }
+            })
+          const prev = planOf(s)
+          const reshuffled = reshuffleToday({ ...prev, tasks }, today, nowMin).plan
+          tasks = reshuffled.tasks
+          const moved = diffToday(s.tasks, tasks, today).moved.map((m) => m.id)
+          set({ tasks, blocks: reshuffled.blocks, flash: moved })
+          if (moved.length) setTimeout(() => set({ flash: [] }), 2600)
+          if (dayComplete(reshuffled.blocks[today] ?? [], tasks) && s.lastCelebratedDate !== today) {
+            set({ celebration: pick(CELEBRATIONS), lastCelebratedDate: today })
+          } else {
+            toast(pick(ENCOURAGEMENTS))
+          }
+        },
+
+        rename: (taskId, title) => {
+          const clean = title.trim()
+          const task = get().tasks.find((t) => t.id === taskId)
+          if (!task || !clean || clean === task.title) return
+          set((s) => ({ tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, title: clean } : t)) }))
+          toast('✓ Renamed')
+        },
+
+        quick: (taskId, what) => {
+          const { at, today } = clockNow()
+          const task = get().tasks.find((t) => t.id === taskId)
+          if (!task || get().thinking) return
+          const tomorrow = plusDays(today, 1)
+          const [actions, text]: [AnyAction[], string] =
+            what === 'more'
+              ? [[{ type: 'extend_task', id: taskId, extraMin: 30 }], `Added 30 min to '${task.title}'.`]
+              : what === 'notStarted'
+                ? [[{ type: 'started_at', id: taskId, start: toHHMM(Math.floor(toMin(clockOf(at)) / 5) * 5), remainingMin: null }], `OK, '${task.title}' starts now.`]
+                : [[{ type: 'move_to_day', id: taskId, date: tomorrow }], `Moved '${task.title}' to ${dayName(tomorrow)}.`]
+          commit(planOf(get()), actions, null, text)
+        },
+
+        closeCelebration: () => set({ celebration: null }),
 
         setChatOpen: (chatOpen) => set({ chatOpen }),
         setWeekOpen: (weekOpen) => set(weekOpen ? { weekOpen } : { weekOpen, selectedDate: dateKey(now()) }),

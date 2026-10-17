@@ -2,6 +2,7 @@ import { Toaster } from 'sonner'
 import { Timetable } from './timetable/Timetable'
 import { ChatDrawer } from './chat/ChatDrawer'
 import { WeekStrip } from './WeekStrip'
+import { Celebration } from './Celebration'
 import { useStore } from '@/state/store'
 
 export function MainScreen() {
@@ -15,6 +16,7 @@ export function MainScreen() {
         </main>
       </div>
       <ChatDrawer />
+      <Celebration />
       {/* The toast is a dark pill: ink background, page-colored text */}
       <Toaster
         position="bottom-center"

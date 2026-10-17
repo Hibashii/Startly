@@ -18,7 +18,7 @@ const say = async (page: Page, text: string) => {
 
 test('started late → the day reshuffles, a toast appears then goes, and the chat lists what moved', async ({ page }) => {
   const sent = await planDay(page, { body: { reply: 'Got it, I moved things so nothing overlaps.', actions: [{ type: 'started_at', id: 't1', start: '16:00', remainingMin: 120 }] } })
-  expect(await rows(page)).toContain('task 14:00–16:00 Hackathon 2h')
+  expect(await rows(page)).toContain('task 14:00–16:00 Hackathon') // the Now card: no duration, quick buttons instead
 
   await page.clock.setFixedTime(new Date(`${TODAY}T16:05:00`))
   await say(page, 'I only started the hackathon at 16:00, it needs 2h')
@@ -49,7 +49,7 @@ test('started late → the day reshuffles, a toast appears then goes, and the ch
 test('delete a task → it disappears and the day closes the gap', async ({ page }) => {
   await planDay(page, { body: { reply: 'Removed.', actions: [{ type: 'remove_task', id: 't1' }] } })
   await say(page, 'delete the hackathon')
-  await expect.poll(() => rows(page)).toContain('task 14:00–15:00 Gym 1h')
+  await expect.poll(() => rows(page)).toContain('task 14:00–15:00 Gym') // now the Now card
   expect((await rows(page)).some((r) => r.includes('Hackathon'))).toBe(false)
   await expect(page.locator('[data-role=assistant]').last()).toContainText('Removed: Hackathon.')
 })

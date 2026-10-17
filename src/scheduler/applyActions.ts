@@ -248,7 +248,18 @@ export function applyActions(plan: Plan, actions: AnyAction[], today: string, no
           break
         }
         // Today → re-placed today; a later day → kept for that day (shown in the week strip).
-        replace({ ...t, date: a.date > today ? a.date : null, start: null })
+        // A split task moves as one again: its unfinished parts merge back into the original.
+        const root = t.partOf ?? t.id
+        const parts = tasks.filter((o) => (o.id === root || o.partOf === root) && o.status === 'todo')
+        const rootTask = find(root)
+        const date = a.date > today ? a.date : null
+        if (parts.length > 1 && rootTask) {
+          const durationMin = parts.reduce((sum, o) => sum + o.durationMin, 0)
+          tasks = tasks.filter((o) => o.partOf !== root || o.status === 'done')
+          replace({ ...rootTask, status: 'todo', durationMin, date, start: null, preferredStart: null })
+        } else {
+          replace({ ...t, date, start: null })
+        }
         applied++
         break
       }
