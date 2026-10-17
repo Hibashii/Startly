@@ -20,7 +20,7 @@ test('a new day: the chat is fresh with a greeting, the plan is kept, and yester
   await expect(page.getByRole('list', { name: 'Chat messages' }).or(page.getByLabel('Chat with Startly'))).toBeVisible()
   await expect(startly(page)).toHaveCount(1)
   await expect(startly(page)).toContainText(/Good morning/)
-  await expect(startly(page)).toContainText("2 things from yesterday weren't checked: Groceries, Job application #3. Add them to today?")
+  await expect(startly(page)).toContainText("2 things from yesterday weren't checked: Groceries and Job application #3. Add them to today?")
   await expect(page.getByText('x', { exact: true })).toHaveCount(0) // yesterday's messages are gone
   expect(await rows(page)).toEqual([]) // nothing silently carried over
 
@@ -41,7 +41,7 @@ test('Choose: a checkbox per task; the picked ones are added, the rest dropped',
 test('Drop them: gone, and the day starts empty', async ({ page }) => {
   await yesterdayWithLeftovers(page)
   await page.getByRole('button', { name: 'Drop them' }).click()
-  await expect(page.getByText('Removed: Groceries, Job application #3.')).toBeVisible()
+  await expect(page.getByText('Removed: Groceries and Job application #3.')).toBeVisible()
 })
 
 test('the same day again: no new greeting', async ({ page }) => {

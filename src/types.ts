@@ -1,3 +1,5 @@
+import type { Lang, Name, Text } from '@/i18n'
+
 export type Priority = 'high' | 'medium' | 'low'
 export type Accent = 'iris' | 'ocean' | 'sage' | 'plum' | 'coral' | 'ink'
 
@@ -16,7 +18,7 @@ export interface Task {
   order: number // stable tiebreak
   rank?: number | null // Startly's suggested position in today's order (null = no suggestion)
   preplanned?: boolean // its start came from laying out a later day in advance (redone when that day comes)
-  partOf?: string // set on "X (cont.)": the rest of task X after it was split
+  partOf?: string // set on the rest of task X after it was split (same title; shown as "X (cont.)")
 }
 
 export interface Block {
@@ -32,22 +34,27 @@ export interface Window {
   end: string
 }
 
-export interface ChatMessage {
+/**
+ * A chat message: words someone typed (you, or the AI's own reply, in whatever language it was written),
+ * or a reply written by code (`content`, shown in the app's language). Never neither, never both.
+ */
+export type ChatMessage = ChatBody & ({ role: 'user'; text: string } | { role: 'assistant'; text: string } | { role: 'assistant'; content: Text })
+
+interface ChatBody {
   id: string
-  role: 'user' | 'assistant'
-  text: string
-  moved?: { id?: string; title: string; from: string; to: string }[] // code-written: what moved
-  notes?: string[] // code-written: removed, didn't fit…
+  moved?: { id?: string; title: Name; from: string; to: string | null }[] // what moved: to = "HH:MM", a later date, or null (not today)
+  notes?: Text[] // code-written notes: removed, didn't fit…
   question?: {
     pendingId: string
-    text: string
-    options: { id: string; label: string }[]
+    text: Text
+    options: { id: string; label: Text }[]
     choose?: { id: string; title: string; partIds: string[] }[] // "Choose": one checkbox per task
-    answered?: string
+    answered?: Text
   } // Startly asks
 }
 
 export interface Settings {
+  lang: Lang
   accent: Accent
   theme: 'light' | 'dark' | null
   endOfDay: string // "HH:MM", may pass midnight: "25:00" = 1 am

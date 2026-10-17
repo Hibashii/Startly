@@ -1,15 +1,13 @@
 import { addDays, format, parseISO } from 'date-fns'
 import type { Plan, Task, Window } from '@/types'
 import { toMin } from '@/lib/time'
-import { endOfDayFor, scheduleDay } from './schedule'
+import { endOfDayFor, scheduleDay, type DayEnds } from './schedule'
 import { dateKey } from '@/lib/time'
 
 // Days after today: free time, overflow by deadline, and laying a day out hour by hour.
 
 export const WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
 export const weekdayKey = (date: string) => WEEKDAYS[parseISO(date).getDay()]
-export const dayName = (date: string) => format(parseISO(date), 'EEEE')
-export const shortDay = (date: string) => format(parseISO(date), 'EEE')
 export const plusDays = (date: string, n: number) => format(addDays(parseISO(date), n), 'yyyy-MM-dd')
 
 /** Your free time on a date: set for that date, else for that weekday, else unknown (null). */
@@ -90,7 +88,7 @@ export function planDay(plan: Plan, date: string): { plan: Plan; unplaced: strin
  * Which planning day it is. A day that runs past midnight ("until 1 am" = "25:00") is still that day
  * until it ends: at 00:30 it's yesterday at "24:30", not a new day.
  */
-export function dayOf(at: Date, plan: Plan): { today: string; nowMin: number } {
+export function dayOf(at: Date, plan: DayEnds): { today: string; nowMin: number } {
   const calendar = dateKey(at)
   const min = at.getHours() * 60 + at.getMinutes()
   const yesterday = plusDays(calendar, -1)

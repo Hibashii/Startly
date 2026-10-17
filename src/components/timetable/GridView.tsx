@@ -1,13 +1,16 @@
 import { Pin } from 'lucide-react'
 import type { Block, Task } from '@/types'
 import type { NowState } from '@/scheduler/now'
-import { clock, formatDuration, toMin } from '@/lib/time'
+import { clock, toMin } from '@/lib/time'
 import { cn } from '@/lib/utils'
+import { useT } from '@/i18n/useT'
+import { taskTitle } from './taskTitle'
 
 const HOUR = 64 // px per hour
 
 /** The day as an hour grid, like a calendar day view, with a line at the current time. */
 export function GridView({ blocks, tasks, nowMin, now }: { blocks: Block[]; tasks: Task[]; nowMin: number | null; now: NowState }) {
+  const t = useT()
   if (!blocks.length) return null
   const byId = new Map(tasks.map((t) => [t.id, t]))
   const first = Math.min(...blocks.map((b) => toMin(b.start)), nowMin ?? Infinity)
@@ -43,10 +46,10 @@ export function GridView({ blocks, tasks, nowMin, now }: { blocks: Block[]; task
   }
 
   return (
-    <div className="relative mt-1 ml-14" style={{ height: gridHeight }} aria-label="Hour grid" role="list">
+    <div className="relative mt-1 ms-14" style={{ height: gridHeight }} aria-label={t('hourGrid')} role="list">
       {hours.map((h) => (
         <div key={h} className="absolute right-0 left-0 z-0 border-t border-line/70" style={{ top: top(h * 60) }}>
-          <span className="absolute -top-2.5 -left-14 w-11 text-right text-xs text-mut tabular-nums">{clock(`${String(h).padStart(2, '0')}:00`)}</span>
+          <span className="absolute -top-2.5 -start-14 w-11 text-end text-xs text-mut tabular-nums">{clock(`${String(h).padStart(2, '0')}:00`)}</span>
         </div>
       ))}
 
@@ -65,20 +68,20 @@ export function GridView({ blocks, tasks, nowMin, now }: { blocks: Block[]; task
               short && 'flex items-center gap-2 rounded-md py-0 text-[12px] leading-none',
               rest && 'border border-dashed bg-bg text-mut',
               task?.status === 'done' && 'text-mut [&>*]:opacity-70', // faded text, solid card: hour lines stay behind
-              isNow && 'bg-tint text-tinti shadow-[inset_3px_0_0_var(--acc)]',
+              isNow && 'bg-tint text-tinti shadow-[inset_3px_0_0_var(--acc)] rtl:shadow-[inset_-3px_0_0_var(--acc)]',
             )}
             style={{ top: y, height }}
           >
             <div className={cn('flex min-w-0 items-center gap-1.5 truncate', !rest && 'font-medium', task?.status === 'done' && 'line-through')}>
-              {rest ? (b.type === 'lunch' ? 'Lunch' : 'Break') : task?.title}
-              {b.type === 'fixed' && <Pin className="size-3 shrink-0 opacity-60" aria-label="fixed appointment" />}
+              {rest ? t(b.type === 'lunch' ? 'lunch' : 'break') : task && taskTitle(task, t)}
+              {b.type === 'fixed' && <Pin className="size-3 shrink-0 opacity-60" aria-label={t('fixedAppointment')} />}
             </div>
             {short ? (
-              <span className="shrink-0 text-[11px] opacity-75 tabular-nums">{clock(b.start)}–{clock(b.end)}</span>
+              <span className="shrink-0 text-[11px] opacity-75 tabular-nums" dir="ltr">{clock(b.start)}–{clock(b.end)}</span>
             ) : height > 34 && (
               <div className="text-xs opacity-75 tabular-nums">
-                {clock(b.start)}–{clock(b.end)}
-                {!rest && ` · ${formatDuration(toMin(b.end) - toMin(b.start))}`}
+                <span dir="ltr">{clock(b.start)}–{clock(b.end)}</span>
+                {!rest && ` · ${t.fmt.duration(toMin(b.end) - toMin(b.start))}`}
               </div>
             )}
           </div>
@@ -86,7 +89,7 @@ export function GridView({ blocks, tasks, nowMin, now }: { blocks: Block[]; task
       })}
 
       {nowY !== null && (
-        <div className="pointer-events-none absolute right-0 -left-2 z-10 flex items-center" style={{ top: nowY }} aria-label="Now">
+        <div className="pointer-events-none absolute end-0 -start-2 z-10 flex items-center" style={{ top: nowY }} aria-label={t('now')}>
           <span className="size-2 rounded-full bg-acc" />
           <span className="h-[2px] flex-1 bg-acc" />
         </div>

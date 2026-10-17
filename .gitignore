@@ -24,3 +24,6 @@ dist/
 .vercel/
 .DS_Store
 *.log
+
+# TypeScript build cache
+*.tsbuildinfo

@@ -1,7 +1,8 @@
 import type { Plan } from '@/types'
 import { clock } from '@/lib/time'
+import { msg, nameOf, type Text } from '@/i18n'
 import type { AnyAction, ApplyResult } from './applyActions'
-import { dayName, plusDays } from './days'
+import { plusDays } from './days'
 import { endOfDayFor } from './schedule'
 
 /** "Keep it": let today run exactly as late as needed (measured when the answer is picked). */
@@ -19,21 +20,21 @@ export function measureAnswer(extra: AnyAction[], today: string, simulate: (extr
 
 export interface QuestionOption {
   id: string
-  label: string
+  label: Text
   extra: AnyAction[] // added to the original change when this answer is picked
 }
 
 export interface Question {
-  text: string
+  text: Text
   options: QuestionOption[]
   /** true: the change waits for the answer. false: the change applies now, the answer acts on top of it. */
   blocking: boolean
 }
 
 /**
- * When a change creates a real tradeoff, Startly asks instead of guessing (texts written by code):
+ * When a change creates a real tradeoff, Startly asks instead of guessing (what to ask; the screen words it):
  * - a task that was on today's timetable got pushed off → "That puts you until 23:40. OK, or should I move it?"
- * - a new task doesn't fit today and isn't due later → "Tomorrow, or drop it?" (the rest applies meanwhile)
+ * - new tasks don't fit today and aren't due later → "Stay until 01:35, move them to Sunday, or drop them?" (the rest applies meanwhile)
  * `simulate` runs the same change plus extra actions, to measure the "keep it" option.
  */
 export function findQuestion(
@@ -59,11 +60,11 @@ export function findQuestion(
     if (!late.unplaced.includes(id)) {
       const until = (late.plan.blocks[today] ?? []).reduce((max, b) => (b.end > max ? b.end : max), '')
       return {
-        text: `That puts you until ${clock(until)}. OK, or should I move '${task.title}' to ${dayName(tomorrow)}?`,
+        text: msg('qUntil', { until: clock(until), title: nameOf(task), date: tomorrow }),
         options: [
           // Measured again when answered: a minute later the day may need a little more.
-          { id: 'keep', label: 'Keep it', extra: [{ type: 'set_day_end', date: today, time: AS_NEEDED }] },
-          { id: 'move', label: 'Move it', extra: [toTomorrow] },
+          { id: 'keep', label: msg('keepIt'), extra: [{ type: 'set_day_end', date: today, time: AS_NEEDED }] },
+          { id: 'move', label: msg('moveIt'), extra: [toTomorrow] },
         ],
         blocking: true,
       }
@@ -71,20 +72,16 @@ export function findQuestion(
   }
   // New tasks that don't fit: one question about all of them, with a real way out (staying later, measured).
   const tasks = ids.map((x) => result.plan.tasks.find((t) => t.id === x)!)
-  const names = tasks.map((t) => `'${t.title}'`)
-  const list = names.length === 1 ? names[0] : `${names.slice(0, -1).join(', ')} and ${names.at(-1)}`
   const one = tasks.length === 1
   const late = simulate([{ type: 'set_day_end', date: today, time: '30:00' }])
   const canStay = ids.every((x) => !late.unplaced.includes(x))
-  const until = (late.plan.blocks[today] ?? []).reduce((max, b) => (b.end > max ? b.end : max), '')
-  const end = clock(endOfDayFor(result.plan, today))
-  const ways = [canStay ? `stay until ${clock(until)}` : null, `move ${one ? 'it' : 'them'} to ${dayName(tomorrow)}`, `drop ${one ? 'it' : 'them'}`].filter(Boolean)
+  const until = clock((late.plan.blocks[today] ?? []).reduce((max, b) => (b.end > max ? b.end : max), ''))
   return {
-    text: `${list} ${one ? "doesn't" : "don't"} fit before ${end}. ${ways.join(', ').replace(/^./, (c) => c.toUpperCase()).replace(/, ([^,]*)$/, ', or $1')}?`,
+    text: msg('qNoFit', { items: tasks.map(nameOf), end: clock(endOfDayFor(result.plan, today)), stay: canStay ? until : null, date: tomorrow }),
     options: [
-      ...(canStay ? [{ id: 'stay', label: `Stay until ${clock(until)}`, extra: [{ type: 'set_day_end', date: today, time: AS_NEEDED } as AnyAction] }] : []),
-      { id: 'tomorrow', label: dayName(tomorrow), extra: tasks.map((t): AnyAction => ({ type: 'move_to_day', id: t.id, date: tomorrow })) },
-      { id: 'drop', label: one ? 'Drop it' : 'Drop them', extra: tasks.map((t): AnyAction => (t.partOf ? { type: 'remove_one', id: t.id } : { type: 'remove_task', id: t.id })) },
+      ...(canStay ? [{ id: 'stay', label: msg('stayUntil', { until }), extra: [{ type: 'set_day_end', date: today, time: AS_NEEDED } as AnyAction] }] : []),
+      { id: 'tomorrow', label: msg('dayOption', { date: tomorrow }), extra: tasks.map((t): AnyAction => ({ type: 'move_to_day', id: t.id, date: tomorrow })) },
+      { id: 'drop', label: msg(one ? 'dropIt' : 'dropThem'), extra: tasks.map((t): AnyAction => (t.partOf ? { type: 'remove_one', id: t.id } : { type: 'remove_task', id: t.id })) },
     ],
     blocking: false,
   }

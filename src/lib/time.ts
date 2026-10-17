@@ -27,14 +27,6 @@ export const dateKey = (d: Date) => format(d, 'yyyy-MM-dd')
 export const clockOf = (d: Date) => format(d, 'HH:mm')
 export const roundUp5 = (min: number) => Math.ceil(min / 5) * 5
 
-/** "1h30", "45m", "2h" */
-export function formatDuration(min: number) {
-  const h = Math.floor(min / 60)
-  const m = min % 60
-  if (!h) return `${m}m`
-  return m ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`
-}
-
 /** Re-renders the component every 30 s so clocks and "today" stay current. */
 export function useNow(): Date {
   const [at, setAt] = useState(now)

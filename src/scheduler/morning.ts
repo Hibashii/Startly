@@ -1,6 +1,7 @@
 import type { Task } from '@/types'
 import type { Question } from './questions'
 import { plusDays } from './days'
+import { msg, type Text } from '@/i18n'
 
 // A new day: a fresh chat, a greeting, and a question about what wasn't checked (never silently carried over).
 
@@ -8,18 +9,10 @@ import { plusDays } from './days'
 export const leftovers = (tasks: Task[], today: string) =>
   tasks.filter((t) => t.kind === 'task' && t.status === 'todo' && t.date !== null && t.date < today)
 
-const GREETINGS = {
-  morning: ['Good morning ☀️', 'Good morning! New day, fresh start.', 'Morning! Ready when you are.'],
-  afternoon: ['Good afternoon!', 'Hi again! Here for the rest of your day.'],
-  evening: ['Good evening!', 'Evening! Let’s make the most of what’s left.'],
-}
-
 /** A greeting written by code (no AI call), picked from a few variants. */
-export function greeting(hour: number, hasPlan: boolean, seed: number) {
+export function greeting(hour: number, hasPlan: boolean, seed: number): Text {
   const part = hour < 12 ? 'morning' : hour < 18 ? 'afternoon' : 'evening'
-  const options = GREETINGS[part]
-  const hello = options[seed % options.length]
-  return hasPlan ? `${hello} Your plan is still here.` : `${hello} What's on today? Tell me everything and I'll plan it.`
+  return msg('greeting', { part, i: seed, hasPlan })
 }
 
 export interface LeftoverItem {
@@ -33,7 +26,7 @@ export function groupLeftovers(left: Task[], all: Task[]): LeftoverItem[] {
   const groups = new Map<string, LeftoverItem>()
   for (const t of left) {
     const root = t.partOf ?? t.id
-    const title = all.find((x) => x.id === root)?.title ?? t.title.replace(/ \(cont\.\)$/, '')
+    const title = all.find((x) => x.id === root)?.title ?? t.title
     const g = groups.get(root) ?? { id: root, title, partIds: [] }
     g.partIds.push(t.id)
     groups.set(root, g)
@@ -49,25 +42,25 @@ export const dropItem = (item: LeftoverItem) => item.partIds.map((id) => ({ type
 export function morningQuestion(left: Task[], all: Task[], today: string): (Question & { choose?: LeftoverItem[] }) | null {
   const items = groupLeftovers(left, all)
   if (!items.length) return null
-  const when = left.every((t) => t.date === plusDays(today, -1)) ? 'yesterday' : 'earlier'
+  const yesterday = left.every((t) => t.date === plusDays(today, -1))
   const addAll = { extra: items.map((i) => addItem(i, today)) }
   const dropAll = { extra: items.flatMap(dropItem) }
   if (items.length === 1) {
     return {
-      text: `'${items[0].title}' from ${when} wasn't checked. Add it to today?`,
+      text: msg('leftoverOne', { title: items[0].title, yesterday }),
       options: [
-        { id: 'add', label: 'Add it', ...addAll },
-        { id: 'drop', label: 'Drop it', ...dropAll },
+        { id: 'add', label: msg('addIt'), ...addAll },
+        { id: 'drop', label: msg('dropIt'), ...dropAll },
       ],
       blocking: false,
     }
   }
   return {
-    text: `${items.length} things from ${when} weren't checked: ${items.map((i) => i.title).join(', ')}. Add them to today?`,
+    text: msg('leftoverMany', { items: items.map((i) => i.title), yesterday }),
     options: [
-      { id: 'add', label: items.length === 2 ? 'Add both' : 'Add all', ...addAll },
-      { id: 'choose', label: 'Choose', extra: [] }, // the chat shows a checkbox per task (never picked by the AI)
-      { id: 'drop', label: 'Drop them', ...dropAll },
+      { id: 'add', label: msg(items.length === 2 ? 'addBoth' : 'addAll'), ...addAll },
+      { id: 'choose', label: msg('choose'), extra: [] }, // the chat shows a checkbox per task (never picked by the AI)
+      { id: 'drop', label: msg('dropThem'), ...dropAll },
     ],
     blocking: false,
     choose: items,

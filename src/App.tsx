@@ -1,5 +1,6 @@
 import { useEffect, useSyncExternalStore } from 'react'
 import { useDay, useStore } from '@/state/store'
+import { dirOf } from '@/i18n'
 import { TopBar } from '@/components/TopBar'
 import { FirstScreen } from '@/components/FirstScreen'
 import { MainScreen } from '@/components/MainScreen'
@@ -36,9 +37,13 @@ export default function App() {
   }, [morningReset, today])
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme
-    document.documentElement.dataset.accent = settings.accent
-  }, [theme, settings.accent])
+    const html = document.documentElement
+    html.dataset.theme = theme
+    html.dataset.accent = settings.accent
+    // Language and writing direction: Arabic mirrors the whole layout right-to-left.
+    html.lang = settings.lang
+    html.dir = dirOf(settings.lang)
+  }, [theme, settings.accent, settings.lang])
 
   return (
     <div className="flex h-full flex-col">

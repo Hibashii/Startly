@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { Eraser, X } from 'lucide-react'
 import { useStore } from '@/state/store'
 import { Avatar } from '@/components/Avatar'
-import { ERRORS } from '@/lib/messages'
+import { useT } from '@/i18n/useT'
 import { cn } from '@/lib/utils'
 import { ChatMessage, StartlyLine, UserBubble } from './ChatMessage'
 import { ChatInput } from './ChatInput'
@@ -15,6 +15,7 @@ export function ChatDrawer() {
   const failed = useStore((s) => s.failed)
   const send = useStore((s) => s.send)
   const clearChat = useStore((s) => s.clearChat)
+  const t = useT()
   const end = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -23,11 +24,11 @@ export function ChatDrawer() {
 
   return (
     <aside
-      aria-label="Chat with Startly"
+      aria-label={t('chatWithStartly')}
       aria-hidden={!open}
       inert={!open}
       className={cn(
-        'flex w-[40%] max-w-[440px] flex-none flex-col overflow-hidden border-l bg-panel transition-[width,max-width,visibility] duration-300 ease-out',
+        'flex w-[40%] max-w-[440px] flex-none flex-col overflow-hidden border-s bg-panel transition-[width,max-width,visibility] duration-300 ease-out',
         !open && 'invisible w-0 max-w-0 border-0',
       )}
     >
@@ -38,16 +39,16 @@ export function ChatDrawer() {
           type="button"
           onClick={clearChat}
           disabled={!messages.length || thinking}
-          aria-label="Clear chat"
-          title="Clear chat (your plan stays)"
-          className="ml-auto grid size-8 cursor-pointer place-items-center rounded-full text-mut hover:bg-blk disabled:cursor-default disabled:opacity-30"
+          aria-label={t('clearChat')}
+          title={t('clearChatHint')}
+          className="ms-auto grid size-8 cursor-pointer place-items-center rounded-full text-mut hover:bg-blk disabled:cursor-default disabled:opacity-30"
         >
           <Eraser className="size-4" />
         </button>
         <button
           type="button"
           onClick={() => setOpen(false)}
-          aria-label="Close chat"
+          aria-label={t('closeChat')}
           className="grid size-8 cursor-pointer place-items-center rounded-full text-mut hover:bg-blk"
         >
           <X className="size-4" />
@@ -65,7 +66,7 @@ export function ChatDrawer() {
                   <span key={d} className="size-1.5 animate-bounce rounded-full bg-mut" style={{ animationDelay: `${d}ms` }} />
                 ))}
               </span>
-              <span className="status-line text-[13.5px] text-mut">Rearranging your day…</span>
+              <span className="status-line text-[13.5px] text-mut">{t('rearranging')}</span>
             </span>
           </StartlyLine>
         )}
@@ -73,13 +74,13 @@ export function ChatDrawer() {
           <>
             <UserBubble faded>{failed.text}</UserBubble>
             <StartlyLine>
-              <p className="m-0">{ERRORS[failed.error]}</p>
+              <p className="m-0">{t(failed.error === 'rate_limited' ? 'errRateLimited' : 'errUnavailable')}</p>
               <button
                 type="button"
                 onClick={() => send(failed.text)}
                 className="mt-2 cursor-pointer rounded-full border px-3 py-1 text-[13px] font-medium hover:bg-blk"
               >
-                Retry
+                {t('retry')}
               </button>
             </StartlyLine>
           </>

@@ -1,18 +1,20 @@
-import { format, parseISO } from 'date-fns'
 import { Pin } from 'lucide-react'
 import { useDay, useStore } from '@/state/store'
-import { clock, formatDuration, toMin } from '@/lib/time'
+import { clock, toMin } from '@/lib/time'
 import { plusDays, windowsFor } from '@/scheduler/days'
 import { endOfDayFor } from '@/scheduler/schedule'
 import { planOf } from '@/state/store'
 import { useShallow } from 'zustand/react/shallow'
 import { TaskCard } from './TaskCard'
+import { taskTitle } from './taskTitle'
+import { useT } from '@/i18n/useT'
 import { GridView } from './GridView'
 import { cn } from '@/lib/utils'
 import { dayComplete, nowState } from '@/scheduler/now'
 
 export function Timetable() {
   const { today, nowMin } = useDay()
+  const t = useT()
   const selected = useStore((s) => s.selectedDate)
   const date = !selected || selected < today ? today : selected // past days aren't viewable
   const isToday = date === today
@@ -27,7 +29,7 @@ export function Timetable() {
   const setView = useStore((s) => s.setView)
   const byId = new Map(tasks.map((t) => [t.id, t]))
 
-  const title = isToday ? 'Today' : date === plusDays(today, 1) ? 'Tomorrow' : format(parseISO(date), 'EEEE')
+  const title = isToday ? t('today') : date === plusDays(today, 1) ? t('tomorrow') : t.fmt.weekday(date).replace(/^./, (c) => c.toUpperCase())
   const work = blocks.filter((b) => b.type === 'task' || b.type === 'fixed')
   const planned = work.reduce((sum, b) => sum + toMin(b.end) - toMin(b.start), 0)
   const until = blocks.reduce((max, b) => (b.end > max ? b.end : max), '')
@@ -53,25 +55,29 @@ export function Timetable() {
         <p className="m-0 text-sm text-mut">
           {laidOut
             ? complete
-              ? 'Day complete ✓'
+              ? t('dayComplete')
               : work.length
-                ? `${formatDuration(planned)} planned · until ${clock(until)}`
-                : 'Nothing planned yet'
-            : [free ? `Free ${free.map((w) => `${clock(w.start)}–${clock(w.end)}`).join(', ')}` : 'Free time unknown', dayMinutes ? `${formatDuration(dayMinutes)} planned` : '']
+                ? t('plannedUntil', { planned: t.fmt.duration(planned), until: clock(until) })
+                : t('nothingPlanned')
+            : [
+                // Each range is isolated left-to-right, so "09:00–10:00" never reads backwards inside an Arabic sentence.
+                free ? t('freeTime', { windows: free.map((w) => `\u2066${clock(w.start)}–${clock(w.end)}\u2069`) }) : t('freeUnknown'),
+                dayMinutes ? t('planned', { planned: t.fmt.duration(dayMinutes) }) : '',
+              ]
                 .filter(Boolean)
                 .join(' · ')}
         </p>
         {laidOut && blocks.length > 0 && (
-          <div className="ml-auto inline-flex self-center rounded-full border p-0.5 text-[13px]" role="group" aria-label="View">
+          <div className="ms-auto inline-flex self-center rounded-full border p-0.5 text-[13px]" role="group" aria-label={t('view')}>
             {(['list', 'grid'] as const).map((v) => (
               <button
                 key={v}
                 type="button"
                 aria-pressed={view === v}
                 onClick={() => setView(v)}
-                className={cn('cursor-pointer rounded-full px-3 py-1 text-mut capitalize', view === v && 'bg-ink font-medium text-bg')}
+                className={cn('cursor-pointer rounded-full px-3 py-1 text-mut', view === v && 'bg-ink font-medium text-bg')}
               >
-                {v}
+                {t(v === 'list' ? 'viewList' : 'viewGrid')}
               </button>
             ))}
           </div>
@@ -83,7 +89,7 @@ export function Timetable() {
       ) : laidOut ? (
         <ol
           className={`m-0 list-none p-0 ${thinking ? 'softened' : 'unsoftened'}`}
-          aria-label={isToday ? "Today's timetable" : `${title}'s timetable`}
+          aria-label={isToday ? t('todaysTimetable') : t('timetableOf', { day: title })}
           aria-busy={thinking}
         >
           {blocks.map((b, i) => (
@@ -99,20 +105,20 @@ export function Timetable() {
         </ol>
       ) : (
         <>
-          <ul className="m-0 list-none p-0" aria-label={`${title}'s tasks`}>
-            {dayTasks.map((t) => (
-              <li key={t.id} className="my-1.5 flex min-h-11 items-center justify-between gap-3 rounded-xl bg-blk px-4 py-[11px]">
+          <ul className="m-0 list-none p-0" aria-label={t('tasksOf', { day: title })}>
+            {dayTasks.map((task) => (
+              <li key={task.id} className="my-1.5 flex min-h-11 items-center justify-between gap-3 rounded-xl bg-blk px-4 py-[11px]">
                 <span className="flex items-center gap-1.5 font-medium">
-                  {t.kind === 'fixed' && <span className="text-sm font-normal text-mut tabular-nums">{t.start}</span>}
-                  {t.title}
-                  {t.kind === 'fixed' && <Pin className="size-3.5 text-mut" aria-label="fixed appointment" />}
+                  {task.kind === 'fixed' && <span className="text-sm font-normal text-mut tabular-nums">{task.start}</span>}
+                  {taskTitle(task, t)}
+                  {task.kind === 'fixed' && <Pin className="size-3.5 text-mut" aria-label={t('fixedAppointment')} />}
                 </span>
-                <span className="text-[13px] text-mut">{formatDuration(t.durationMin)}</span>
+                <span className="text-[13px] text-mut">{t.fmt.duration(task.durationMin)}</span>
               </li>
             ))}
           </ul>
           <p className="mt-4 text-sm text-mut">
-            {dayTasks.length ? "I'll lay this day out hour by hour when it comes, or ask me to plan it now." : 'Nothing planned for this day yet.'}
+            {t(dayTasks.length ? 'laterDayHint' : 'laterDayEmpty')}
           </p>
         </>
       )}
@@ -120,13 +126,13 @@ export function Timetable() {
       {notPlaced.length > 0 && (
         <div className="mt-7">
           <h3 className="m-0 mb-1 text-sm font-semibold text-mut">
-            {isToday ? `Doesn't fit before ${clock(endOfDayFor(plan, today))}` : `Doesn't fit on ${title}`}
+            {isToday ? t('noFitBefore', { end: clock(endOfDayFor(plan, today)) }) : t('noFitOn', { day: title })}
           </h3>
-          <ul className="m-0 list-none p-0" aria-label={isToday ? "Doesn't fit today" : `Doesn't fit on ${title}`}>
-            {notPlaced.map((t) => (
-              <li key={t.id} className="my-1.5 flex items-center justify-between rounded-xl border border-dashed px-4 py-2.5 text-mut">
-                <span>{t.title}</span>
-                <span className="text-[13px]">{formatDuration(t.durationMin)}</span>
+          <ul className="m-0 list-none p-0" aria-label={isToday ? t('noFitToday') : t('noFitOn', { day: title })}>
+            {notPlaced.map((task) => (
+              <li key={task.id} className="my-1.5 flex items-center justify-between rounded-xl border border-dashed px-4 py-2.5 text-mut">
+                <span>{taskTitle(task, t)}</span>
+                <span className="text-[13px]">{t.fmt.duration(task.durationMin)}</span>
               </li>
             ))}
           </ul>

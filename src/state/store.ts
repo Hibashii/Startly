@@ -5,10 +5,11 @@ import type { Block, ChatMessage, Plan, Settings, Task, Window } from '@/types'
 import { askStartly, buildContext } from '@/lib/api'
 import { clock, clockOf, dateKey, now, roundUp5, toHHMM, toMin, useNow } from '@/lib/time'
 import { applyActions, type AnyAction, type ApplyResult } from '@/scheduler/applyActions'
-import { dayName, dayOf, plusDays } from '@/scheduler/days'
+import { dayOf, plusDays } from '@/scheduler/days'
 import { dayComplete } from '@/scheduler/now'
 import { addItem, dropItem, greeting, leftovers, morningQuestion } from '@/scheduler/morning'
-import { CELEBRATIONS, cheerLine, pick } from '@/lib/messages'
+import { cheerStage, pickCelebration, pickCheer } from '@/lib/messages'
+import { detectLang, msg, nameOf, translate, type Lang, type Text } from '@/i18n'
 import { diffToday, toastText } from '@/scheduler/diff'
 import { findQuestion, measureAnswer, type QuestionOption } from '@/scheduler/questions'
 import { endOfDayFor, reshuffleToday } from '@/scheduler/schedule'
@@ -20,7 +21,7 @@ export interface Pending {
   kind?: 'morning' // the morning question about yesterday's unchecked tasks
   choose?: { id: string; title: string; partIds: string[] }[]
   reaskMorning?: boolean // it interrupted the morning question: ask that again once this is answered
-  question: string
+  question: Text
   options: QuestionOption[]
   base: { actions: AnyAction[]; order: string[] | null } // the change that raised the question
 }
@@ -48,10 +49,10 @@ interface Ui {
   /** Which day the timetable shows, and whether the week strip is open. */
   selectedDate: string | null // null = today
   weekOpen: boolean
-  /** Every task of the day is checked: confetti and a message. */
-  celebration: { message: string; quote: string } | null
-  /** The cheer after checking a task: a line that follows your progress, and how far along the day is. */
-  cheer: { id: number; line: string; done: number; total: number } | null
+  /** Every task of the day is checked: confetti and a message (which one: i). */
+  celebration: { i: number } | null
+  /** The cheer after checking a task: a line that follows your progress through the day. */
+  cheer: { id: number; line: Text } | null
   /** List (default) or an hour grid like a calendar day view. */
   view: 'list' | 'grid'
 }
@@ -71,10 +72,11 @@ interface Actions {
   morningReset: () => void
   /** Empty the conversation (the plan stays). */
   clearChat: () => void
-  /** Delete everything and go back to the first screen (color and mode stay). */
+  /** Delete everything and go back to the first screen (your preferences stay). */
   startFresh: () => void
   /** "Choose": add the picked tasks to today, drop the rest. */
   answerChoose: (keepIds: string[]) => void
+  setLang: (lang: Lang) => void
   setAccent: (accent: Settings['accent']) => void
   setTheme: (theme: 'light' | 'dark') => void
   setView: (view: 'list' | 'grid') => void
@@ -89,7 +91,7 @@ const fresh = (): Persisted => ({
   tasks: [],
   blocks: {},
   availability: {},
-  settings: { accent: 'iris', theme: null, endOfDay: '23:00' },
+  settings: { lang: detectLang(), accent: 'iris', theme: null, endOfDay: '23:00' },
   dayEnds: {},
   chat: { date: dateKey(now()), messages: [] },
   pending: null,
@@ -108,7 +110,7 @@ export const planOf = (s: Persisted): Plan => ({
 })
 
 /** Show a question as closed in the chat (answered, skipped or expired). */
-const closeQuestion = (messages: ChatMessage[], pendingId: string, answered: string) =>
+const closeQuestion = (messages: ChatMessage[], pendingId: string, answered: Text) =>
   messages.map((m) => (m.question?.pendingId === pendingId ? { ...m, question: { ...m.question, answered } } : m))
 
 
@@ -122,21 +124,28 @@ export const useStore = create<Store>()(
         return { at, ...dayOf(at, planOf(get())) }
       }
 
+      /** Words for a toast, in the app's language at the moment it shows. */
+      const say = (text: Text) => toast(translate(get().settings.lang, text))
+
       /**
-       * Apply a change, or ask first when it creates a real tradeoff.
-       * Returns the message Startly adds to the chat (its reply + code-written notes or a question).
+       * Apply a change, or ask first when it creates a real tradeoff, and add Startly's message to the chat:
+       * its reply (the AI's own words, or a code-written one) plus code-written notes or a question.
        */
-      function commit(prev: Plan, actions: AnyAction[], order: string[] | null, replyText: string) {
+      function commit(prev: Plan, actions: AnyAction[], order: string[] | null, replyIn: string | Text) {
         const { today, nowMin } = clockNow()
         const run = (extra: AnyAction[] = []): ApplyResult => applyActions(prev, [...actions, ...extra], today, nowMin, order)
         const result = run()
-        const reply: ChatMessage = { id: mid(), role: 'assistant', text: replyText }
         const changed = result.applied > 0
+        // Nothing changed although actions came: Startly says it didn't understand (instead of the AI's reply).
+        const misunderstood = !changed && actions.some((a) => a.type !== 'resolve_pending')
+        const reply: ChatMessage =
+          misunderstood ? { id: mid(), role: 'assistant', content: msg('didntGet') }
+          : typeof replyIn === 'string' ? { id: mid(), role: 'assistant', text: replyIn }
+          : { id: mid(), role: 'assistant', content: replyIn }
 
         if (!changed) {
-          // Nothing changed: an open question stays open ("how late is that?" doesn't answer it).
-          if (actions.some((a) => a.type !== 'resolve_pending')) reply.text = "Sorry, I didn't quite get that. Could you say it another way?"
-          else if (actions.length) reply.text = `${replyText}\n\nYou can answer with the buttons above.`
+          // An open question stays open ("how late is that?" doesn't answer it).
+          if (!misunderstood && actions.length) reply.notes = [msg('answerWithButtons')]
           set((cur) => ({ chat: { ...cur.chat, messages: [...cur.chat.messages, reply] } }))
           return
         }
@@ -144,7 +153,7 @@ export const useStore = create<Store>()(
         // The morning question stays open, though, unless a new question takes its place (then it's asked again after).
         const open = get().pending
         const morningOpen = open?.kind === 'morning'
-        let skipOpen = (messages: ChatMessage[]) => (open && !morningOpen ? closeQuestion(messages, open.id, 'skipped (you changed something else)') : messages)
+        let skipOpen = (messages: ChatMessage[]) => (open && !morningOpen ? closeQuestion(messages, open.id, msg('questionSkipped')) : messages)
 
         const question = findQuestion(prev, result, today, run)
         let pending: Pending | null = null
@@ -152,7 +161,7 @@ export const useStore = create<Store>()(
           // Blocking: nothing changes until an answer is picked. Otherwise the change applies now and the answer acts on top.
           const base = question.blocking ? { actions, order } : { actions: [], order: null }
           pending = { id: mid(), date: today, question: question.text, options: question.options, base, reaskMorning: morningOpen || open?.reaskMorning }
-          if (morningOpen) skipOpen = (messages) => closeQuestion(messages, open!.id, 'later')
+          if (morningOpen) skipOpen = (messages) => closeQuestion(messages, open!.id, msg('questionLater'))
           reply.question = { pendingId: pending.id, text: question.text, options: question.options.map(({ id, label }) => ({ id, label })) }
           if (question.blocking) {
             set((cur) => ({ pending, chatOpen: true, chat: { ...cur.chat, messages: [...skipOpen(cur.chat.messages), reply] } }))
@@ -162,30 +171,29 @@ export const useStore = create<Store>()(
 
         // Written by code from the actual change, so it's always accurate.
         const next = result.plan
-        const title = (id: string) => next.tasks.find((t) => t.id === id)?.title ?? ''
+        const title = (id: string) => nameOf(next.tasks.find((t) => t.id === id) ?? { title: '' })
         const diff = diffToday(prev.tasks, next.tasks, today)
         const wasUnplaced = new Set(prev.tasks.filter((t) => t.kind === 'task' && t.date === null).map((t) => t.id))
         const newlyUnplaced = result.unplaced.filter((id) => !wasUnplaced.has(id))
-        const notes: string[] = []
-        if (diff.removed.length) notes.push(`Removed: ${diff.removed.join(', ')}.`)
+        const notes: Text[] = []
+        if (diff.removed.length) notes.push(msg('noteRemoved', { items: diff.removed }))
         for (const m of result.movedLater) {
           const t = next.tasks.find((x) => x.id === m.id)!
-          notes.push(`Put '${t.title}' on ${dayName(m.date)}, since it's due ${dayName(t.deadline!)}.`)
+          notes.push(msg('notePutOn', { title: nameOf(t), date: m.date, due: t.deadline! }))
         }
         const askDays = [...new Set([...result.needFreeTime.map((n) => n.date), ...result.unknownDays])]
         for (const d of askDays) {
-          const waiting = result.needFreeTime.filter((n) => n.date === d).map((n) => `'${title(n.id)}'`)
-          notes.push(`When are you free on ${dayName(d)}?${waiting.length ? ` I'd like to fit ${waiting.join(', ')} in before it's due.` : " Tell me and I'll plan it."}`)
+          notes.push(msg('noteWhenFree', { date: d, waiting: result.needFreeTime.filter((n) => n.date === d).map((n) => title(n.id)) }))
         }
         const laterNoFit = result.laterUnplaced.filter((u) => !prev.tasks.some((t) => t.id === u.id && t.date === u.date && !t.start && u.date in prev.blocks))
         for (const d of [...new Set(laterNoFit.map((u) => u.date))]) {
-          notes.push(`These don't fit on ${dayName(d)}: ${laterNoFit.filter((u) => u.date === d).map((u) => title(u.id)).join(', ')}.`)
+          notes.push(msg('noteNoFitOn', { date: d, items: laterNoFit.filter((u) => u.date === d).map((u) => title(u.id)) }))
         }
-        if (result.plannedDays.length) notes.push(`Planned ${result.plannedDays.map(dayName).join(', ')} hour by hour.`)
+        if (result.plannedDays.length) notes.push(msg('notePlanned', { dates: result.plannedDays }))
         // (The one Startly is asking about is covered by its question.)
         const unasked = newlyUnplaced.filter((id) => !pending?.options.some((o) => o.extra.some((a) => 'id' in a && a.id === id)))
-        if (unasked.length) notes.push(`These don't fit before ${clock(endOfDayFor(next, today))} today: ${unasked.map(title).join(', ')}.`)
-        const moved = diff.moved.filter((m) => m.to !== 'not today')
+        if (unasked.length) notes.push(msg('noteNoFitToday', { end: clock(endOfDayFor(next, today)), items: unasked.map(title) }))
+        const moved = diff.moved.filter((m) => m.to !== null)
         if (moved.length) reply.moved = moved
         if (notes.length) reply.notes = notes
 
@@ -202,7 +210,7 @@ export const useStore = create<Store>()(
           chat: { ...cur.chat, messages: [...skipOpen(cur.chat.messages), reply] },
         }))
         const note = firstPlan ? null : toastText(diff)
-        if (note) toast(note)
+        if (note) say(note)
         if (flash.length) setTimeout(() => set({ flash: [] }), 2600)
         if (firstPlan) setTimeout(() => set({ justPlanned: false }), 1500)
         if (!pending && open?.reaskMorning) askMorning(today, false)
@@ -213,24 +221,23 @@ export const useStore = create<Store>()(
         const s = get()
         const q = morningQuestion(leftovers(s.tasks, today), s.tasks, today)
         const hasPlan = s.tasks.some((t) => t.date === today || (t.date === null && t.status === 'todo'))
-        const text = greet ? greeting(at.getHours(), hasPlan, at.getDate()) : 'Back to the earlier question:'
         if (!q && !greet) return null
-        const msg: ChatMessage = { id: mid(), role: 'assistant', text }
+        const hello: ChatMessage = { id: mid(), role: 'assistant', content: greet ? greeting(at.getHours(), hasPlan, at.getDate()) : msg('backToEarlier') }
         let pending: Pending | null = null
         if (q) {
           pending = { id: mid(), date: today, kind: 'morning', question: q.text, options: q.options, base: { actions: [], order: null }, choose: q.choose }
-          msg.question = { pendingId: pending.id, text: q.text, options: q.options.map(({ id, label }) => ({ id, label })), choose: q.choose }
+          hello.question = { pendingId: pending.id, text: q.text, options: q.options.map(({ id, label }) => ({ id, label })), choose: q.choose }
         }
-        if (greet) set({ pending, chatOpen: !!pending || s.chatOpen, chat: { date: today, messages: [msg] } })
-        else set((cur) => ({ pending, chatOpen: true, chat: { ...cur.chat, messages: [...cur.chat.messages, msg] } }))
-        return msg
+        if (greet) set({ pending, chatOpen: !!pending || s.chatOpen, chat: { date: today, messages: [hello] } })
+        else set((cur) => ({ pending, chatOpen: true, chat: { ...cur.chat, messages: [...cur.chat.messages, hello] } }))
+        return hello
       }
 
       /** A question from an earlier day no longer makes sense ("tomorrow" has moved): close it. */
       function expireOldQuestion() {
         const p = get().pending
         if (p && p.date !== clockNow().today) {
-          set((cur) => ({ pending: null, chat: { ...cur.chat, messages: closeQuestion(cur.chat.messages, p.id, 'expired') } }))
+          set((cur) => ({ pending: null, chat: { ...cur.chat, messages: closeQuestion(cur.chat.messages, p.id, msg('questionExpired')) } }))
         }
       }
 
@@ -276,13 +283,14 @@ export const useStore = create<Store>()(
           if (moved.length) setTimeout(() => set({ flash: [] }), 2600)
           // Every time the day becomes complete (again), the finale.
           if (dayComplete(reshuffled.blocks[today] ?? [], tasks)) {
-            set({ celebration: pick(CELEBRATIONS), lastCelebratedDate: today, cheer: null })
+            set({ celebration: { i: pickCelebration() }, lastCelebratedDate: today, cheer: null })
           } else {
             // How far along today is: tasks and appointments on today's timetable.
             const ids = new Set((reshuffled.blocks[today] ?? []).filter((b) => b.taskId).map((b) => b.taskId!))
             const todays = tasks.filter((t) => ids.has(t.id))
             const done = todays.filter((t) => t.status === 'done').length
-            const cheer = { id: Date.now(), line: cheerLine(done, todays.length), done, total: todays.length }
+            const stage = cheerStage(done, todays.length)
+            const cheer = { id: Date.now(), line: msg('cheer', { stage, i: pickCheer(stage) }) }
             set({ cheer })
             setTimeout(() => get().cheer?.id === cheer.id && set({ cheer: null }), 2400)
           }
@@ -292,8 +300,10 @@ export const useStore = create<Store>()(
           const clean = title.trim()
           const task = get().tasks.find((t) => t.id === taskId)
           if (!task || !clean || clean === task.title) return
-          set((s) => ({ tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, title: clean } : t)) }))
-          toast('✓ Renamed')
+          // A split task is one task: all its parts take the new name.
+          const root = task.partOf ?? task.id
+          set((s) => ({ tasks: s.tasks.map((t) => (t.id === root || t.partOf === root ? { ...t, title: clean } : t)) }))
+          say(msg('toastRenamed'))
         },
 
         quick: (taskId, what) => {
@@ -301,13 +311,13 @@ export const useStore = create<Store>()(
           const task = get().tasks.find((t) => t.id === taskId)
           if (!task || get().thinking) return
           const tomorrow = plusDays(today, 1)
-          const [actions, text]: [AnyAction[], string] =
+          const [actions, reply]: [AnyAction[], Text] =
             what === 'more'
-              ? [[{ type: 'extend_task', id: taskId, extraMin: 30 }], `Added 30 min to '${task.title}'.`]
+              ? [[{ type: 'extend_task', id: taskId, extraMin: 30 }], msg('addedMore', { title: nameOf(task) })]
               : what === 'notStarted'
-                ? [[{ type: 'started_at', id: taskId, start: toHHMM(Math.floor(toMin(clockOf(at)) / 5) * 5), remainingMin: null }], `OK, '${task.title}' starts now.`]
-                : [[{ type: 'move_to_day', id: taskId, date: tomorrow }], `Moved '${task.title}' to ${dayName(tomorrow)}.`]
-          commit(planOf(get()), actions, null, text)
+                ? [[{ type: 'started_at', id: taskId, start: toHHMM(Math.floor(toMin(clockOf(at)) / 5) * 5), remainingMin: null }], msg('startsNow', { title: nameOf(task) })]
+                : [[{ type: 'move_to_day', id: taskId, date: tomorrow }], msg('movedTo', { title: nameOf(task), date: tomorrow })]
+          commit(planOf(get()), actions, null, reply)
         },
 
         closeCelebration: () => set({ celebration: null }),
@@ -329,14 +339,14 @@ export const useStore = create<Store>()(
 
         clearChat: () => {
           set((s) => ({ pending: null, failed: null, chat: { ...s.chat, messages: [] } }))
-          toast('✓ Chat cleared')
+          say(msg('toastChatCleared'))
         },
 
         startFresh: () => {
           const { settings } = get()
           set({
             ...fresh(),
-            // Your preferences stay: color, mode, usual end of day, break rule.
+            // Your preferences stay: language, color, mode, usual end of day, break rule.
             settings: { ...settings },
             chatOpen: false,
             weekOpen: false,
@@ -354,10 +364,11 @@ export const useStore = create<Store>()(
           const { today } = clockNow()
           const keep = new Set(keepIds)
           const extra: AnyAction[] = p.choose.flatMap((item): AnyAction[] => (keep.has(item.id) ? [addItem(item, today)] : dropItem(item)))
-          set((cur) => ({ pending: null, chat: { ...cur.chat, messages: closeQuestion(cur.chat.messages, p.id, `${keep.size} added`) } }))
-          commit(planOf(get()), extra, null, keep.size ? 'Added to today.' : 'Dropped them.')
+          set((cur) => ({ pending: null, chat: { ...cur.chat, messages: closeQuestion(cur.chat.messages, p.id, msg('nAdded', { n: keep.size })) } }))
+          commit(planOf(get()), extra, null, msg(keep.size ? 'addedToToday' : 'droppedThem'))
         },
 
+        setLang: (lang) => set((s) => ({ settings: { ...s.settings, lang } })),
         setAccent: (accent) => set((s) => ({ settings: { ...s.settings, accent } })),
         setTheme: (theme) => set((s) => ({ settings: { ...s.settings, theme } })),
         setView: (view) => set({ view }),
@@ -375,7 +386,11 @@ export const useStore = create<Store>()(
 
           const { at } = clockNow()
           // "Choose" is only the checkbox button: the AI can't pick it.
-          const pendingForAi = s.pending && { question: s.pending.question, options: s.pending.options.filter((o) => o.id !== 'choose').map(({ id, label }) => ({ id, label })) }
+          const words = (x: Text) => translate(s.settings.lang, x)
+          const pendingForAi = s.pending && {
+            question: words(s.pending.question),
+            options: s.pending.options.filter((o) => o.id !== 'choose').map(({ id, label }) => ({ id, label: words(label) })),
+          }
           const res = await askStartly(text, buildContext(planOf(s), s.chat.messages, pendingForAi, at))
           if (!res.ok) {
             // Leave the plan untouched; take the message back out so it can be retried.
@@ -411,13 +426,13 @@ export const useStore = create<Store>()(
           const { today, nowMin } = clockNow()
           const prev = planOf(get())
           const simulate = (extra: AnyAction[]) => applyActions(prev, [...p.base.actions, ...extra], today, nowMin, p.base.order)
-          commit(prev, [...p.base.actions, ...measureAnswer(option.extra, today, simulate)], p.base.order, `${option.label}.`)
+          commit(prev, [...p.base.actions, ...measureAnswer(option.extra, today, simulate)], p.base.order, option.label)
         },
       }
     },
     {
       name: 'startly-v1',
-      version: 1,
+      version: 2,
       partialize: (s): Persisted => ({
         tasks: s.tasks,
         blocks: s.blocks,
@@ -430,16 +445,38 @@ export const useStore = create<Store>()(
       }),
       // Older saves may miss newer fields.
       merge: (saved, current) => ({ ...current, ...(saved as Partial<Persisted>), dayEnds: (saved as Partial<Persisted>)?.dayEnds ?? {} }),
-      // Saved data from an unknown version starts fresh instead of crashing.
-      migrate: () => fresh(),
+      migrate: (saved, version) => (version === 1 ? fromV1(saved) : fresh()), // anything unknown starts fresh
     },
   ),
 )
+
+/**
+ * v1 → v2: chat messages became language-free data, so the old chat is cleared; the plan is kept.
+ * Every field falls back to a safe default, so a damaged save can't break the scheduler.
+ */
+function fromV1(saved: unknown): Persisted {
+  const base = fresh()
+  if (!saved || typeof saved !== 'object') return base
+  const old = saved as Partial<Persisted>
+  const tasks = Array.isArray(old.tasks)
+    ? old.tasks.map((t) => (t.partOf ? { ...t, title: t.title.replace(/ \(cont\.\)$/, '') } : t)) // "(cont.)" is now added on screen
+    : base.tasks
+  return {
+    ...base,
+    tasks,
+    blocks: old.blocks && typeof old.blocks === 'object' ? old.blocks : base.blocks,
+    availability: old.availability && typeof old.availability === 'object' ? old.availability : base.availability,
+    settings: { ...base.settings, ...(old.settings ?? {}), lang: detectLang() },
+    dayEnds: old.dayEnds && typeof old.dayEnds === 'object' ? old.dayEnds : base.dayEnds,
+    chat: { date: typeof old.chat?.date === 'string' ? old.chat.date : base.chat.date, messages: [] },
+    lastCelebratedDate: typeof old.lastCelebratedDate === 'string' ? old.lastCelebratedDate : null,
+  }
+}
 
 /** The planning day for components: a day running past midnight is still "today" until it ends. */
 export function useDay() {
   const at = useNow()
   const endOfDay = useStore((s) => s.settings.endOfDay)
   const dayEnds = useStore((s) => s.dayEnds)
-  return { at, ...dayOf(at, { tasks: [], blocks: {}, availability: {}, settings: { accent: 'iris', theme: null, endOfDay }, dayEnds }) }
+  return { at, ...dayOf(at, { settings: { endOfDay }, dayEnds }) }
 }

@@ -1,26 +1,30 @@
 import { useEffect, useRef, useState } from 'react'
 import { MoreHorizontal } from 'lucide-react'
 import type { Accent } from '@/types'
+import { LANGS, type Lang } from '@/i18n'
+import { useT } from '@/i18n/useT'
 import { useStore } from '@/state/store'
 import { cn } from '@/lib/utils'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
 
 /** The "softer" palette: [light, dark] accent for each color. */
-export const ACCENTS: { id: Accent; name: string; light: string; dark: string }[] = [
-  { id: 'iris', name: 'Iris', light: '#5b5bd6', dark: '#a5a6ff' },
-  { id: 'ocean', name: 'Ocean', light: '#0e7490', dark: '#67d3e8' },
-  { id: 'sage', name: 'Sage', light: '#3f7d5c', dark: '#8fd1ac' },
-  { id: 'plum', name: 'Plum', light: '#8e4ec6', dark: '#d2a8ff' },
-  { id: 'coral', name: 'Coral', light: '#e5484d', dark: '#ff9592' },
-  { id: 'ink', name: 'Ink', light: '#18181b', dark: '#eeeeee' },
+export const ACCENTS: { id: Accent; light: string; dark: string }[] = [
+  { id: 'iris', light: '#5b5bd6', dark: '#a5a6ff' },
+  { id: 'ocean', light: '#0e7490', dark: '#67d3e8' },
+  { id: 'sage', light: '#3f7d5c', dark: '#8fd1ac' },
+  { id: 'plum', light: '#8e4ec6', dark: '#d2a8ff' },
+  { id: 'coral', light: '#e5484d', dark: '#ff9592' },
+  { id: 'ink', light: '#18181b', dark: '#eeeeee' },
 ]
 
-/** ⋯ in the top bar: the accent color and Light / Dark. Both are remembered. */
+/** ⋯ in the top bar: language, accent color and Light / Dark, all remembered; and Start fresh. */
 export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
   const accent = useStore((s) => s.settings.accent)
   const setAccent = useStore((s) => s.setAccent)
   const setTheme = useStore((s) => s.setTheme)
   const startFresh = useStore((s) => s.startFresh)
+  const setLang = useStore((s) => s.setLang)
+  const t = useT()
   const [open, setOpen] = useState(false)
   const [confirm, setConfirm] = useState(false)
   const root = useRef<HTMLDivElement>(null)
@@ -39,13 +43,12 @@ export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
   }, [open, confirm])
 
   const dark = theme === 'dark'
-  const current = ACCENTS.find((a) => a.id === accent)!
 
   return (
     <div ref={root} className="relative">
       <button
         type="button"
-        aria-label="Settings"
+        aria-label={t('settings')}
         aria-expanded={open}
         aria-haspopup="dialog"
         onClick={() => setOpen(!open)}
@@ -56,19 +59,34 @@ export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
       {open && (
         <div
           role="dialog"
-          aria-label="Settings"
-          className="menu-in absolute top-[46px] right-0 z-30 w-[260px] origin-top-right rounded-2xl border bg-card p-3.5 shadow-soft"
+          aria-label={t('settings')}
+          className="menu-in absolute top-[46px] end-0 z-30 w-[260px] origin-top-right rounded-2xl border bg-card p-3.5 shadow-soft rtl:origin-top-left"
         >
-          <h4 className="m-0 mb-2.5 text-[13px] font-semibold">Color</h4>
-          <div className="grid grid-cols-6 gap-2" role="radiogroup" aria-label="Color">
+          <label className="flex items-center justify-between gap-3">
+            <span className="text-[13px] font-semibold">{t('language')}</span>
+            <select
+              value={t.lang}
+              onChange={(e) => setLang(e.target.value as Lang)}
+              aria-label={t('language')}
+              className="cursor-pointer rounded-lg border bg-card px-2 py-1 text-[13px] text-ink"
+            >
+              {LANGS.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <h4 className="m-0 mt-3.5 mb-2.5 border-t pt-3 text-[13px] font-semibold">{t('color')}</h4>
+          <div className="grid grid-cols-6 gap-2" role="radiogroup" aria-label={t('color')}>
             {ACCENTS.map((a) => (
               <button
                 key={a.id}
                 type="button"
                 role="radio"
                 aria-checked={a.id === accent}
-                aria-label={a.name}
-                title={a.name}
+                aria-label={t('accent', { accent: a.id })}
+                title={t('accent', { accent: a.id })}
                 onClick={() => setAccent(a.id)}
                 className={cn(
                   'press size-[30px] cursor-pointer rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)]',
@@ -78,14 +96,15 @@ export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
               />
             ))}
           </div>
-          <p className="mt-2 mb-0 text-xs text-mut">{current.name} · Startly remembers your choice.</p>
+          <p className="mt-2 mb-0 text-xs text-mut">{t('remembers', { name: t('accent', { accent }) })}</p>
           <div className="mt-3.5 flex items-center justify-between border-t pt-3">
-            <span className="text-[13px] font-semibold">Dark mode</span>
+            <span className="text-[13px] font-semibold">{t('darkMode')}</span>
             <button
               type="button"
               role="switch"
               aria-checked={dark}
-              aria-label="Dark mode"
+              aria-label={t('darkMode')}
+              dir="ltr"
               onClick={() => setTheme(dark ? 'light' : 'dark')}
               className={cn('relative h-6 w-10 cursor-pointer rounded-full bg-line transition-colors', dark && 'bg-acc')}
             >
@@ -96,22 +115,20 @@ export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
             <button
               type="button"
               onClick={() => setConfirm(true)}
-              className="-mx-2 w-[calc(100%+1rem)] cursor-pointer rounded-lg px-2 py-1.5 text-left text-[13px] font-semibold text-[#c4363b] hover:bg-blk dark:text-[#ff9592]"
+              className="-mx-2 w-[calc(100%+1rem)] cursor-pointer rounded-lg px-2 py-1.5 text-start text-[13px] font-semibold text-[#c4363b] hover:bg-blk dark:text-[#ff9592]"
             >
-              Start fresh…
+              {t('startFresh')}
             </button>
           </div>
         </div>
       )}
       <Dialog open={confirm} onOpenChange={setConfirm}>
         <DialogContent showCloseButton={false} className="max-w-[380px] rounded-[20px] border bg-card p-6 text-ink">
-          <DialogTitle className="text-[18px] font-bold">Start fresh?</DialogTitle>
-          <DialogDescription className="text-[14.5px] text-mut">
-            This deletes your plan, your chat and your free times, and takes you back to the first screen. Your preferences stay (color, mode, end of day, breaks). It can't be undone.
-          </DialogDescription>
+          <DialogTitle className="text-start text-[18px] font-bold">{t('startFreshTitle')}</DialogTitle>
+          <DialogDescription className="text-start text-[14.5px] text-mut">{t('startFreshBody')}</DialogDescription>
           <div className="mt-2 flex justify-end gap-2">
             <button type="button" onClick={() => setConfirm(false)} className="press cursor-pointer rounded-full border px-4 py-2 text-sm font-medium hover:bg-blk">
-              Cancel
+              {t('cancel')}
             </button>
             <button
               type="button"
@@ -122,7 +139,7 @@ export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
               }}
               className="press cursor-pointer rounded-full bg-[#e5484d] px-4 py-2 text-sm font-semibold text-white"
             >
-              Delete everything
+              {t('deleteEverything')}
             </button>
           </div>
         </DialogContent>

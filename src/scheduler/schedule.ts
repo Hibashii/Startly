@@ -227,7 +227,8 @@ export interface ReshuffleResult {
 }
 
 /** Today's end: a one-day "keep it, I'll stay later" override, else the usual end of day. */
-export const endOfDayFor = (plan: Plan, date: string) => plan.dayEnds?.[date] ?? plan.settings.endOfDay
+export type DayEnds = { settings: { endOfDay: string }; dayEnds?: Record<string, string> }
+export const endOfDayFor = (plan: DayEnds, date: string) => plan.dayEnds?.[date] ?? plan.settings.endOfDay
 
 /** Re-place today from `fromMin` (now) to the end of the day and write the result back into the plan. */
 export function reshuffleToday(plan: Plan, today: string, fromMin: number): ReshuffleResult {

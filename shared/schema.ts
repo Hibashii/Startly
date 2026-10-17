@@ -93,6 +93,7 @@ export const AssistantContext = z.object({
   pending: z.unknown().nullable(),
   timetable: z.array(z.string()).describe("today's timetable as the app placed it, e.g. \"19:55-20:55 Prepare for interview\", \"20:55-21:10 break\""),
   breaks: z.object({ afterMin: z.number(), lengthMin: z.number() }),
+  language: z.string().describe("the app's language (en, fr, es, de, nl, ar): reply in the language the user writes in; if unclear, in this one"),
   recentMessages: z.array(z.object({ role: z.enum(['user', 'assistant']), text: z.string() })),
 })
 export type AssistantContext = z.infer<typeof AssistantContext>

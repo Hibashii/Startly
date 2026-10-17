@@ -84,7 +84,7 @@ Build mode: fast — the learner asked to be shown each checkpoint only after te
 - [x] Breaks: the AI sees today's real timetable (`context.timetable`) and can change the break rule in plain words (`set_breaks`, default now a break after ~60 min) — it had promised a break the code never placed
 - [x] The finale plays every time the day becomes complete (not once per day); the cheer no longer shows a count; it stays at the bottom (doesn't cover the timetable)
 - [x] Things that don't fit: one question about all of them with "Stay until 01:35 / Sunday / Drop them"; Start fresh keeps preferences (end of day, breaks) — it had reset her 1 am end to 23:00
-- [ ] Languages (French, Arabic, Spanish, German, Dutch): cost explained, waiting for the learner's decision
+- [x] Languages (French, Arabic with right-to-left, Spanish, German, Dutch): typed dictionaries, language-free messages in the logic, Intl formatting, a store migration v1 → v2; reviewed for architecture
 - [ ] Final review complete — feedback resolved and learner confirms ready to ship
 
 ## Code Tour and App Map
@@ -120,3 +120,4 @@ Activity mode:
 - "Today" is the planning day, not the calendar date: a day that runs past midnight (e.g. until 1 am) stays the same day until it ends (`dayOf`) — found by review: at 00:05 the app reset and called the 00:15 task a leftover.
 - Discipline nudges only on a late start of a packed day, never on a light evening — the real model nudged on a light evening.
 - The AI now receives today's actual timetable and the break rule; breaks became a setting the AI can change (`set_breaks`), default after ~60 min — in the final review the AI promised a break that the code (90-min rule) never placed.
+- Internationalization (6 languages, Arabic RTL) added in the final review at the learner's request: logic now returns message keys + data instead of English text, split tasks keep their plain name (the screen adds "(cont.)" per language), and saved data migrates from v1 to v2 (old chat cleared, plan kept).

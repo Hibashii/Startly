@@ -1,9 +1,11 @@
 import { format } from 'date-fns'
+import { useT } from '@/i18n/useT'
+import { longDate } from '@/i18n'
 import { ChevronDown } from 'lucide-react'
 import { Avatar } from './Avatar'
 import { SettingsMenu } from './SettingsMenu'
 import { useStore } from '@/state/store'
-import { useNow } from '@/lib/time'
+import { dateKey, useNow } from '@/lib/time'
 import { cn } from '@/lib/utils'
 
 export function TopBar({ main, theme }: { main: boolean; theme: 'light' | 'dark' }) {
@@ -12,6 +14,7 @@ export function TopBar({ main, theme }: { main: boolean; theme: 'light' | 'dark'
   const weekOpen = useStore((s) => s.weekOpen)
   const setWeekOpen = useStore((s) => s.setWeekOpen)
   const at = useNow()
+  const t = useT()
 
   return (
     <header className="relative z-10 grid h-[60px] flex-none grid-cols-[1fr_auto_1fr] items-center border-b bg-bg px-[22px]">
@@ -24,11 +27,11 @@ export function TopBar({ main, theme }: { main: boolean; theme: 'light' | 'dark'
           type="button"
           onClick={() => setWeekOpen(!weekOpen)}
           aria-expanded={weekOpen}
-          aria-label={`${format(at, 'EEEE d MMMM')}: ${weekOpen ? 'hide' : 'show'} the week`}
+          aria-label={t('weekToggle', { date: dateKey(at), open: weekOpen })}
           className="press flex cursor-pointer items-baseline gap-2 rounded-[10px] px-3 py-1.5 font-semibold hover:bg-blk"
         >
-          {format(at, 'EEEE, d MMMM')}
-          <small className="text-[13px] font-normal text-mut">{format(at, 'HH:mm')}</small>
+          {longDate(t.lang, at)}
+          <small className="text-[13px] font-normal text-mut" dir="ltr">{format(at, 'HH:mm')}</small>
           <ChevronDown className={cn('size-3.5 self-center text-mut transition-transform', weekOpen && 'rotate-180')} />
         </button>
       ) : (
@@ -42,12 +45,12 @@ export function TopBar({ main, theme }: { main: boolean; theme: 'light' | 'dark'
             aria-pressed={chatOpen}
             onClick={() => setChatOpen(!chatOpen)}
             className={cn(
-              'flex cursor-pointer items-center gap-2 rounded-full border bg-card py-1 pr-3.5 pl-1 text-sm font-semibold text-ink',
+              'flex cursor-pointer items-center gap-2 rounded-full border bg-card py-1 pe-3.5 ps-1 text-sm font-semibold text-ink',
               chatOpen && 'border-transparent bg-tint text-tinti',
             )}
           >
             <Avatar />
-            Ask Startly
+            {t('askStartly')}
           </button>
         )}
       </div>

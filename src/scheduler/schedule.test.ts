@@ -18,7 +18,7 @@ function fixed(title: string, start: string, end: string, date = TODAY): Task {
   return task(title, toMin(end) - toMin(start), { kind: 'fixed', start, date, priority: 'high' })
 }
 function emptyPlan(tasks: Task[]): Plan {
-  return { tasks, blocks: {}, availability: {}, settings: { accent: 'iris', theme: null, endOfDay: '23:00' } }
+  return { tasks, blocks: {}, availability: {}, settings: { lang: 'en', accent: 'iris', theme: null, endOfDay: '23:00' } }
 }
 function day(tasks: Task[], from = '09:00', prevBlocks: Block[] = []) {
   return scheduleDay({

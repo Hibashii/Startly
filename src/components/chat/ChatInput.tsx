@@ -1,10 +1,12 @@
 import { useState, type FormEvent, type KeyboardEvent } from 'react'
 import { ArrowUp } from 'lucide-react'
 import { useStore } from '@/state/store'
+import { useT } from '@/i18n/useT'
 
 export function ChatInput() {
   const send = useStore((s) => s.send)
   const thinking = useStore((s) => s.thinking)
+  const t = useT()
   const [text, setText] = useState('')
 
   async function submit(e?: FormEvent) {
@@ -22,7 +24,7 @@ export function ChatInput() {
   return (
     <form
       onSubmit={submit}
-      className="mx-3.5 mb-3.5 flex min-w-[280px] items-end gap-2.5 rounded-[26px] border bg-card py-[7px] pr-[7px] pl-[18px] shadow-soft"
+      className="mx-3.5 mb-3.5 flex min-w-[280px] items-end gap-2.5 rounded-[26px] border bg-card py-[7px] pe-[7px] ps-[18px] shadow-soft"
     >
       <textarea
         rows={1}
@@ -30,13 +32,14 @@ export function ChatInput() {
         value={text}
         onChange={(e) => setText(e.target.value)}
         onKeyDown={onKeyDown}
-        aria-label="Message Startly"
-        placeholder="Message Startly…"
+        aria-label={t('messageLabel')}
+        placeholder={t('messagePlaceholder')}
+        dir="auto"
         className="field-sizing-content max-h-40 min-h-[34px] flex-1 resize-none bg-transparent py-[7px] text-[14.5px] text-ink outline-none placeholder:text-mut"
       />
       <button
         type="submit"
-        aria-label="Send"
+        aria-label={t('send')}
         disabled={!text.trim() || thinking}
         className="grid size-[34px] flex-none cursor-pointer place-items-center rounded-full bg-acc text-accink disabled:cursor-default disabled:opacity-40"
       >

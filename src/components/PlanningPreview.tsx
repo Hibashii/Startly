@@ -1,19 +1,15 @@
 import { useEffect, useState } from 'react'
 import { Avatar } from './Avatar'
+import { useT } from '@/i18n/useT'
 
-const STEPS = [
-  'Reading your list…',
-  'Spotting fixed times…',
-  'Choosing a good order…',
-  'Adding lunch and breaks…',
-  'Building your timetable…',
-]
+const STEPS = ['planning1', 'planning2', 'planning3', 'planning4', 'planning5'] as const
 
 // Ghost rows: [width of the name, is it a break]
 const GHOSTS: [string, boolean][] = [['46%', false], ['20%', true], ['58%', false], ['34%', false], ['20%', true], ['40%', false]]
 
 /** Shown while Startly plans the first day: what it's doing, and a timetable assembling itself. */
 export function PlanningPreview({ dump }: { dump: string }) {
+  const t = useT()
   const [step, setStep] = useState(0)
   useEffect(() => {
     const id = setInterval(() => setStep((s) => Math.min(s + 1, STEPS.length - 1)), 1100)
@@ -21,13 +17,13 @@ export function PlanningPreview({ dump }: { dump: string }) {
   }, [])
 
   return (
-    <div className="planning w-full max-w-[720px] text-left" role="status" aria-live="polite">
+    <div className="planning w-full max-w-[720px] text-start" role="status" aria-live="polite">
       <p className="m-0 line-clamp-3 rounded-[20px] border bg-card px-5 py-3.5 text-[15px] text-mut shadow-soft">{dump}</p>
 
       <div className="mt-6 flex items-center gap-3">
         <Avatar className="breathe size-9" />
         <span key={step} className="status-line text-[15.5px] font-medium">
-          {STEPS[step]}
+          {t(STEPS[step])}
         </span>
       </div>
 

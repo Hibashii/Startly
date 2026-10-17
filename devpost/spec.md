@@ -164,6 +164,9 @@ PRD ref: `prd.md > The Settings Menu`.
 On app load (and when the tab gets focus again), if `chat.date ≠ today`, the chat is cleared and a **Good morning** greeting is added (code template, picked from a few variants, no AI call). If tasks from earlier days are unchecked, the greeting lists them with **Add both / Choose / Drop them**. *Choose* shows a checkbox per task in the message. The plan is kept, and today's blocks are re-placed from its availability.
 PRD ref: `prd.md > The Assistant Chat`, `prd.md > States and Boundaries`.
 
+### Languages (i18n)
+`src/i18n/`: one dictionary per language (`en.ts` is the source of truth; `fr/es/de/nl/ar.ts` are typed `Dict`, so a missing or mismatched message is a build error). Logic code (scheduler, store) returns language-free `Text` = `{ k: messageKey, p: params }` via `msg()`; only the UI turns it into words (`useT()` / `translate()`), so a language switch re-renders the chat history too. `format.ts` uses `Intl` for weekdays, dates, lists, quotes and durations (Latin digits in Arabic). `<html lang dir>` is set from `settings.lang`; layout uses logical start/end classes so Arabic mirrors; time ranges are isolated left-to-right. The AI receives `context.language` and replies in the user's language. Message keys are saved in chats, so renaming one needs a store migration (store v1 → v2 cleared the old chat).
+
 ## Data Model
 Everything lives in **one Zustand store, saved to localStorage** under the key `startly-v1` (with a version number so the format can change later). Times are **local**: dates as `"YYYY-MM-DD"`, times as `"HH:MM"`.
 
@@ -196,7 +199,7 @@ interface AppState {
   tasks: Task[]
   blocks: Record<string, Block[]>          // by date
   availability: Record<string, { start: string; end: string }[]> // by date or "mon".."sun"
-  settings: { accent: Accent; theme: 'light' | 'dark' | null; endOfDay: string /* "23:00"; past midnight = "25:00" */ }
+  settings: { lang: Lang; accent: Accent; theme: 'light' | 'dark' | null; endOfDay: string /* "23:00"; past midnight = "25:00" */; breaks?: { afterMin; lengthMin } }
   chat: { date: string; messages: ChatMessage[] }
   pending: { proposal: Partial<AppState>; question: string; options: Option[] } | null
   lastCelebratedDate: string | null

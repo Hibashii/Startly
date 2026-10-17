@@ -1,18 +1,18 @@
 import type { Task } from '@/types'
-import { shortDay } from './days'
+import { msg, nameOf, type Name, type Text } from '@/i18n'
 
 export interface Moved {
   id: string
-  title: string
+  title: Name
   from: string // "HH:MM"
-  to: string // "HH:MM", or a short label like "not today"
+  to: string | null // "HH:MM", a later date "YYYY-MM-DD", or null (not today)
 }
 
 export interface Diff {
   moved: Moved[]
-  added: string[]
+  added: Name[]
   addedIds: string[]
-  removed: string[]
+  removed: Name[]
 }
 
 /** Compares today's tasks before and after a change. Written by code, so the summary is always accurate. */
@@ -20,38 +20,36 @@ export function diffToday(before: Task[], after: Task[], today: string): Diff {
   const prev = new Map(before.map((t) => [t.id, t]))
   const next = new Map(after.map((t) => [t.id, t]))
   const moved: Moved[] = []
-  const added: string[] = []
+  const added: Name[] = []
   const addedIds: string[] = []
 
   for (const t of after) {
     const old = prev.get(t.id)
     if (!old) {
       if (t.kind === 'task' || t.date === today) {
-        added.push(t.title)
+        added.push(nameOf(t))
         addedIds.push(t.id)
       }
       continue
     }
     const wasToday = old.date === today && old.start !== null
     const isToday = t.date === today && t.start !== null
-    if (wasToday && isToday && old.start !== t.start) moved.push({ id: t.id, title: t.title, from: old.start!, to: t.start! })
+    if (wasToday && isToday && old.start !== t.start) moved.push({ id: t.id, title: nameOf(t), from: old.start!, to: t.start! })
     else if (wasToday && !isToday) {
-      const to = t.date && t.date > today ? shortDay(t.date) : 'not today'
-      moved.push({ id: t.id, title: t.title, from: old.start!, to })
+      const to = t.date && t.date > today ? t.date : null
+      moved.push({ id: t.id, title: nameOf(t), from: old.start!, to })
     }
   }
-  const removed = before.filter((t) => !next.has(t.id)).map((t) => t.title)
+  const removed = before.filter((t) => !next.has(t.id)).map(nameOf)
   moved.sort((a, b) => (a.from < b.from ? -1 : 1))
   return { moved, added, addedIds, removed }
 }
 
-const plural = (n: number, word: string) => `${n} ${word}${n === 1 ? '' : 's'}`
-
 /** The short toast after a change, or null when nothing on the timetable changed. */
-export function toastText(d: Diff): string | null {
-  if (d.removed.length) return `✓ Removed ${d.removed.join(', ')}`
-  const shifted = d.moved.filter((m) => m.to !== 'not today').length
-  if (shifted) return `↻ Reshuffled ${plural(shifted, 'task')}`
-  if (d.added.length) return `✓ Added ${plural(d.added.length, 'task')}`
+export function toastText(d: Diff): Text | null {
+  if (d.removed.length) return msg('toastRemoved', { items: d.removed })
+  const shifted = d.moved.filter((m) => m.to !== null).length
+  if (shifted) return msg('toastReshuffled', { n: shifted })
+  if (d.added.length) return msg('toastAdded', { n: d.added.length })
   return null
 }

@@ -4,13 +4,22 @@ import type { Block, Plan, Task } from '@/types'
 import { toMin } from '@/lib/time'
 import { applyActions } from './applyActions'
 import { diffToday, toastText } from './diff'
+import { translate, type Text } from '@/i18n'
+/** What the user reads, in English. */
+const words = (x: Text | null | undefined) => (x ? translate('en', x) : x)
+
 
 const TODAY = '2026-10-17'
 const add = (title: string, durationMin: number): Action => ({
   type: 'add_task', title, durationMin, priority: 'medium', deadline: null, preferredStart: null, endBy: null, date: null,
 })
-const empty = (): Plan => ({ tasks: [], blocks: {}, availability: {}, settings: { accent: 'iris', theme: null, endOfDay: '23:00' } })
-const byTitle = (p: Plan, title: string) => p.tasks.find((t) => t.title === title)!
+const empty = (): Plan => ({ tasks: [], blocks: {}, availability: {}, settings: { lang: 'en', accent: 'iris', theme: null, endOfDay: '23:00' } })
+/** A task by name; "X (cont.)" finds the rest of a split task X (same name, marked as a part). */
+const byTitle = (p: Plan, title: string) =>
+  title.endsWith(' (cont.)')
+    ? p.tasks.find((t) => t.partOf && t.title === title.slice(0, -8))!
+    : p.tasks.find((t) => t.title === title && !t.partOf)!
+const hasCont = (tasks: Task[], title: string) => tasks.some((t) => t.partOf && t.title === title)
 function noOverlap(blocks: Block[]) {
   for (let i = 1; i < blocks.length; i++) expect(toMin(blocks[i].start)).toBeGreaterThanOrEqual(toMin(blocks[i - 1].end))
 }
@@ -40,7 +49,7 @@ describe('reshuffling from chat', () => {
     const d = diffToday(before.tasks, plan.tasks, TODAY)
     expect(d.moved.map((m) => m.title)).toEqual(expect.arrayContaining(['Hackathon', 'Gym', 'Review notes']))
     expect(d.moved.find((m) => m.title === 'Call with mentor')).toBeUndefined()
-    expect(toastText(d)).toBe(`↻ Reshuffled ${d.moved.length} tasks`)
+    expect(words(toastText(d))).toBe(`↻ Reshuffled ${d.moved.length} tasks`)
   })
 
   it('remove closes the gap', () => {
@@ -48,7 +57,7 @@ describe('reshuffling from chat', () => {
     const { plan } = applyActions(before, [{ type: 'remove_task', id: byTitle(before, 'Hackathon').id }], TODAY, toMin('14:00'))
     expect(plan.tasks.find((t) => t.title === 'Hackathon')).toBeUndefined()
     expect(byTitle(plan, 'Gym').start).toBe('14:00')
-    expect(toastText(diffToday(before.tasks, plan.tasks, TODAY))).toBe('✓ Removed Hackathon')
+    expect(words(toastText(diffToday(before.tasks, plan.tasks, TODAY)))).toBe('✓ Removed Hackathon')
   })
 
   it('extend_task makes the task longer and pushes the next one', () => {
@@ -197,13 +206,13 @@ describe('review fixes (slice 2)', () => {
   it('deleting a split task removes its continuation too', () => {
     const plan = splitDemo()
     const { plan: after } = applyActions(plan, [{ type: 'remove_task', id: byTitle(plan, 'Hack').id }], TODAY, toMin('16:10'))
-    expect(after.tasks.some((t) => t.title.startsWith('Hack'))).toBe(false)
+    expect(after.tasks.some((t) => t.title === 'Hack')).toBe(false)
   })
 
   it('"need more time" on a split task extends the latest part, not a new continuation', () => {
     const plan = splitDemo()
     const { plan: after } = applyActions(plan, [{ type: 'extend_task', id: byTitle(plan, 'Hack').id, extraMin: 30 }], TODAY, toMin('16:10'))
-    expect(after.tasks.filter((t) => t.title === 'Hack (cont.)')).toHaveLength(1)
+    expect(after.tasks.filter((t) => t.partOf && t.title === 'Hack')).toHaveLength(1)
     expect(at(after, 'Hack')).toBe('16:00+30')
     expect(at(after, 'Hack (cont.)')).toBe('17:00+120')
   })
@@ -341,9 +350,9 @@ describe('review fixes (slice 4)', () => {
   it('"→ Tomorrow" on a split task moves it as one task again, with its full remaining time', () => {
     const { plan: before } = applyActions(empty(), [add('A', 60)], TODAY, toMin('14:00'))
     const { plan: split } = applyActions(before, [{ type: 'add_fixed', title: 'Call', date: TODAY, start: '14:30', end: '15:00' }], TODAY, toMin('14:10'))
-    expect(split.tasks.some((x) => x.title === 'A (cont.)')).toBe(true)
+    expect(hasCont(split.tasks, 'A')).toBe(true)
     const { plan } = applyActions(split, [{ type: 'move_to_day', id: byTitle(split, 'A').id, date: '2026-10-18' }], TODAY, toMin('14:10'))
-    expect(plan.tasks.some((x) => x.title === 'A (cont.)')).toBe(false)
+    expect(hasCont(plan.tasks, 'A')).toBe(false)
     expect(byTitle(plan, 'A')).toMatchObject({ date: '2026-10-18', durationMin: 60 })
   })
 })

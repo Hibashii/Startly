@@ -4,8 +4,10 @@ import confetti from 'canvas-confetti'
 import type { Block, Task } from '@/types'
 import type { NowState } from '@/scheduler/now'
 import { useStore } from '@/state/store'
-import { clock, formatDuration, toMin } from '@/lib/time'
+import { clock, toMin } from '@/lib/time'
 import { cn } from '@/lib/utils'
+import { useT } from '@/i18n/useT'
+import { taskTitle } from './taskTitle'
 
 interface Props {
   block: Block
@@ -18,9 +20,10 @@ interface Props {
 export function TaskCard({ block, task, flash, enterDelay, now }: Props) {
   const toggleDone = useStore((s) => s.toggleDone)
   const quick = useStore((s) => s.quick)
+  const t = useT()
   const rest = block.type === 'lunch' || block.type === 'break'
   const done = task?.status === 'done'
-  const name = rest ? (block.type === 'lunch' ? 'Lunch' : 'Break') : (task?.title ?? '')
+  const name = rest ? t(block.type === 'lunch' ? 'lunch' : 'break') : task ? taskTitle(task, t) : ''
   const isNow = !!now && !done
   const asking = now?.kind === 'didYouFinish'
 
@@ -33,7 +36,8 @@ export function TaskCard({ block, task, flash, enterDelay, now }: Props) {
         'group my-1.5 grid min-h-11 grid-cols-[18px_112px_1fr_auto] items-center gap-3.5 rounded-xl bg-blk px-4 py-[11px]',
         rest && 'min-h-9 border border-dashed bg-transparent py-[7px] text-mut',
         done && 'opacity-60',
-        isNow && 'bg-tint py-3.5 pl-5 shadow-[inset_4px_0_0_var(--acc)]',
+        // The Now bar sits on the starting edge (left, or right in Arabic).
+        isNow && 'bg-tint py-3.5 ps-5 shadow-[inset_4px_0_0_var(--acc)] rtl:shadow-[inset_-4px_0_0_var(--acc)]',
         flash && 'flash',
         enterDelay !== undefined && 'enter',
       )}
@@ -46,7 +50,7 @@ export function TaskCard({ block, task, flash, enterDelay, now }: Props) {
           type="button"
           role="checkbox"
           aria-checked={done}
-          aria-label={`Done: ${task.title}`}
+          aria-label={t('doneLabel', { title: name })}
           onClick={(e) => {
             if (!done) burst(e.currentTarget)
             toggleDone(task.id)
@@ -60,19 +64,19 @@ export function TaskCard({ block, task, flash, enterDelay, now }: Props) {
         </button>
       )}
 
-      <time data-part className={cn('text-sm whitespace-nowrap text-mut tabular-nums', isNow && 'text-tinti/80')}>
+      <time data-part dir="ltr" className={cn('text-start text-sm whitespace-nowrap text-mut tabular-nums', isNow && 'text-tinti/80')}>
         {clock(block.start)}–{clock(block.end)}
       </time>
 
       <div className="min-w-0">
         <span className={cn('flex items-center gap-1.5', rest ? 'font-normal' : 'font-medium', done && 'text-mut line-through', isNow && 'text-tinti')}>
-          {task && !rest ? <TaskName task={task} /> : <span data-part>{name}</span>}
-          {block.type === 'fixed' && <Pin className="size-3.5 shrink-0 text-mut" aria-label="fixed appointment" />}
+          {task && !rest ? <TaskName task={task} name={name} /> : <span data-part>{name}</span>}
+          {block.type === 'fixed' && <Pin className="size-3.5 shrink-0 text-mut" aria-label={t('fixedAppointment')} />}
         </span>
         {isNow && (
           <div className="mt-1 flex items-center gap-1.5 text-[11px] font-bold tracking-[0.07em] text-tinti uppercase">
             <span className="size-[7px] rounded-full bg-acc" aria-hidden />
-            {asking ? "Did you finish?" : `Now · ${formatDuration(now.leftMin)} left`}
+            {asking ? t('didYouFinish') : t('nowLeft', { left: t.fmt.duration(now.leftMin) })}
           </div>
         )}
       </div>
@@ -82,20 +86,20 @@ export function TaskCard({ block, task, flash, enterDelay, now }: Props) {
         <div className={cn('flex gap-1.5', !asking && 'hidden group-focus-within:flex group-hover:flex')}>
           {asking ? (
             <>
-              <Pill onClick={() => toggleDone(task.id)} strong>✓ Done</Pill>
-              <Pill onClick={() => quick(task.id, 'more')}>Need more time</Pill>
-              <Pill onClick={() => quick(task.id, 'tomorrow')}>Skip to tomorrow</Pill>
+              <Pill onClick={() => toggleDone(task.id)} strong>{t('btnDone')}</Pill>
+              <Pill onClick={() => quick(task.id, 'more')}>{t('needMoreTime')}</Pill>
+              <Pill onClick={() => quick(task.id, 'tomorrow')}>{t('skipToTomorrow')}</Pill>
             </>
           ) : (
             <>
-              <Pill onClick={() => quick(task.id, 'more')}>Need more time</Pill>
-              <Pill onClick={() => quick(task.id, 'notStarted')}>Not started</Pill>
-              <Pill onClick={() => quick(task.id, 'tomorrow')}>→ Tomorrow</Pill>
+              <Pill onClick={() => quick(task.id, 'more')}>{t('needMoreTime')}</Pill>
+              <Pill onClick={() => quick(task.id, 'notStarted')}>{t('notStarted')}</Pill>
+              <Pill onClick={() => quick(task.id, 'tomorrow')}>{t('toTomorrow')}</Pill>
             </>
           )}
         </div>
       ) : (
-        <span data-part className="text-[13px] text-mut">{rest ? '' : formatDuration(toMin(block.end) - toMin(block.start))}</span>
+        <span data-part className="text-[13px] text-mut">{rest ? '' : t.fmt.duration(toMin(block.end) - toMin(block.start))}</span>
       )}
     </li>
   )
@@ -135,8 +139,9 @@ function Pill({ children, onClick, strong }: { children: ReactNode; onClick: () 
 }
 
 /** Click the name to rename it in place: Enter saves, Escape cancels. */
-function TaskName({ task }: { task: Task }) {
+function TaskName({ task, name }: { task: Task; name: string }) {
   const rename = useStore((s) => s.rename)
+  const t = useT()
   const [editing, setEditing] = useState(false)
   const [value, setValue] = useState(task.title)
 
@@ -149,10 +154,10 @@ function TaskName({ task }: { task: Task }) {
           setValue(task.title)
           setEditing(true)
         }}
-        title="Click to rename"
-        className="cursor-text truncate rounded text-left hover:underline hover:decoration-mut/40 hover:underline-offset-4"
+        title={t('clickToRename')}
+        className="cursor-text truncate rounded text-start hover:underline hover:decoration-mut/40 hover:underline-offset-4"
       >
-        {task.title}
+        {name}
       </button>
     )
   }
@@ -163,7 +168,7 @@ function TaskName({ task }: { task: Task }) {
   return (
     <input
       autoFocus
-      aria-label={`Rename ${task.title}`}
+      aria-label={t('renameLabel', { title: name })}
       value={value}
       maxLength={120}
       onChange={(e) => setValue(e.target.value)}

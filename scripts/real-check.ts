@@ -13,15 +13,15 @@ if (existsSync('.env')) process.loadEnvFile('.env')
 const TODAY = '2026-10-17'
 type Check = (plan: Plan, reply: string) => string | null // returns a failure message, or null
 
-const fresh = (): Plan => ({ tasks: [], blocks: {}, availability: {}, settings: { accent: 'iris', theme: null, endOfDay: '23:00' } })
+const fresh = (): Plan => ({ tasks: [], blocks: {}, availability: {}, settings: { lang: 'en', accent: 'iris', theme: null, endOfDay: '23:00' } })
 const onTimetable = (p: Plan, re: RegExp) => p.tasks.some((t) => re.test(t.title) && t.date === TODAY && t.start)
 const count = (p: Plan, re: RegExp) => p.tasks.filter((t) => re.test(t.title)).length
 const show = (p: Plan) =>
   (p.blocks[TODAY] ?? []).map((b) => `${b.start}-${b.end} ${b.taskId ? p.tasks.find((t) => t.id === b.taskId)?.title : b.type}`).join(' | ') +
   (p.tasks.some((t) => !t.date) ? `  [not placed: ${p.tasks.filter((t) => !t.date).map((t) => t.title).join(', ')}]` : '')
 
-async function scenario(name: string, steps: { at: string; say: string; check: Check }[]) {
-  let plan = fresh()
+async function scenario(name: string, steps: { at: string; say: string; check: Check }[], lang: Plan['settings']['lang'] = 'en') {
+  let plan: Plan = { ...fresh(), settings: { ...fresh().settings, lang } }
   const messages: ChatMessage[] = []
   let pending: { q: Question; base: AnyAction[]; order: string[] | null } | null = null
   let failures = 0
@@ -173,6 +173,16 @@ const failures = [
       },
     },
   ]),
+  await scenario('Writing in French gets a French reply (app language French)', [
+    {
+      at: '10:00',
+      say: "J'ai un entretien à préparer, la salle de sport et les courses aujourd'hui",
+      check: (p, reply) =>
+        !p.tasks.length ? 'tasks should be added'
+        : /\b(je|j'|tu|ton|ta|tes|ai|est|les|des|et|pour|avec|ta journée)\b/i.test(reply) ? null
+        : `expected a French reply, got: ${reply}`,
+    },
+  ], 'fr'),
   await scenario('Demo story: started late', [
     {
       at: '13:00',

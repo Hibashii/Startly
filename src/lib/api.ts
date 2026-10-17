@@ -2,6 +2,7 @@ import type { AssistantContext, AssistantResponse } from '../../shared/schema'
 import type { ChatMessage, Plan } from '@/types'
 import { toHHMM } from './time'
 import { dayOf } from '@/scheduler/days'
+import { translate } from '@/i18n'
 import { DEFAULT_BREAKS } from '@/scheduler/schedule'
 import { format, parseISO } from 'date-fns'
 
@@ -13,8 +14,8 @@ export function buildContext(plan: Plan, messages: ChatMessage[], pending: unkno
     now: `${today}T${toHHMM(nowMin)}`, // past midnight on a late day: "24:30"
     weekday: format(parseISO(today), 'EEEE'),
     today,
-    tasks: plan.tasks.map(({ id, title, kind, date, start, durationMin, status, deadline, priority }) => ({
-      id, title, kind, date, start, durationMin, status, deadline, priority,
+    tasks: plan.tasks.map(({ id, title, kind, date, start, durationMin, status, deadline, priority, partOf }) => ({
+      id, title: partOf ? `${title} (cont.)` : title, kind, date, start, durationMin, status, deadline, priority,
       onTimetable: date !== null && (start !== null || date > today),
     })),
     availability: plan.availability,
@@ -26,7 +27,8 @@ export function buildContext(plan: Plan, messages: ChatMessage[], pending: unkno
       return `${b.start}-${b.end} ${name}${done}`
     }),
     breaks: plan.settings.breaks ?? DEFAULT_BREAKS,
-    recentMessages: messages.slice(-10).map((m) => ({ role: m.role, text: m.text })),
+    language: plan.settings.lang,
+    recentMessages: messages.slice(-10).map((m) => ({ role: m.role, text: 'content' in m ? translate(plan.settings.lang, m.content) : m.text })),
   }
 }
 

@@ -65,11 +65,10 @@ export function applyActions(plan: Plan, actions: AnyAction[], today: string, no
   }
   const endOf = (t: Task) => toMin(t.start!) + t.durationMin
   const nowHHMM = toHHMM(roundUp5(nowMin))
-  /** The rest of a split task, as a real task "X (cont.)". Held at now unless `held` is false. */
+  /** The rest of a split task, as a real task (same name, `partOf` set; shown as "X (cont.)"). Held at now unless `held` is false. */
   const continuation = (t: Task, durationMin: number, held = true): Task => ({
     ...t,
     id: `t${nextId++}`,
-    title: t.partOf ? t.title : `${t.title} (cont.)`,
     durationMin,
     date: null,
     start: null,

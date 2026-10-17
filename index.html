@@ -5,13 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Startly</title>
     <script>
-      // Apply the saved color and mode before the first paint (no white flash in dark mode).
+      // Apply the saved color, mode and language before the first paint (no flash, no layout jump).
       try {
         var st = (JSON.parse(localStorage.getItem('startly-v1')) || {}).state || {}
         var set = st.settings || {}
         var dark = set.theme ? set.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches
         document.documentElement.dataset.theme = dark ? 'dark' : 'light'
         if (set.accent) document.documentElement.dataset.accent = set.accent
+        // The saved language, else the browser's first one Startly speaks (same rule as detectLang).
+        var speaks = ['en', 'fr', 'es', 'de', 'nl', 'ar']
+        var lang = set.lang || (navigator.languages || []).map(function (l) { return l.toLowerCase().split('-')[0] }).filter(function (l) { return speaks.indexOf(l) >= 0 })[0] || 'en'
+        var rtl = ['ar']
+        document.documentElement.lang = lang
+        document.documentElement.dir = rtl.indexOf(lang) >= 0 ? 'rtl' : 'ltr'
       } catch (e) {}
     </script>
   </head>

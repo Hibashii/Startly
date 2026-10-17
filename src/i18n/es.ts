@@ -1,0 +1,170 @@
+import type { Dict } from './index'
+import { variant, type CheerStage, type DayPart } from './shared'
+
+
+const GREETINGS: Record<DayPart, string[]> = {
+  morning: ['Buenos días ☀️', '¡Buenos días! Nuevo día, nuevo comienzo.', '¡Buenos días! Cuando quieras.'],
+  afternoon: ['¡Buenas tardes!', '¡Hola de nuevo! Aquí para el resto de tu día.'],
+  evening: ['¡Buenas noches!', '¡Buenas noches! Aprovechemos lo que queda.'],
+}
+const CHEERS: Record<CheerStage, string[]> = {
+  first: ['¡Gran comienzo! 🚀', 'La primera, hecha 🎯', '¡Arrancamos! 🏁', 'Impulso: activado ⚡️'],
+  half: ['A mitad de camino 💪', 'Medio día, hecho 🔥', 'Lo más difícil ya pasó 🏔️'],
+  lastOne: ['Solo queda una 🔥', 'La última. Tú puedes 💪', 'Recta final 🏁'],
+  any: ['¡Bien! Una menos 🎉', 'Esa ya está 💪', 'Mantén el ritmo ✨', 'Hecho y bien hecho ✅', 'Mírate avanzar 🙌', 'Vas lanzado 🔥', 'Así se hace ⚡️'],
+}
+const CELEBRATIONS = [
+  ['Hoy lo diste todo. Todo marcado. Ve a descansar, te lo mereces.', 'La disciplina es elegir entre lo que quieres ahora y lo que más quieres.'],
+  ['Todo hecho. Empezaste y terminaste. Eso era lo difícil.', 'O diriges tú el día, o el día te dirige a ti.'],
+  ['Siéntete orgulloso de la versión de ti que apareció hoy.', 'Las pequeñas mejoras diarias son la clave de grandes resultados.'],
+  ['Todo listo. Mañana le darás las gracias a tu yo de hoy.', 'Somos lo que hacemos repetidamente. La excelencia, entonces, no es un acto, sino un hábito.'],
+  ['Cada casilla marcada. La noche es tuya.', 'El secreto para salir adelante es empezar.'],
+]
+const tarea = (n: number) => (n === 1 ? 'tarea' : 'tareas')
+
+export const es: Dict = {
+  hookQuestion: '¿No sabes por dónde empezar?',
+  hookAnswer: 'Empieza aquí.',
+  step1: 'Suéltalo todo',
+  step2: 'Recibe tu horario',
+  step3: 'Avísame cuando algo cambie',
+  stepArrow: '→',
+  dumpLabel: 'Cuéntame todo lo que tienes que hacer',
+  dumpPlaceholder: 'Cuéntame todo lo que tienes que hacer…',
+  planMyDay: 'Planificar mi día →',
+  planning1: 'Leyendo tu lista…',
+  planning2: 'Buscando horas fijas…',
+  planning3: 'Eligiendo un buen orden…',
+  planning4: 'Añadiendo comida y descansos…',
+  planning5: 'Construyendo tu horario…',
+
+  askStartly: 'Preguntar a Startly',
+  weekToggle: (p, f) => `${f.dayMonth(p.date)}: ${p.open ? 'ocultar' : 'mostrar'} la semana`,
+  settings: 'Ajustes',
+  color: 'Color',
+  accent: (p) => ({ iris: 'Iris', ocean: 'Océano', sage: 'Salvia', plum: 'Ciruela', coral: 'Coral', ink: 'Tinta' })[p.accent],
+  remembers: (p) => `${p.name} · Startly lo recuerda.`,
+  darkMode: 'Modo oscuro',
+  language: 'Idioma',
+  startFresh: 'Empezar de cero…',
+  startFreshTitle: '¿Empezar de cero?',
+  startFreshBody:
+    'Esto borra tu plan, tu chat y tu tiempo libre, y te lleva a la primera pantalla. Tus preferencias se quedan (color, modo, idioma, fin del día, descansos). No se puede deshacer.',
+  cancel: 'Cancelar',
+  deleteEverything: 'Borrar todo',
+
+  thisWeek: 'Esta semana',
+  today: 'Hoy',
+  tomorrow: 'Mañana',
+  weekDay: (p, f) => `${f.dayMonth(p.date)}: ${p.planned ? `${p.planned} planificado` : 'nada planificado'}${p.pinned ? ', cita fija' : ''}`,
+
+  dayComplete: 'Día completado ✓',
+  plannedUntil: (p) => `${p.planned} planificado · hasta las ${p.until}`,
+  nothingPlanned: 'Nada planificado todavía',
+  freeTime: (p, f) => `Libre ${f.list(p.windows)}`,
+  freeUnknown: 'Tiempo libre desconocido',
+  planned: (p) => `${p.planned} planificado`,
+  view: 'Vista',
+  viewList: 'Lista',
+  viewGrid: 'Cuadrícula',
+  timetableOf: (p) => `Horario: ${p.day}`,
+  todaysTimetable: 'Horario de hoy',
+  tasksOf: (p) => `Tareas: ${p.day}`,
+  laterDayHint: 'Organizaré este día hora por hora cuando llegue, o pídeme que lo planifique ahora.',
+  laterDayEmpty: 'Nada planificado para este día todavía.',
+  noFitBefore: (p) => `No cabe antes de las ${p.end}`,
+  noFitToday: 'No cabe hoy',
+  noFitOn: (p) => `No cabe: ${p.day}`,
+  lunch: 'Comida',
+  break: 'Descanso',
+  hourGrid: 'Cuadrícula horaria',
+  now: 'Ahora',
+  fixedAppointment: 'cita fija',
+
+  doneLabel: (p) => `Hecho: ${p.title}`,
+  nowLeft: (p) => `Ahora · quedan ${p.left}`,
+  didYouFinish: '¿Terminaste?',
+  btnDone: '✓ Hecho',
+  needMoreTime: 'Más tiempo',
+  notStarted: 'Sin empezar',
+  toTomorrow: '→ Mañana',
+  skipToTomorrow: 'Pasar a mañana',
+  clickToRename: 'Haz clic para renombrar',
+  renameLabel: (p) => `Renombrar ${p.title}`,
+  continued: (p) => `${p.title} (cont.)`,
+
+  chatWithStartly: 'Chat con Startly',
+  clearChat: 'Borrar chat',
+  clearChatHint: 'Borrar chat (tu plan se queda)',
+  closeChat: 'Cerrar chat',
+  rearranging: 'Reorganizando tu día…',
+  messageLabel: 'Escribe a Startly',
+  messagePlaceholder: 'Escribe a Startly…',
+  send: 'Enviar',
+  retry: 'Reintentar',
+  whatMoved: 'Lo que se movió',
+  notToday: 'hoy no',
+  errRateLimited: 'Son muchos mensajes en una hora. Dame unos minutos.',
+  errUnavailable: 'No he podido pensar ahora mismo. ¿Lo intentamos otra vez?',
+  didntGet: 'Perdona, no lo he entendido bien. ¿Puedes decirlo de otra forma?',
+  answerWithButtons: 'Puedes responder con los botones de arriba.',
+  youChose: (p) => `Elegiste: ${p.answer}`,
+  questionExpired: 'Pregunta caducada.',
+  questionSkipped: 'Pregunta omitida (cambiaste otra cosa).',
+  questionLater: 'Te lo vuelvo a preguntar en un momento.',
+  nAdded: (p) => `${p.n} añadida${p.n === 1 ? '' : 's'}`,
+  chooseLegend: 'Elige qué añadir a hoy',
+  addSelected: 'Añadir lo elegido · quitar el resto',
+  backToEarlier: 'Volvamos a la pregunta de antes:',
+
+  noteRemoved: (p, f) => `Quitado: ${f.list(p.items.map(f.name))}.`,
+  notePutOn: (p, f) => `Puse ${f.quote(f.name(p.title))} el ${f.weekday(p.date)}, porque vence el ${f.weekday(p.due)}.`,
+  noteWhenFree: (p, f) =>
+    `¿Cuándo estás libre el ${f.weekday(p.date)}?` +
+    (p.waiting.length ? ` Me gustaría encajar ${f.list(p.waiting.map((x) => f.quote(f.name(x))))} antes de que venza.` : ' Dímelo y lo planifico.'),
+  notePlanned: (p, f) => `Planifiqué ${f.list(p.dates.map(f.weekday))} hora por hora.`,
+  noteNoFitToday: (p, f) => `Esto no cabe antes de las ${p.end} hoy: ${f.list(p.items.map(f.name))}.`,
+  noteNoFitOn: (p, f) => `Esto no cabe el ${f.weekday(p.date)}: ${f.list(p.items.map(f.name))}.`,
+
+  qUntil: (p, f) => `Eso te lleva hasta las ${p.until}. ¿Vale, o muevo ${f.quote(f.name(p.title))} al ${f.weekday(p.date)}?`,
+  keepIt: 'Mantener',
+  moveIt: 'Moverlo',
+  qNoFit: (p, f) => {
+    const one = p.items.length === 1
+    const ways = [p.stay ? `quedarte hasta las ${p.stay}` : null, `${one ? 'moverlo' : 'moverlos'} al ${f.weekday(p.date)}`, one ? 'quitarlo' : 'quitarlos'].filter(
+      (x): x is string => !!x,
+    )
+    const choice = ways.slice(0, -1).join(', ') + ' o ' + ways.at(-1)
+    return `${f.list(p.items.map((x) => f.quote(f.name(x))))} no ${one ? 'cabe' : 'caben'} antes de las ${p.end}. ¿${choice}?`
+  },
+  stayUntil: (p) => `Quedarme hasta las ${p.until}`,
+  dayOption: (p, f) => f.weekday(p.date).replace(/^./, (c) => c.toUpperCase()),
+  dropIt: 'Quitarlo',
+  dropThem: 'Quitarlos',
+
+  greeting: (p) =>
+    `${variant(GREETINGS[p.part], p.i)} ${p.hasPlan ? 'Tu plan sigue aquí.' : '¿Qué hay para hoy? Cuéntamelo todo y lo planifico.'}`,
+  leftoverOne: (p, f) => `${f.quote(f.name(p.title))} de ${p.yesterday ? 'ayer' : 'antes'} no se marcó. ¿Lo añado a hoy?`,
+  leftoverMany: (p, f) => `${p.items.length} cosas de ${p.yesterday ? 'ayer' : 'antes'} no se marcaron: ${f.list(p.items.map(f.name))}. ¿Las añado a hoy?`,
+  addIt: 'Añadir',
+  addBoth: 'Añadir las dos',
+  addAll: 'Añadir todo',
+  choose: 'Elegir',
+
+  addedMore: (p, f) => `Añadí 30 min a ${f.quote(f.name(p.title))}.`,
+  startsNow: (p, f) => `Vale, ${f.quote(f.name(p.title))} empieza ahora.`,
+  movedTo: (p, f) => `Moví ${f.quote(f.name(p.title))} al ${f.weekday(p.date)}.`,
+  addedToToday: 'Añadido a hoy.',
+  droppedThem: 'Quitado.',
+
+  toastReshuffled: (p) => `↻ ${p.n} ${tarea(p.n)} reorganizada${p.n === 1 ? '' : 's'}`,
+  toastRemoved: (p, f) => `✓ Quitado: ${f.list(p.items.map(f.name))}`,
+  toastAdded: (p) => `✓ ${p.n} ${tarea(p.n)} añadida${p.n === 1 ? '' : 's'}`,
+  toastRenamed: '✓ Renombrado',
+  toastChatCleared: '✓ Chat borrado',
+  cheer: (p) => variant(CHEERS[p.stage], p.i),
+  dayCompleteTitle: 'Día completado',
+  celebrationMessage: (p) => variant(CELEBRATIONS, p.i)[0],
+  celebrationQuote: (p) => variant(CELEBRATIONS, p.i)[1],
+  restWell: 'Descansa',
+}

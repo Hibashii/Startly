@@ -104,6 +104,11 @@ Source: `scope.md > The Unique Kernel`.
   - [ ] The Light / Dark switch flips the whole app, and both modes look right (pure white light mode, warm near-black dark mode).
   - [ ] The chosen color and mode are still applied after closing and reopening the app.
 
+### Languages
+Added in the final review, at her request: **English, French, Spanish, German, Dutch and Arabic**, picked in the ⋯ menu (first visit: the browser's language if Startly speaks it). Everything the app writes follows it: buttons, notes, questions, greetings, cheers, celebrations, dates and durations. **Arabic** mirrors the whole layout right-to-left; times stay readable ("14:00–15:00"). Startly's AI replies in the language you write in.
+  - [x] Switching language changes every screen at once, including earlier chat messages written by the app, and is remembered.
+  - [x] In Arabic the layout mirrors (chat on the left, the Now bar on the right) and times read left-to-right.
+
 ### The Assistant Chat
 - Full conversation, with the assistant's avatar on its messages.
 - **The chat starts fresh each morning** with a "Good morning" from the assistant. The **plan carries over**.
