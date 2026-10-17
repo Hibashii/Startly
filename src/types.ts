@@ -1,7 +1,7 @@
 import type { Lang, Name, Text } from '@/i18n'
 
 export type Priority = 'high' | 'medium' | 'low'
-export type Accent = 'iris' | 'ocean' | 'sage' | 'plum' | 'coral' | 'ink'
+export type Accent = 'iris' | 'ocean' | 'sage' | 'plum' | 'pink' | 'coral' | 'ink'
 
 export interface Task {
   id: string // short, e.g. "t7", so the AI can refer to it

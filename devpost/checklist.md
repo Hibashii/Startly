@@ -85,6 +85,7 @@ Build mode: fast — the learner asked to be shown each checkpoint only after te
 - [x] The finale plays every time the day becomes complete (not once per day); the cheer no longer shows a count; it stays at the bottom (doesn't cover the timetable)
 - [x] Things that don't fit: one question about all of them with "Stay until 01:35 / Sunday / Drop them"; Start fresh keeps preferences (end of day, breaks) — it had reset her 1 am end to 23:00
 - [x] Languages (French, Arabic with right-to-left, Spanish, German, Dutch): typed dictionaries, language-free messages in the logic, Intl formatting, a store migration v1 → v2; reviewed for architecture
+- [x] Pink accent added (7 colors, named in all 6 languages); the browser tab shows Startly's avatar (Iris, the brand color)
 - [ ] Final review complete — feedback resolved and learner confirms ready to ship
 
 ## Code Tour and App Map

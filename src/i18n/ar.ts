@@ -45,7 +45,7 @@ export const ar: Dict = {
   weekToggle: (p, f) => `${f.dayMonth(p.date)}: ${p.open ? 'إخفاء' : 'إظهار'} الأسبوع`,
   settings: 'الإعدادات',
   color: 'اللون',
-  accent: (p) => ({ iris: 'سوسن', ocean: 'محيط', sage: 'مريمية', plum: 'برقوق', coral: 'مرجان', ink: 'حبر' })[p.accent],
+  accent: (p) => ({ iris: 'سوسن', ocean: 'محيط', sage: 'مريمية', plum: 'برقوق', pink: 'وردي', coral: 'مرجان', ink: 'حبر' })[p.accent],
   remembers: (p) => `${p.name} · Startly يتذكّر اختيارك.`,
   darkMode: 'الوضع الداكن',
   language: 'اللغة',

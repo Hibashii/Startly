@@ -42,7 +42,7 @@ export const nl: Dict = {
   weekToggle: (p, f) => `${f.dayMonth(p.date)}: week ${p.open ? 'verbergen' : 'tonen'}`,
   settings: 'Instellingen',
   color: 'Kleur',
-  accent: (p) => ({ iris: 'Iris', ocean: 'Oceaan', sage: 'Salie', plum: 'Pruim', coral: 'Koraal', ink: 'Inkt' })[p.accent],
+  accent: (p) => ({ iris: 'Iris', ocean: 'Oceaan', sage: 'Salie', plum: 'Pruim', pink: 'Roze', coral: 'Koraal', ink: 'Inkt' })[p.accent],
   remembers: (p) => `${p.name} · Startly onthoudt je keuze.`,
   darkMode: 'Donkere modus',
   language: 'Taal',

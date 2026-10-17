@@ -42,7 +42,7 @@ export const de: Dict = {
   weekToggle: (p, f) => `${f.dayMonth(p.date)}: Woche ${p.open ? 'ausblenden' : 'anzeigen'}`,
   settings: 'Einstellungen',
   color: 'Farbe',
-  accent: (p) => ({ iris: 'Iris', ocean: 'Ozean', sage: 'Salbei', plum: 'Pflaume', coral: 'Koralle', ink: 'Tinte' })[p.accent],
+  accent: (p) => ({ iris: 'Iris', ocean: 'Ozean', sage: 'Salbei', plum: 'Pflaume', pink: 'Rosa', coral: 'Koralle', ink: 'Tinte' })[p.accent],
   remembers: (p) => `${p.name} · Startly merkt sich das.`,
   darkMode: 'Dunkelmodus',
   language: 'Sprache',

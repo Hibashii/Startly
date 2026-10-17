@@ -51,7 +51,7 @@ export const en = {
   settings: 'Settings',
   color: 'Color',
   accent: (p: { accent: Accent }) =>
-    ({ iris: 'Iris', ocean: 'Ocean', sage: 'Sage', plum: 'Plum', coral: 'Coral', ink: 'Ink' })[p.accent],
+    ({ iris: 'Iris', ocean: 'Ocean', sage: 'Sage', plum: 'Plum', pink: 'Pink', coral: 'Coral', ink: 'Ink' })[p.accent],
   remembers: (p: { name: string }) => `${p.name} · Startly remembers your choice.`,
   darkMode: 'Dark mode',
   language: 'Language',

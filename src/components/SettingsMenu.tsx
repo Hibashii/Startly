@@ -13,6 +13,7 @@ export const ACCENTS: { id: Accent; light: string; dark: string }[] = [
   { id: 'ocean', light: '#0e7490', dark: '#67d3e8' },
   { id: 'sage', light: '#3f7d5c', dark: '#8fd1ac' },
   { id: 'plum', light: '#8e4ec6', dark: '#d2a8ff' },
+  { id: 'pink', light: '#d6409f', dark: '#f48cc8' },
   { id: 'coral', light: '#e5484d', dark: '#ff9592' },
   { id: 'ink', light: '#18181b', dark: '#eeeeee' },
 ]
@@ -78,7 +79,7 @@ export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
             </select>
           </label>
           <h4 className="m-0 mt-3.5 mb-2.5 border-t pt-3 text-[13px] font-semibold">{t('color')}</h4>
-          <div className="grid grid-cols-6 gap-2" role="radiogroup" aria-label={t('color')}>
+          <div className="grid grid-cols-7 gap-1.5" role="radiogroup" aria-label={t('color')}>
             {ACCENTS.map((a) => (
               <button
                 key={a.id}
@@ -89,7 +90,7 @@ export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
                 title={t('accent', { accent: a.id })}
                 onClick={() => setAccent(a.id)}
                 className={cn(
-                  'press size-[30px] cursor-pointer rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)]',
+                  'press size-7 cursor-pointer rounded-full shadow-[inset_0_0_0_1px_rgba(0,0,0,0.08)]',
                   a.id === accent && 'outline-2 outline-offset-2 outline-ink',
                 )}
                 style={{ background: dark ? a.dark : a.light }}
