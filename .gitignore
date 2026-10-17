@@ -1,0 +1,26 @@
+# Personal learning context (kept out of commits)
+/devpost/learner-profile.md
+
+# Local credentials
+.env
+.env.*
+!.env.example
+
+# Playwright MCP output (screenshots, page snapshots, logs) and test reports
+.playwright-mcp/
+test-results/
+playwright-report/
+
+# Local Claude Code permissions
+.claude/settings.local.json
+
+# Planning exploration pages (kept locally; startly-design.html is the build's visual reference)
+/devpost/*.html
+!/devpost/startly-design.html
+
+# Build output and dependencies
+node_modules/
+dist/
+.vercel/
+.DS_Store
+*.log

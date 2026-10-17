@@ -1,0 +1,246 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Startly Design</title>
+<style>
+/* ---------- page chrome ---------- */
+:root{--pg:#ffffff;--pgc:#ffffff;--pgi:#18181b;--pgm:#71717a;--pgl:#e4e4e7}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--pg:#0f0e0c;--pgc:#161512;--pgi:#eeeeee;--pgm:#9a958b;--pgl:#2b2924}}
+:root[data-theme="dark"]{--pg:#0f0e0c;--pgc:#161512;--pgi:#eeeeee;--pgm:#9a958b;--pgl:#2b2924}
+*{box-sizing:border-box}
+body{margin:0;background:var(--pg);color:var(--pgi);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.ctl{position:sticky;top:0;z-index:20;display:flex;gap:10px 14px;align-items:center;flex-wrap:wrap;padding:10px 16px;background:var(--pgc);border-bottom:1px solid var(--pgl)}
+.ctl b{font-size:14px;margin-right:4px}
+.ctl label{font-size:12px;color:var(--pgm);margin-right:-8px}
+.sg{display:inline-flex;background:var(--pgl);border-radius:9px;padding:2px;flex-wrap:wrap}
+.sg button{font:inherit;font-size:13px;border:0;background:transparent;color:var(--pgm);padding:5px 12px;border-radius:7px;cursor:pointer}
+.sg button[aria-pressed="true"]{background:var(--pgc);color:var(--pgi);box-shadow:0 1px 2px rgba(0,0,0,.14)}
+.replay{font:inherit;font-size:13px;border:1px solid var(--pgl);background:var(--pgc);color:var(--pgi);padding:5px 12px;border-radius:8px;cursor:pointer}
+.wrap{max-width:1260px;margin:0 auto;padding:24px 16px 70px}
+.intro h1{font-size:24px;letter-spacing:-.02em;margin:0 0 6px}
+.intro p{margin:0 0 6px;color:var(--pgm);max-width:84ch}
+.intro p b{color:var(--pgi)}
+.intro ul{margin:6px 0 0;padding-left:20px;color:var(--pgm);max-width:84ch}
+.intro li b{color:var(--pgi)}
+.scroller{margin-top:18px;overflow-x:auto;border:1px solid var(--pgl);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.08)}
+
+/* ---------- Startly tokens ---------- */
+.app{--bg:#ffffff;--panel:#fafafa;--card:#ffffff;--blk:#f4f4f5;--line:#e4e4e7;--ink:#18181b;--mut:#71717a;--av0:14%;--av1:42%;--av2:72%;--accink:#ffffff;--shadow:0 1px 2px rgba(0,0,0,.04),0 8px 28px rgba(0,0,0,.08);
+  --fui:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif}
+.app[data-m="dark"]{--bg:#161512;--panel:#1b1a17;--card:#201f1b;--blk:#2b2924;--line:#3a3831;--ink:#eeeeee;--mut:#9a958b;--av0:22%;--av1:52%;--av2:80%;--accink:#161512;--shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35)}
+
+.app{min-width:1000px;height:700px;display:flex;flex-direction:column;position:relative;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--fui);font-size:15px;transition:background .25s,color .25s}
+.top{height:60px;flex:none;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 22px;border-bottom:1px solid var(--line);position:relative;z-index:3;background:var(--bg)}
+.brand{display:flex;align-items:center;gap:9px;font-weight:700;font-size:18px;letter-spacing:-.02em}
+.brand svg{width:28px;height:28px}
+.date{display:flex;align-items:baseline;gap:8px;font-weight:600;padding:6px 12px;border-radius:10px}
+.date small{font-weight:400;color:var(--mut);font-size:13px}
+.date i{font-style:normal;color:var(--mut);font-size:12px}
+.right{justify-self:end;display:flex;align-items:center;gap:10px;position:relative}
+.icon{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;cursor:pointer;color:var(--ink)}
+.icon svg{width:18px;height:18px}
+.pill{display:flex;align-items:center;gap:8px;padding:4px 14px 4px 4px;border-radius:999px;border:1px solid var(--line);background:var(--card);font-weight:600;font-size:14px;cursor:pointer;font-family:inherit;color:var(--ink)}
+.pill svg{width:28px;height:28px}
+.pill[aria-pressed="true"]{background:var(--tint);border-color:transparent;color:var(--tinti)}
+.pop{position:absolute;top:46px;right:0;z-index:5;width:260px;background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:14px;display:none}
+.pop.on{display:block}
+.pop h4{margin:0 0 10px;font-size:13px;font-weight:600}
+.sw{display:grid;grid-template-columns:repeat(6,1fr);gap:8px}
+.sw button{width:30px;height:30px;border-radius:50%;border:0;cursor:pointer;box-shadow:inset 0 0 0 1px rgba(0,0,0,.08)}
+.sw button[aria-pressed="true"]{outline:2px solid var(--ink);outline-offset:2px}
+.pop p{margin:10px 0 0;font-size:12px;color:var(--mut)}
+
+/* ---------- first screen ---------- */
+.first{flex:1;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding:0 24px 60px;text-align:center}
+.first h1{position:relative;z-index:1;margin:0;font-size:56px;line-height:1.08;font-weight:700;letter-spacing:-.035em}
+.first h1 .sh{color:var(--acc)}
+.steps{position:relative;z-index:1;display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center}
+.step{display:flex;gap:8px;align-items:center;font-size:15.5px;color:var(--mut)}
+.step i{font-style:normal;width:24px;height:24px;border-radius:50%;background:var(--tint);color:var(--tinti);display:grid;place-items:center;font-size:12.5px;font-weight:700}
+.step + .step::before{content:"→";margin-right:10px;color:var(--mut);opacity:.5}
+.cwrap{position:relative;width:720px;margin-top:10px}
+.composer{position:relative;z-index:1;background:var(--card);border:1px solid var(--line);border-radius:28px;padding:22px 16px 14px 26px;box-shadow:var(--shadow);text-align:left}
+.composer .ph{min-height:84px;color:var(--mut);font-size:17px}
+.composer .ph b{color:var(--ink);font-weight:400}
+.composer .ph .car{display:inline-block;width:1.5px;height:1.1em;background:var(--ink);vertical-align:-3px;margin-left:1px;animation:car 1s steps(1) infinite}
+@keyframes car{50%{opacity:0}}
+.composer .bar{display:flex;justify-content:flex-end}
+.go{background:var(--acc);color:var(--accink);font-weight:600;font-size:15.5px;padding:12px 20px;border-radius:999px;white-space:nowrap}
+
+/* touch: avatar says hi */
+.hi{position:relative;z-index:1;display:none;align-items:center;gap:12px;margin-bottom:-4px}
+.app[data-wave="1"] .hi{display:flex}
+.hi .av{width:84px;height:84px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.16))}
+.hi .bub{position:absolute;left:calc(100% + 6px);top:4px;background:var(--card);border:1px solid var(--line);box-shadow:var(--shadow);border-radius:16px 16px 16px 4px;padding:8px 14px;font-size:14.5px;font-weight:500;white-space:nowrap}
+.play .hi .av{animation:pop .7s cubic-bezier(.34,1.56,.64,1) both}
+.play .hi .bub{animation:say 3.6s ease both .55s}
+.play .hand{animation:wave 1.3s ease-in-out .6s 2 both}
+.eyes{transform-box:fill-box;transform-origin:center;animation:blink 4.5s infinite 2.2s}
+@keyframes pop{from{opacity:0;transform:translateY(14px) scale(.6)}to{opacity:1;transform:none}}
+@keyframes say{0%{opacity:0;transform:translateX(-6px)}12%{opacity:1;transform:none}85%{opacity:1}100%{opacity:0}}
+@keyframes wave{0%,100%{transform:rotate(0)}20%{transform:rotate(-22deg)}45%{transform:rotate(12deg)}70%{transform:rotate(-18deg)}}
+@keyframes blink{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.1)}}
+.hand{transform-box:view-box;transform-origin:102px 46px}
+
+/* calm first-screen versions */
+.app:not([data-fs="busy"]) .step i{background:var(--blk);color:var(--ink)}
+.crow{display:flex;gap:14px;align-items:flex-start}
+.crow .ph{flex:1}
+.cav{display:none;width:42px;height:42px;flex:none;margin:-6px 0 0 -6px}
+.cav svg{width:42px;height:42px}
+.app[data-fs="box"] .cav{display:block}
+.app[data-fs="box"] .composer .ph{padding-top:4px}
+.hi{max-height:140px}
+.app[data-fs="leave"].play .hi{animation:leave 4.6s ease both}
+@keyframes leave{0%,82%{opacity:1;max-height:140px}100%{opacity:0;max-height:0;margin:-22px 0 0}}
+/* hook typography options */
+.app[data-hk="b"] .first h1,.app[data-hk="c"] .first h1{font-size:44px;font-weight:600;letter-spacing:-.025em;line-height:1.15}
+.app[data-hk="c"] .first h1 .q{color:var(--mut);font-weight:500}
+.app[data-hk="c"]:not([data-m="dark"]) .first h1 .q{color:#4b4b52}
+.app[data-hk="d"] .first h1{font-size:54px;font-weight:700;letter-spacing:-.03em}
+.app[data-hk="d"] .first h1 br{display:none}
+.app[data-hk="d"] .first h1 .q{display:block;font-size:24px;font-weight:500;letter-spacing:-.01em;color:var(--mut);margin-bottom:8px}
+/* touch: highlighter under "Start here." */
+.app[data-mark="1"] .first h1 .sh{color:var(--ink);background:linear-gradient(transparent 58%,color-mix(in srgb,var(--acc) 30%,transparent) 58%,color-mix(in srgb,var(--acc) 30%,transparent) 92%,transparent 92%) no-repeat 0 0/100% 100%;padding:0 .08em}
+.app[data-mark="1"].play .first h1 .sh{animation:mark .9s cubic-bezier(.65,0,.35,1) .9s both}
+@keyframes mark{from{background-size:0% 100%}to{background-size:100% 100%}}
+
+/* touch: soft glow behind the box */
+.glow{display:none;position:absolute;z-index:0;inset:-40px -60px;border-radius:50%;filter:blur(48px);opacity:.38;background:conic-gradient(from 0deg,var(--acc),var(--g2),var(--acc),var(--g2),var(--acc));animation:spin 14s linear infinite}
+.app[data-m="dark"] .glow{opacity:.3}
+.app[data-glow="1"] .glow{display:block}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ---------- main screen ---------- */
+.main{flex:1;display:flex;min-height:0}
+.tt{flex:1;position:relative;overflow:hidden;padding:26px 36px}
+.ttin{max-width:700px;margin:0 auto}
+.hd{display:flex;align-items:baseline;gap:12px;margin-bottom:14px}
+.hd h3{margin:0;font-size:28px;font-weight:700;letter-spacing:-.03em}
+.hd p{margin:0;color:var(--mut);font-size:14px}
+.seg{margin-left:auto;align-self:center;display:inline-flex;border:1px solid var(--line);border-radius:999px;padding:2px;font-size:13px}
+.seg span{padding:4px 12px;border-radius:999px;color:var(--mut)}
+.seg span.on{background:var(--ink);color:var(--bg);font-weight:500}
+.b{display:grid;grid-template-columns:18px 112px 1fr auto;gap:14px;align-items:center;background:var(--blk);border-radius:12px;padding:11px 16px;margin:6px 0;min-height:44px}
+.b time{color:var(--mut);font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.b .n{font-weight:500}
+.b .du{color:var(--mut);font-size:13px}
+.ck{width:17px;height:17px;border:1.5px solid var(--mut);border-radius:5px;position:relative}
+.b.done{opacity:.6}
+.b.done .ck{background:var(--acc);border-color:var(--acc)}
+.b.done .ck::after{content:"";position:absolute;left:4.5px;top:1.5px;width:4px;height:8px;border:solid var(--accink);border-width:0 2px 2px 0;transform:rotate(45deg)}
+.b.done .n{text-decoration:line-through;color:var(--mut)}
+.b.brk{background:transparent;border:1px dashed var(--line);color:var(--mut);padding:7px 16px;min-height:36px}
+.b.brk .ck{border:0}
+.b.brk .n{font-weight:400}
+.b.now{background:var(--tint);box-shadow:inset 4px 0 0 var(--acc);padding:14px 16px 14px 20px}
+.b.now time{color:var(--tinti);opacity:.8}
+.tag{display:flex;align-items:center;gap:6px;margin-top:4px;font-size:11px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--tinti)}
+.tag::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--acc)}
+.qa{display:flex;gap:6px}
+.qa span{font-size:12.5px;border:1px solid color-mix(in srgb,var(--tinti) 45%,transparent);color:var(--tinti);border-radius:999px;padding:4px 11px;white-space:nowrap}
+.toast{position:absolute;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--bg);font-size:13.5px;font-weight:500;padding:9px 18px;border-radius:999px;box-shadow:0 8px 24px rgba(0,0,0,.2);white-space:nowrap}
+.chat{width:38%;max-width:420px;flex:none;border-left:1px solid var(--line);background:var(--panel);display:flex;flex-direction:column}
+.chat.off{width:0;border:0;overflow:hidden}
+.chh{height:54px;flex:none;display:flex;align-items:center;gap:9px;padding:0 18px;font-weight:600;font-size:15px;border-bottom:1px solid var(--line);white-space:nowrap}
+.chh svg{width:26px;height:26px}
+.chh .x{margin-left:auto;color:var(--mut);font-weight:400;font-size:20px;cursor:pointer}
+.msgs{flex:1;padding:20px 18px;display:flex;flex-direction:column;gap:16px;overflow:hidden;font-size:14.5px;line-height:1.55;min-width:300px}
+.m.a{display:flex;gap:10px;align-items:flex-start}
+.m.a svg{width:28px;height:28px;flex:none}
+.m.a .tx{padding-top:3px}
+.m.u{align-self:flex-end;max-width:82%;background:var(--tint);color:var(--tinti);padding:9px 15px;border-radius:20px 20px 6px 20px}
+.mv{margin:8px 0 6px;padding:0;list-style:none;display:grid;gap:4px}
+.mv li{display:flex;justify-content:space-between;gap:12px;font-size:14px}
+.mv li span{color:var(--mut);font-size:13px;font-variant-numeric:tabular-nums}
+.comp{margin:0 14px 14px;display:flex;align-items:center;gap:10px;background:var(--card);border:1px solid var(--line);border-radius:26px;padding:7px 7px 7px 18px;color:var(--mut);font-size:14.5px;box-shadow:var(--shadow);min-width:280px}
+.send{margin-left:auto;width:34px;height:34px;border-radius:50%;background:var(--acc);color:var(--accink);display:grid;place-items:center;flex:none}
+.send svg{width:15px;height:15px}
+@media (prefers-reduced-motion: reduce){.app *{animation:none!important}}
+</style>
+</head>
+<body>
+<div class="ctl">
+  <b>Startly</b>
+  <label>Screen</label><div class="sg" role="group" aria-label="Screen"><button type="button" data-k="s" data-v="first" aria-pressed="true">First open</button><button type="button" data-k="s" data-v="main" aria-pressed="false">Main screen</button></div>
+  <label>Mode</label><div class="sg" role="group" aria-label="Mode"><button type="button" data-k="m" data-v="light" aria-pressed="true">Light</button><button type="button" data-k="m" data-v="dark" aria-pressed="false">Dark</button></div>
+  <label>First screen</label><div class="sg" role="group" aria-label="First screen version"><button type="button" data-k="fs" data-v="box" aria-pressed="false">1 · Startly in the box ★</button><button type="button" data-k="fs" data-v="leave" aria-pressed="false">2 · Says hi, then leaves</button><button type="button" data-k="fs" data-v="plain" aria-pressed="true">3 · Hook only ✓</button><button type="button" data-k="fs" data-v="busy" aria-pressed="false">Before (too busy)</button></div>
+  <label>Hook text</label><div class="sg" role="group" aria-label="Hook typography"><button type="button" data-k="hk" data-v="a" aria-pressed="false">A · Big &amp; bold (before)</button><button type="button" data-k="hk" data-v="b" aria-pressed="false">B · Smaller, lighter</button><button type="button" data-k="hk" data-v="c" aria-pressed="true">C · Two tones ★</button><button type="button" data-k="hk" data-v="d" aria-pressed="false">D · Small question, big answer</button></div>
+  <label>Colors</label><div class="sg" role="group" aria-label="Color set"><button type="button" data-k="set" data-v="A" aria-pressed="false">A · current</button><button type="button" data-k="set" data-v="B" aria-pressed="true">B · softer ✓</button></div>
+  <button type="button" class="replay" id="replay">↻ Replay</button>
+</div>
+<div class="wrap">
+  <div class="intro">
+    <h1>Startly: setting the hook</h1>
+    <p>Hook only, with the highlighter on <b>"Start here."</b>, as you chose. The font is still SF Pro. Only its <b>size, weight and spacing</b> change between A–D, so you can see what made your eyes get lost.</p>
+    <ul>
+      <li><b>A · Big &amp; bold:</b> what you saw before. Both lines are huge and heavy, so nothing leads your eye.</li>
+      <li><b>B · Smaller, lighter:</b> same idea, about 20% smaller and less heavy.</li>
+      <li><b>C · Two tones (my pick):</b> the question is softer and gray, and "Start here." is strong with the highlighter. You read the question in passing and land on the answer.</li>
+      <li><b>D · Small question, big answer:</b> the question becomes a small line on top and "Start here." is the big headline. The strongest contrast.</li>
+    </ul>
+    <p style="margin-top:8px"><b>Colors:</b> A is the current set. B is a softer, more refined set (Iris, Ocean, Sage, Plum, Coral, Ink). Open 🎨 in the app to see each one.</p>
+  </div>
+  <div class="scroller"><div class="app" id="app"></div></div>
+</div>
+<script>
+const SETS={
+ A:[["Indigo",["#4f46e5","#eef0ff","#3b3fb8","#a855f7"],["#aeb1ff","#2e2f55","#aeb1ff","#d8b4fe"]],
+    ["Blue",["#2563eb","#eaf1ff","#1d4ed8","#06b6d4"],["#8ab4ff","#1f3354","#8ab4ff","#67e8f9"]],
+    ["Green",["#059669","#e7f6ef","#047857","#22d3ee"],["#6ee7b7","#173a2e","#6ee7b7","#a5f3fc"]],
+    ["Violet",["#7c3aed","#f4eeff","#6d28d9","#ec4899"],["#c4b5fd","#36294f","#c4b5fd","#f9a8d4"]],
+    ["Rose",["#e11d48","#fff0f3","#be123c","#f59e0b"],["#fda4af","#4a1f2a","#fda4af","#fcd34d"]],
+    ["No color",["#18181b","#ececee","#18181b","#a1a1aa"],["#eeeeee","#3a3833","#eeeeee","#71717a"]]],
+ B:[["Iris",["#5b5bd6","#f0f0ff","#4747b8","#8e8cf0"],["#a5a6ff","#2b2c52","#b4b5ff","#7f7dea"]],
+    ["Ocean",["#0e7490","#e6f6f9","#0b5f75","#38bdf8"],["#67d3e8","#12343c","#7fdcee","#38bdf8"]],
+    ["Sage",["#3f7d5c","#ecf5f0","#2f6449","#84cc16"],["#8fd1ac","#1c3328","#9fd9b8","#a3e635"]],
+    ["Plum",["#8e4ec6","#f6efff","#7438a8","#e879f9"],["#d2a8ff","#352648","#dbb8ff","#f0abfc"]],
+    ["Coral",["#e5484d","#fff0f0","#c4363b","#fb923c"],["#ff9592","#4a2224","#ffa5a3","#fdba74"]],
+    ["Ink",["#18181b","#ececee","#18181b","#a1a1aa"],["#eeeeee","#3a3833","#eeeeee","#71717a"]]]};
+const S={s:"first",m:"light",set:"B",p:0,chat:true,pop:false,fs:"plain",hk:"c",wave:1,mark:0,glow:0,type:0};
+// Boss with a waving hand. b=body, i=features
+// Glossy "Boss" like the original sketches: gradient body + shine + blush, dark eyes/headset/bow tie.
+// Body color comes from the chosen accent (--acc), so it follows the palette and light/dark mode.
+let gid=0;
+function boss(hand){const g="bg"+(++gid),K="#1b1b1f";return `<svg viewBox="0 0 124 120" aria-hidden="true" class="${hand?"av":""}"><defs><radialGradient id="${g}" cx="35%" cy="30%" r="75%"><stop offset="0" style="stop-color:color-mix(in srgb,var(--avc) var(--av0),#fff)"/><stop offset=".55" style="stop-color:color-mix(in srgb,var(--avc) var(--av1),#fff)"/><stop offset="1" style="stop-color:color-mix(in srgb,var(--avc) var(--av2),#fff)"/></radialGradient></defs>${hand?`<g class="hand"><rect x="98" y="18" width="20" height="26" rx="10" fill="url(#${g})" transform="rotate(18 108 31)"/><path d="M103 22v-5M108 21v-6M113 23v-4" stroke="color-mix(in srgb,var(--avc) var(--av1),#fff)" stroke-width="4.5" stroke-linecap="round" transform="rotate(18 108 31)"/></g>`:""}<rect x="24" y="27" width="72" height="71" rx="26" fill="url(#${g})"/><ellipse cx="44" cy="41" rx="12" ry="6" fill="#fff" opacity=".5"/><g class="eyes"><circle cx="48" cy="59" r="4.8" fill="${K}"/><circle cx="72" cy="59" r="4.8" fill="${K}"/><circle cx="49.5" cy="57.5" r="1.4" fill="#fff"/><circle cx="73.5" cy="57.5" r="1.4" fill="#fff"/></g><ellipse cx="40" cy="69" rx="5" ry="3" fill="#f9a8d4" opacity=".6"/><ellipse cx="80" cy="69" rx="5" ry="3" fill="#f9a8d4" opacity=".6"/><g fill="${K}"><rect x="18" y="51" width="13" height="19" rx="5"/><rect x="89" y="51" width="13" height="19" rx="5"/><circle cx="78" cy="85" r="3.8"/><path d="M49 82l11 5.5-11 5.5zM71 82l-11 5.5 11 5.5z"/><circle cx="60" cy="87.5" r="3"/></g><g stroke="${K}" fill="none" stroke-linecap="round"><path d="M28 58q0-32 32-32t32 32" stroke-width="5"/><path d="M95 70q0 13-15 15" stroke-width="3.4"/></g></svg>`}
+const small=()=>boss(false);
+const palIcon=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 1.7-.8 1.7-1.7 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-.9.8-1.7 1.7-1.7H16a5 5 0 0 0 5-5c0-4-4-7.2-9-7.2z"/><circle cx="7.5" cy="11" r="1.1" fill="currentColor"/><circle cx="10.5" cy="7.2" r="1.1" fill="currentColor"/><circle cx="15" cy="7.5" r="1.1" fill="currentColor"/></svg>`;
+const up=`<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 13V3M3.5 7.5L8 3l4.5 4.5"/></svg>`;
+const ROWS=[["done","09:00–10:30","Job application #3","1h30"],["brk","10:30–10:45","Break",""],["done","10:45–12:15","Revise chapter 4","1h30"],["brk","12:15–13:00","Lunch",""],["done","13:00–15:30","Interview prep","2h30"],["now","16:00–18:00","Hackathon build","2h"],["brk","18:00–18:30","Break",""],["","18:30–19:30","Gym","1h"],["brk","19:30–20:15","Dinner",""],["","20:15–21:15","Review notes","1h"]];
+const EX=["Gym 1h, 2 job applications, groceries, interview Wednesday 11:30–12:00…","Exam on Friday, revise chapters 3 to 6, I'm free after 14:00…","I'm overwhelmed: hackathon due Sunday, laundry, call mom, it's 10:30…"];
+let typer=null;
+function colors(){const [,L,D]=SETS[S.set][S.p];const c=S.m==="dark"?D:L;return `--avc:${L[0]};--acc:${c[0]};--tint:${c[1]};--tinti:${c[2]};--g2:${c[3]}`}
+function render(play){
+ const a=document.getElementById("app");S.wave=(S.fs==="leave"||S.fs==="busy")?1:0;S.mark=(S.fs==="busy"||S.fs==="plain")?1:0;a.dataset.fs=S.fs;a.dataset.hk=S.hk;a.dataset.m=S.m;a.dataset.wave=S.wave;a.dataset.mark=S.mark;a.dataset.glow=S.glow;a.setAttribute("style",colors());
+ a.classList.remove("play");void a.offsetWidth;if(play!==false)a.classList.add("play");
+ const pop=`<div class="pop ${S.pop?"on":""}"><h4>Color</h4><div class="sw">${SETS[S.set].map(([n,L,D],i)=>`<button type="button" title="${n}" aria-label="${n}" data-pal="${i}" aria-pressed="${S.p===i}" style="background:${S.m==="dark"?D[0]:L[0]}"></button>`).join("")}</div><p>${SETS[S.set][S.p][0]} · Startly remembers your choice.</p></div>`;
+ const right=`<div class="right"><span class="icon" data-act="pop" title="Colors">${palIcon}</span>${S.s==="main"?`<button type="button" class="pill" data-act="chat" aria-pressed="${S.chat}">${small()}Ask Startly</button>`:""}${pop}</div>`;
+ const top=`<div class="top"><div class="brand">${small()}Startly</div>${S.s==="main"?`<div class="date">Saturday, 17 October <small>16:20</small><i>⌄</i></div>`:"<div></div>"}${right}</div>`;
+ const body=S.s==="first"
+ ?`<div class="first"><div class="hi">${boss(true)}<span class="bub">Hi, I'm Startly 👋</span></div><h1><span class="q">Don't know where to start?</span><br><span class="sh">Start here.</span></h1><div class="steps"><span class="step"><i>1</i>Dump everything</span><span class="step"><i>2</i>Get your timetable</span><span class="step"><i>3</i>Tell me when things change</span></div><div class="cwrap"><div class="glow"></div><div class="composer"><div class="crow"><span class="cav">${boss(true)}</span><div class="ph" id="ph">Tell me everything you have to do…</div></div><div class="bar"><span class="go">Plan my day →</span></div></div></div></div>`
+ :`<div class="main"><div class="tt"><div class="ttin"><div class="hd"><h3>Today</h3><p>6h planned · until 21:15</p><div class="seg"><span class="on">List</span><span>Grid</span></div></div>${ROWS.map(([c,t,n,d])=>c==="now"
+   ?`<div class="b now"><span class="ck"></span><time>${t}</time><div><div class="n">${n}</div><div class="tag">Now · 1h40 left</div></div><div class="qa"><span>Need more time</span><span>Not started</span><span>→ Tomorrow</span></div></div>`
+   :`<div class="b ${c}"><span class="ck"></span><time>${t}</time><span class="n">${n}</span><span class="du">${d}</span></div>`).join("")}</div><div class="toast">↻ Reshuffled 3 tasks</div></div>
+   <aside class="chat ${S.chat?"":"off"}"><div class="chh">${small()}Startly<span class="x" data-act="chat">×</span></div><div class="msgs">
+   <div class="m a">${small()}<div class="tx">Good morning! Here's your Saturday: 5 tasks, lunch at 12:15, and you're done by 21:15.</div></div>
+   <div class="m u">I only started the hackathon at 16:00, it needs 2h</div>
+   <div class="m a">${small()}<div class="tx">Got it. I moved 3 things so nothing overlaps:<ul class="mv"><li>Gym<span>18:00 → 18:30</span></li><li>Dinner<span>19:00 → 19:30</span></li><li>Review notes<span>19:45 → 20:15</span></li></ul>You'll still finish at 21:15.</div></div>
+   </div><div class="comp">Message Startly…<span class="send">${up}</span></div></aside></div>`;
+ a.innerHTML=top+body;
+ startTyping();
+}
+function startTyping(){clearTimeout(typer);const ph=document.getElementById("ph");if(!ph||!S.type)return;let e=0,i=0,del=false;
+ const tick=()=>{const t=EX[e];ph.innerHTML=`<b>${t.slice(0,i)}</b><span class="car"></span>`;
+  if(!del){i++;if(i>t.length){del=true;typer=setTimeout(tick,1800);return}}else{i-=3;if(i<=0){i=0;del=false;e=(e+1)%EX.length}}
+  typer=setTimeout(tick,del?18:42)};tick()}
+document.querySelectorAll("[data-k]").forEach(b=>b.onclick=()=>{S[b.dataset.k]=b.dataset.v;if(b.dataset.k==="m")document.documentElement.dataset.theme=b.dataset.v;document.querySelectorAll(`[data-k="${b.dataset.k}"]`).forEach(x=>x.setAttribute("aria-pressed",x===b));render()});
+document.querySelectorAll("[data-t]").forEach(b=>b.onclick=()=>{const k=b.dataset.t;S[k]=S[k]?0:1;b.setAttribute("aria-pressed",!!S[k]);render()});
+document.getElementById("replay").onclick=()=>render();
+document.getElementById("app").addEventListener("click",e=>{const t=e.target.closest("[data-act],[data-pal]");if(!t)return;
+ if(t.dataset.pal){S.p=+t.dataset.pal}else if(t.dataset.act==="pop"){S.pop=!S.pop}else if(t.dataset.act==="chat"){S.chat=!S.chat}render(false)});
+render();
+</script>
+</body>
+</html>
