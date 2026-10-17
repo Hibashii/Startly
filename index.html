@@ -4,6 +4,16 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Startly</title>
+    <script>
+      // Apply the saved color and mode before the first paint (no white flash in dark mode).
+      try {
+        var st = (JSON.parse(localStorage.getItem('startly-v1')) || {}).state || {}
+        var set = st.settings || {}
+        var dark = set.theme ? set.theme === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches
+        document.documentElement.dataset.theme = dark ? 'dark' : 'light'
+        if (set.accent) document.documentElement.dataset.accent = set.accent
+      } catch (e) {}
+    </script>
   </head>
   <body>
     <div id="root"></div>

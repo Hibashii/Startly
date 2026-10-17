@@ -1,11 +1,12 @@
 import { format } from 'date-fns'
 import { ChevronDown } from 'lucide-react'
 import { Avatar } from './Avatar'
+import { SettingsMenu } from './SettingsMenu'
 import { useStore } from '@/state/store'
 import { useNow } from '@/lib/time'
 import { cn } from '@/lib/utils'
 
-export function TopBar({ main }: { main: boolean }) {
+export function TopBar({ main, theme }: { main: boolean; theme: 'light' | 'dark' }) {
   const chatOpen = useStore((s) => s.chatOpen)
   const setChatOpen = useStore((s) => s.setChatOpen)
   const weekOpen = useStore((s) => s.weekOpen)
@@ -34,6 +35,7 @@ export function TopBar({ main }: { main: boolean }) {
         <div />
       )}
       <div className="flex items-center justify-self-end gap-2.5">
+        <SettingsMenu theme={theme} />
         {main && (
           <button
             type="button"

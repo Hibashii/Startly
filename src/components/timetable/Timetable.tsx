@@ -7,6 +7,8 @@ import { endOfDayFor } from '@/scheduler/schedule'
 import { planOf } from '@/state/store'
 import { useShallow } from 'zustand/react/shallow'
 import { TaskCard } from './TaskCard'
+import { GridView } from './GridView'
+import { cn } from '@/lib/utils'
 import { dayComplete, nowState } from '@/scheduler/now'
 
 export function Timetable() {
@@ -23,6 +25,8 @@ export function Timetable() {
   const justPlanned = useStore((s) => s.justPlanned)
   const thinking = useStore((s) => s.thinking)
   const plan = useStore(useShallow((s) => planOf(s)))
+  const view = useStore((s) => s.view)
+  const setView = useStore((s) => s.setView)
   const byId = new Map(tasks.map((t) => [t.id, t]))
 
   const title = isToday ? 'Today' : date === plusDays(today, 1) ? 'Tomorrow' : format(parseISO(date), 'EEEE')
@@ -59,9 +63,26 @@ export function Timetable() {
                 .filter(Boolean)
                 .join(' · ')}
         </p>
+        {laidOut && blocks.length > 0 && (
+          <div className="ml-auto inline-flex self-center rounded-full border p-0.5 text-[13px]" role="group" aria-label="View">
+            {(['list', 'grid'] as const).map((v) => (
+              <button
+                key={v}
+                type="button"
+                aria-pressed={view === v}
+                onClick={() => setView(v)}
+                className={cn('cursor-pointer rounded-full px-3 py-1 text-mut capitalize', view === v && 'bg-ink font-medium text-bg')}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
-      {laidOut ? (
+      {laidOut && view === 'grid' ? (
+        <GridView blocks={blocks} tasks={tasks} nowMin={isToday ? nowMin : null} now={now} />
+      ) : laidOut ? (
         <ol
           className={`m-0 list-none p-0 ${thinking ? 'softened' : 'unsoftened'}`}
           aria-label={isToday ? "Today's timetable" : `${title}'s timetable`}

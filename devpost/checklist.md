@@ -49,7 +49,7 @@ Build mode: fast — the learner asked to be shown each checkpoint only after te
   Learner check: Plan a short day that includes the current time. Hover the Now card and press **Need more time**. Check off tasks one by one until the last one, and rename one by clicking its name.
   Commit: `Now card, quick buttons, check-off rewards, celebration, rename`
 
-- [ ] **5. Make it yours: color, light/dark, grid view**
+- [x] **5. Make it yours: color, light/dark, grid view**
   Becomes usable: The ⋯ menu (on both screens) offers six swatches (Iris, Ocean, Sage, Plum, Coral, Ink) and a Light/Dark switch. Everything accent-colored recolors at once, including Startly's body, and both are remembered (first visit follows the system mode). The **List / Grid** switch shows the day as an hour grid with a current-time line.
   Why now: This is polish rather than proof of the kernel, so it comes after the core works. The token system is already in place from slice 1, so this mostly adds variants and the menu.
   PRD ref: `prd.md > The Settings Menu`, `prd.md > Main Screen` (List / Grid), `prd.md > Look and Feel`

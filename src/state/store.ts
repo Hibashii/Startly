@@ -46,6 +46,8 @@ interface Ui {
   weekOpen: boolean
   /** Every task of the day is checked: confetti and a message. */
   celebration: { message: string; quote: string } | null
+  /** List (default) or an hour grid like a calendar day view. */
+  view: 'list' | 'grid'
 }
 
 interface Actions {
@@ -59,6 +61,9 @@ interface Actions {
   /** The Now card's buttons, handled by code (no AI call). */
   quick: (taskId: string, what: 'more' | 'notStarted' | 'tomorrow') => void
   closeCelebration: () => void
+  setAccent: (accent: Settings['accent']) => void
+  setTheme: (theme: 'light' | 'dark') => void
+  setView: (view: 'list' | 'grid') => void
   setChatOpen: (open: boolean) => void
   setWeekOpen: (open: boolean) => void
   selectDate: (date: string) => void
@@ -199,6 +204,7 @@ export const useStore = create<Store>()(
         selectedDate: dateKey(now()),
         weekOpen: false,
         celebration: null,
+        view: 'list',
 
         toggleDone: (taskId) => {
           const { today, nowMin } = clockNow()
@@ -257,6 +263,9 @@ export const useStore = create<Store>()(
         },
 
         closeCelebration: () => set({ celebration: null }),
+        setAccent: (accent) => set((s) => ({ settings: { ...s.settings, accent } })),
+        setTheme: (theme) => set((s) => ({ settings: { ...s.settings, theme } })),
+        setView: (view) => set({ view }),
 
         setChatOpen: (chatOpen) => set({ chatOpen }),
         setWeekOpen: (weekOpen) => set(weekOpen ? { weekOpen } : { weekOpen, selectedDate: dateKey(now()) }),

@@ -25,7 +25,7 @@ export default function App() {
 
   return (
     <div className="flex h-full flex-col">
-      <TopBar main={started} />
+      <TopBar main={started} theme={theme} />
       {started ? <MainScreen /> : <FirstScreen />}
     </div>
   )
