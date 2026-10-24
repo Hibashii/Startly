@@ -1,27 +1,19 @@
-import { useEffect, useRef } from 'react'
 import { Eraser, X } from 'lucide-react'
 import { Tip } from '../ui/tooltip'
 import { useStore } from '@/state/store'
 import { Avatar } from '@/components/Avatar'
 import { useT } from '@/i18n/useT'
 import { cn } from '@/lib/utils'
-import { ChatMessage, StartlyLine, UserBubble } from './ChatMessage'
+import { ChatThread } from './ChatThread'
 import { ChatInput } from './ChatInput'
 
-export function ChatDrawer() {
+export function ChatDrawer({ arriving }: { arriving?: boolean }) {
   const open = useStore((s) => s.chatOpen)
   const setOpen = useStore((s) => s.setChatOpen)
   const messages = useStore((s) => s.chat.messages)
   const thinking = useStore((s) => s.thinking)
-  const failed = useStore((s) => s.failed)
-  const send = useStore((s) => s.send)
   const clearChat = useStore((s) => s.clearChat)
   const t = useT()
-  const end = useRef<HTMLDivElement>(null)
-
-  useEffect(() => {
-    end.current?.scrollIntoView({ block: 'end' })
-  }, [messages.length, open, thinking, failed])
 
   return (
     <aside
@@ -31,6 +23,7 @@ export function ChatDrawer() {
       className={cn(
         'flex w-[40%] max-w-[440px] flex-none flex-col overflow-hidden border-s bg-panel transition-[width,max-width,visibility] duration-300 ease-out',
         !open && 'invisible w-0 max-w-0 border-0',
+        arriving && open && 'chat-arrive', // from the middle of the first screen to its place
       )}
     >
       <div className="flex h-[54px] flex-none items-center gap-[9px] border-b px-[18px] font-semibold whitespace-nowrap">
@@ -58,39 +51,7 @@ export function ChatDrawer() {
           <X className="size-4" />
         </button>
       </div>
-      <div className="flex min-w-[300px] flex-1 flex-col gap-4 overflow-y-auto px-[18px] py-5 text-[14.5px] leading-[1.55]">
-        {messages.map((m, i) => (
-          <ChatMessage key={m.id} message={m} last={i === messages.length - 1 && !thinking} />
-        ))}
-        {thinking && (
-          <StartlyLine>
-            <span className="inline-flex items-center gap-2.5 pt-1" role="status">
-              <span className="inline-flex gap-1" aria-hidden>
-                {[0, 150, 300].map((d) => (
-                  <span key={d} className="size-1.5 animate-bounce rounded-full bg-mut" style={{ animationDelay: `${d}ms` }} />
-                ))}
-              </span>
-              <span className="status-line text-[13.5px] text-mut">{t('thinking')}</span>
-            </span>
-          </StartlyLine>
-        )}
-        {failed && !thinking && (
-          <>
-            <UserBubble faded>{failed.text}</UserBubble>
-            <StartlyLine>
-              <p className="m-0">{t(failed.error === 'rate_limited' ? 'errRateLimited' : 'errUnavailable')}</p>
-              <button
-                type="button"
-                onClick={() => send(failed.text)}
-                className="mt-2 cursor-pointer rounded-full border px-3 py-1 text-[13px] font-medium hover:bg-blk"
-              >
-                {t('retry')}
-              </button>
-            </StartlyLine>
-          </>
-        )}
-        <div ref={end} />
-      </div>
+      <ChatThread className="min-w-[300px] px-[18px] py-5 text-[14.5px] leading-[1.55]" />
       <ChatInput />
     </aside>
   )

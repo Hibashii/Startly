@@ -5,12 +5,17 @@ import { Textarea } from '@/components/ui/textarea'
 import { useT } from '@/i18n/useT'
 import { PlanningPreview } from './PlanningPreview'
 import { ProfileFields, type ProfileValue } from './ProfileForm'
+import { ChatThread } from './chat/ChatThread'
+import { ChatInput } from './chat/ChatInput'
 
 
 export function FirstScreen() {
   const send = useStore((s) => s.send)
   const thinking = useStore((s) => s.thinking)
   const known = useStore((s) => !!s.settings.profile)
+  // Startly answered with a question (which days? when are you free?) and there's no plan yet:
+  // the conversation stays here in the middle until the plan exists, then the main screen takes over.
+  const talking = useStore((s) => s.chat.messages.some((m) => m.role === 'assistant'))
   const [asking, setAsking] = useState(false)
   const [text, setText] = useState('')
   const t = useT()
@@ -32,6 +37,17 @@ export function FirstScreen() {
   }
 
   if (asking && !known && !thinking) return <Questions onDone={() => submit()} />
+
+  if (talking) {
+    return (
+      <main className="flex min-h-0 flex-1 flex-col items-center px-6 pt-10 pb-6">
+        <div className="planning flex min-h-0 w-full max-w-[680px] flex-1 flex-col" role="region" aria-label={t('chatWithStartly')}>
+          <ChatThread className="pb-5 text-[16px] leading-[1.6]" />
+          <ChatInput autoFocus className="mx-0 mb-0 py-[9px] text-[16px]" />
+        </div>
+      </main>
+    )
+  }
 
   if (thinking) {
     return (

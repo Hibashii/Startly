@@ -417,8 +417,9 @@ export const useStore = create<Store>()(
           const s = get()
           if (s.chat.date === today) return
           if (s.thinking) return // after the request finishes (send runs it again)
-          if (!s.tasks.length && !s.chat.messages.length) {
-            set({ chat: { date: today, messages: [] } })
+          // No plan yet: a new day starts on the welcome screen (yesterday's unfinished conversation goes).
+          if (!s.tasks.length) {
+            set({ chat: { date: today, messages: [] }, pending: null })
             return
           }
           // The plan is kept: today is (re)laid out; what wasn't checked waits for the question.

@@ -2,8 +2,9 @@ import { useState, type FormEvent, type KeyboardEvent } from 'react'
 import { ArrowUp } from 'lucide-react'
 import { useStore } from '@/state/store'
 import { useT } from '@/i18n/useT'
+import { cn } from '@/lib/utils'
 
-export function ChatInput() {
+export function ChatInput({ className, autoFocus }: { className?: string; autoFocus?: boolean }) {
   const send = useStore((s) => s.send)
   const thinking = useStore((s) => s.thinking)
   const t = useT()
@@ -24,10 +25,11 @@ export function ChatInput() {
   return (
     <form
       onSubmit={submit}
-      className="mx-3.5 mb-3.5 flex min-w-[280px] items-end gap-2.5 rounded-[26px] border bg-card py-[7px] pe-[7px] ps-[18px] shadow-soft"
+      className={cn('mx-3.5 mb-3.5 flex min-w-[280px] items-end gap-2.5 rounded-[26px] border bg-card py-[7px] pe-[7px] ps-[18px] shadow-soft', className)}
     >
       <textarea
         rows={1}
+        autoFocus={autoFocus}
         maxLength={4000}
         value={text}
         onChange={(e) => setText(e.target.value)}

@@ -19,16 +19,20 @@ test('planning a week: Startly asks with answers to tap, then lays out each day'
   )
   await page.getByLabel('Tell me everything you have to do').fill('plan my vacation next week')
   await page.keyboard.press('Enter')
+  // No plan yet: the question is asked in the middle of the screen, with its answers to tap.
+  const talk = page.getByRole('region', { name: 'Chat with Startly' })
+  await expect(talk).toContainText('Which days should I plan?')
+  await talk.getByRole('button', { name: 'Mon 19 Oct – Sun 25 Oct' }).click()
+  // The week is planned: the conversation moves to the side.
   const chat = page.getByRole('complementary', { name: 'Chat with Startly' })
-  await expect(chat).toContainText('Which days should I plan?')
-  await chat.getByRole('button', { name: 'Mon 19 Oct – Sun 25 Oct' }).click()
   await expect(chat).toContainText("Here's your week.")
   expect((sent[1] as { message: string }).message).toBe('Mon 19 Oct – Sun 25 Oct') // the tap is sent as your answer
   await expect(chat.getByRole('button', { name: 'Mon – Fri only' })).toHaveCount(0) // old answers go away
 
-  await page.getByRole('button', { name: 'Week', exact: true }).click()
+  // Nothing today: it opens where the plan starts, on the Week view of next week.
+  await expect(page.getByRole('heading', { name: /^19\s*–\s*25 Oct$/ })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Week', exact: true })).toHaveAttribute('aria-pressed', 'true')
   await expect(chat).toBeVisible() // the chat stays open beside the week
-  await page.getByRole('button', { name: 'Next week' }).click()
   const grid = page.getByRole('region', { name: 'Week grid' })
   await expect(grid.getByRole('list', { name: 'Monday 19 October' })).toContainText('Portfolio')
   await expect(grid.getByRole('list', { name: 'Monday 19 October' })).toContainText('10:00–12:30')
@@ -42,8 +46,12 @@ test('planning a week: Startly asks with answers to tap, then lays out each day'
   await grid.getByRole('button', { name: /Mon\s*19/ }).click()
   await page.getByRole('button', { name: 'List', exact: true }).click()
   await expect(page.getByRole('checkbox', { name: 'Done: Portfolio' })).toBeDisabled()
-  await page.getByRole('checkbox', { name: 'Done: Portfolio' }).hover({ force: true })
-  await expect(page.getByRole('tooltip')).toContainText('on the day itself')
+  // (Hover again until the tooltip shows: a hover during the day's slide-in animation can be missed.)
+  await expect(async () => {
+    await page.mouse.move(0, 0)
+    await page.getByRole('checkbox', { name: 'Done: Portfolio' }).hover({ force: true })
+    await expect(page.getByRole('tooltip')).toContainText('on the day itself', { timeout: 1000 })
+  }).toPass()
   await expect(page.locator('.stamp')).toHaveCount(0)
 })
 

@@ -6,6 +6,7 @@ import { useT } from '@/i18n/useT'
 import { clock, now } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import { playPause, playRoundDone, playStart, ring, unlockSound } from '@/lib/sound'
+import { askNotifications, notify } from '@/lib/notify'
 import { countdown, phaseKey, shouldRing, timerView } from '@/scheduler/timer'
 import { taskTitle } from './taskTitle'
 import { msg, type Text } from '@/i18n'
@@ -17,8 +18,19 @@ import { Tip } from '@/components/ui/tooltip'
 function useTick() {
   const [ms, setMs] = useState(() => now().getTime())
   useEffect(() => {
-    const id = setInterval(() => setMs(now().getTime()), 1000)
-    return () => clearInterval(id)
+    const tick = () => setMs(now().getTime())
+    // Ticked from a worker: browsers slow a background tab's own timers down (Chrome: once a minute after
+    // 5 minutes hidden), not a worker's, so the bell and the notifications stay on time in another tab.
+    try {
+      const url = URL.createObjectURL(new Blob(['setInterval(() => postMessage(0), 1000)'], { type: 'text/javascript' }))
+      const worker = new Worker(url)
+      URL.revokeObjectURL(url)
+      worker.onmessage = tick
+      return () => worker.terminate()
+    } catch {
+      const id = setInterval(tick, 1000)
+      return () => clearInterval(id)
+    }
   }, [])
   return ms
 }
@@ -40,6 +52,7 @@ let lastClick = 0
 /** Every timer button: no bell right after a click (you did it yourself), and its own little sound if it has one. */
 const clicked = (fn: () => void, sound?: () => void) => () => {
   lastClick = Date.now()
+  askNotifications() // the first timer click: may Startly notify you when you're in another tab?
   unlockSound() // the bell may only ring after a click
   if (sound && useStore.getState().settings.timerSound !== false) sound()
   fn()
@@ -54,6 +67,7 @@ export function TimerBell() {
   const t = useT()
   const prev = useRef<string | null>(null)
   const key = phaseKey(view)
+  const task = view && tasks.find((x) => x.id === view.block.taskId)
 
   useEffect(() => {
     const before = prev.current
@@ -66,9 +80,15 @@ export function TimerBell() {
       if (sound) playRoundDone()
       showPop(msg('roundDone', { n, i: Math.floor(Math.random() * 3) }))
     } else if (sound) ring()
+
+    // The same moment as a notification, for when you're in another tab or app.
+    const name = task ? taskTitle(task, t) : ''
+    if (view?.kind === 'pomoBreak') notify(t('notifBreakTitle'), t('notifBreakBody', { time: clockAt(view.backAtMs) }))
+    else if (key.startsWith('e:')) notify(t('notifUpTitle'), t('notifUpBody', { title: name }))
+    else if (before.startsWith('b:') && name) notify(t('notifBackTitle'), t('notifTask', { title: name }))
+    else if (before.startsWith('r:') && name) notify(t('notifNextTitle', { title: name }), t('notifNextBody'))
   }, [key, sound, showPop])
 
-  const task = view && tasks.find((x) => x.id === view.block.taskId)
   const title =
     view?.kind === 'focus' || view?.kind === 'pomoBreak'
       ? `${view.pausedForMs !== undefined ? '⏸ ' : ''}${countdown(view.leftMs)} · ${view.kind === 'focus' && task ? taskTitle(task, t) : t('shortBreak')}`

@@ -83,3 +83,58 @@ test('the first Start asks how you want to focus, once, and the mute button turn
   await expect(bubble).toHaveCount(0)
   await expect(panel.getByRole('timer')).toBeVisible()
 })
+
+test('notifications: asked on the first Start, sent only when you are elsewhere, a click says welcome back', async ({ page }) => {
+  // A stand-in for the browser's notifications that records what Startly sends; "elsewhere" = the window isn't focused.
+  await page.addInitScript(() => {
+    const w = window as unknown as { __notes: object[]; __asked: number; __focused: boolean; __last: { onclick?: () => void } }
+    w.__notes = []
+    w.__asked = 0
+    w.__focused = true
+    class FakeNotification {
+      static permission = 'default'
+      static requestPermission() {
+        w.__asked++
+        FakeNotification.permission = 'granted'
+        return Promise.resolve('granted')
+      }
+      onclick?: () => void
+      constructor(title: string, opts: NotificationOptions) {
+        w.__notes.push({ title, body: opts.body, icon: opts.icon, renotify: (opts as { renotify?: boolean }).renotify, silent: opts.silent })
+        w.__last = this
+      }
+      close() {}
+    }
+    Object.defineProperty(window, 'Notification', { value: FakeNotification })
+    Document.prototype.hasFocus = () => w.__focused
+  })
+  const notes = () => page.evaluate(() => (window as unknown as { __notes: { title: string; body: string }[] }).__notes)
+  await planned(page)
+  const panel = page.getByRole('region', { name: 'Focus timer' })
+  await panel.getByRole('button', { name: 'Start' }).click()
+  expect(await page.evaluate(() => (window as unknown as { __asked: number }).__asked)).toBe(1)
+  await panel.getByRole('button', { name: /Countdown/ }).click()
+  await page.getByRole('menuitemradio', { name: /Pomodoro/ }).click()
+
+  // Looking at Startly: the round ends with Startly's own pop, no notification.
+  await page.clock.fastForward('26:00')
+  await expect(panel).toContainText('Short break')
+  expect(await notes()).toEqual([])
+
+  // In another app: the break's end arrives as a notification, silent, with Startly's picture.
+  await page.evaluate(() => ((window as unknown as { __focused: boolean }).__focused = false))
+  await page.clock.fastForward('05:00')
+  await expect.poll(notes).toEqual([{ title: 'Back to work', body: '“Hackathon”', icon: '/notification-icon.png', renotify: true, silent: true }])
+  await page.clock.fastForward('25:00')
+  await expect.poll(async () => (await notes()).at(-1)).toMatchObject({ title: 'Break time ☕', body: expect.stringMatching(/^Back to it at \d\d:\d\d\.$/) })
+
+  // Clicking it brings you back, and Startly says hello.
+  await page.evaluate(() => (window as unknown as { __last: { onclick: () => void } }).__last.onclick())
+  await expect(page.getByRole('status').filter({ hasText: 'Welcome back 👋' })).toBeVisible()
+
+  // Away again until the task's time runs out.
+  await page.evaluate(() => ((window as unknown as { __focused: boolean }).__focused = false))
+  await page.clock.fastForward('40:00')
+  await expect(panel).toContainText("Time's up")
+  await expect.poll(async () => (await notes()).at(-1)).toMatchObject({ title: "Time's up", body: '“Hackathon”: done, or need more time?' })
+})

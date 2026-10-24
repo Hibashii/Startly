@@ -33,13 +33,27 @@ test('dump → timetable with lunch, a break and the appointment at its time; su
   expect(await rows(page)).toEqual(plan)
 })
 
-test('unclear dump → main screen with nothing planned and Startly asking', async ({ page }) => {
+test('unclear dump → Startly asks in the middle of the screen; the main screen comes with the plan', async ({ page }) => {
   await freshApp(page)
-  await mockAssistant(page, { body: { reply: 'What do you need to get done today?', actions: [] } })
+  await mockAssistant(
+    page,
+    { body: { reply: 'What do you need to get done today?', actions: [] } },
+    { body: { reply: 'Here you go.', order: null, actions: [task('Essay', 60)] } },
+  )
   await page.getByLabel('Tell me everything you have to do').fill('hmm')
   await page.keyboard.press('Enter')
-  await expect(page.getByText('Nothing planned yet')).toBeVisible()
-  await expect(page.locator('[data-role=assistant]')).toContainText('What do you need to get done today?')
+  const talk = page.getByRole('region', { name: 'Chat with Startly' })
+  await expect(talk.locator('[data-role=assistant]')).toContainText('What do you need to get done today?')
+  await expect(page.getByText('Nothing planned yet')).toHaveCount(0) // no empty main screen behind the question
+  await expect(page.getByRole('complementary', { name: 'Chat with Startly' })).toHaveCount(0)
+
+  await talk.getByLabel('Message Startly').fill('an essay, 1 hour')
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
+  const chat = page.getByRole('complementary', { name: 'Chat with Startly' })
+  await expect(chat).toContainText('What do you need to get done today?') // the same conversation, now on the side
+  await expect(chat).toContainText('Here you go.')
+  await expect(chat).toHaveClass(/chat-arrive/)
 })
 
 test('assistant down → friendly error, still on the first screen', async ({ page }) => {

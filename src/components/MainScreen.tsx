@@ -3,11 +3,11 @@ import { Timetable } from './timetable/Timetable'
 import { ChatDrawer } from './chat/ChatDrawer'
 import { WeekStrip } from './WeekStrip'
 import { Celebration } from './Celebration'
-import { Cheer } from './Cheer'
+import { Cheer, WelcomeBack } from './Cheer'
 import { StartlyPop, TimerBell } from './timetable/FocusTimer'
 import { useStore } from '@/state/store'
 
-export function MainScreen() {
+export function MainScreen({ arriving }: { arriving?: boolean }) {
   // (The Week view has its own arrows and day headers: no strip on top of it.)
   const weekOpen = useStore((s) => s.weekOpen && s.view !== 'week')
   return (
@@ -18,9 +18,10 @@ export function MainScreen() {
           <Timetable />
         </main>
       </div>
-      <ChatDrawer />
+      <ChatDrawer arriving={arriving} />
       <Celebration />
       <Cheer />
+      <WelcomeBack />
       <TimerBell />
       <StartlyPop />
       {/* The toast is a dark pill: ink background, page-colored text */}

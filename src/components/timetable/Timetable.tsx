@@ -1,3 +1,5 @@
+import { useEffect } from 'react'
+import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useDay, useStore } from '@/state/store'
 import { clock, toMin } from '@/lib/time'
 import { mondayOf, plusDays, weekOf, windowsFor } from '@/scheduler/days'
@@ -31,8 +33,27 @@ export function Timetable() {
   const plan = useStore(useShallow((s) => planOf(s)))
   const view = useStore((s) => s.view)
   const setView = useStore((s) => s.setView)
+  const stripOpen = useStore((s) => s.weekOpen)
+  const selectDate = useStore((s) => s.selectDate)
+  const goToday = useStore((s) => s.goToday)
   const byId = new Map(tasks.map((t) => [t.id, t]))
 
+  // A day at a time: the arrows by the title (when the week strip is closed), and ← → on the keyboard.
+  const shiftDay = (by: -1 | 1) => selectDate(plusDays(date, by))
+  useEffect(() => {
+    if (view === 'week') return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return
+      const el = e.target as HTMLElement
+      if (el.closest('input, textarea, select, [contenteditable], [role=menu], [role=slider]')) return // typing, or a control that uses the arrows
+      const forward = (e.key === 'ArrowRight') !== (document.documentElement.dir === 'rtl') // Arabic reads right to left
+      selectDate(plusDays(useStore.getState().selectedDate ?? today, forward ? 1 : -1))
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [view, today, selectDate])
+
+  const dayArrow = 'press grid size-8 cursor-pointer place-items-center rounded-full text-mut hover:bg-blk hover:text-ink'
   const upper = (x: string) => x.replace(/^./, (c) => c.toUpperCase())
   const title = isToday ? t('today') : date === plusDays(today, 1) ? t('tomorrow') : upper(t.fmt.dayMonth(date))
   const work = blocks.filter((b) => b.type === 'task' || b.type === 'fixed')
@@ -54,6 +75,7 @@ export function Timetable() {
     .sort((a, b) => (a.start ?? '99') .localeCompare(b.start ?? '99') || a.order - b.order)
   const free = windowsFor(plan, date)
   const dayMinutes = dayTasks.reduce((sum, t) => sum + t.durationMin, 0)
+  const checked = dayTasks.filter((t) => t.status === 'done').length
 
   // The Week view: Monday to Sunday of the day you're on.
   const week = weekOf(mondayOf(date))
@@ -95,38 +117,67 @@ export function Timetable() {
 
   return (
     <section className="mx-auto max-w-[700px]">
-      <div className="sticky -top-[26px] z-20 -mt-[26px] mb-3.5 flex items-baseline gap-3 bg-bg pt-[26px] pb-2">
-        <h2 className="m-0 text-[28px] font-bold tracking-[-0.03em]">{title}</h2>
-        <p className="m-0 text-sm text-mut">
-          {isPast
-            ? blocks.length || dayTasks.length ? '' : t('nothingThatDay')
-            : laidOut
-            ? complete
-              ? t('dayComplete')
-              : work.length
-                ? t('plannedUntil', { planned: t.fmt.duration(planned), until: clock(until) })
-                : t('nothingPlanned')
-            : [
-                // Each range is isolated left-to-right, so "09:00–10:00" never reads backwards inside an Arabic sentence.
-                free ? t('freeTime', { windows: free.map((w) => `\u2066${clock(w.start)}–${clock(w.end)}\u2069`) }) : t('freeUnknown'),
-                dayMinutes ? t('planned', { planned: t.fmt.duration(dayMinutes) }) : '',
-              ]
-                .filter(Boolean)
-                .join(' · ')}
-        </p>
-        {toggle}
+      <div className={cn('sticky -top-[26px] z-20 -mt-[26px] mb-3.5 flex flex-wrap gap-x-3 gap-y-1 bg-bg pt-[26px] pb-2', stripOpen ? 'items-baseline' : 'items-center')}>
+        {stripOpen ? (
+          <h2 className="m-0 text-[28px] font-bold tracking-[-0.03em] whitespace-nowrap">{title}</h2>
+        ) : (
+          // The week strip is closed: ‹ › by the title move a day (with the strip open, it does that job).
+          // The ‹ sits in the page margin, so the title still lines up with the cards below.
+          <div className="-ms-9 flex items-center gap-1">
+            <button type="button" aria-label={t('prevDay')} onClick={() => shiftDay(-1)} className={dayArrow}>
+              <ChevronLeft className="size-5 rtl:rotate-180" />
+            </button>
+            <h2 className="m-0 text-[28px] font-bold tracking-[-0.03em] whitespace-nowrap">{title}</h2>
+            <button type="button" aria-label={t('nextDay')} onClick={() => shiftDay(1)} className={dayArrow}>
+              <ChevronRight className="size-5 rtl:rotate-180" />
+            </button>
+          </div>
+        )}
+        {/* The line, Today and the view switch move together: short on room (a long day name, the chat open),
+            they drop under the title as one row instead of squeezing into a narrow column. */}
+        <div className={cn('flex min-w-[min(100%,27rem)] flex-1 gap-3', stripOpen ? 'items-baseline' : 'items-center')}>
+          <p className="m-0 min-w-0 flex-1 text-sm text-mut">
+            {isPast
+              ? ''
+              : laidOut
+              ? complete
+                ? t('dayComplete')
+                : work.length
+                  ? t('plannedUntil', { planned: t.fmt.duration(planned), until: clock(until) })
+                  : t('nothingPlanned')
+              : [
+                  // Each range is isolated left-to-right, so "09:00–10:00" never reads backwards inside an Arabic sentence.
+                  free ? t('freeTime', { windows: free.map((w) => `\u2066${clock(w.start)}–\u2060${clock(w.end)}\u2069`) }) : t('freeUnknown'),
+                  dayMinutes ? t('planned', { planned: t.fmt.duration(dayMinutes) }) : '',
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
+          </p>
+          {!stripOpen && !isToday && (
+            <button
+              type="button"
+              onClick={goToday}
+              className="press cursor-pointer self-center rounded-full border px-3 py-1 text-[13px] font-medium whitespace-nowrap hover:bg-blk"
+            >
+              {t('today')}
+            </button>
+          )}
+          {toggle}
+        </div>
       </div>
 
       {isToday && <FocusTimer />}
 
       <div key={date} className={cn('relative', daySlide)}>
-        {/* A day that's over: a tilted stamp across it. You can still read everything, just not change it. */}
-        {isPast && (blocks.length > 0 || dayTasks.length > 0) && (
+        {/* A day that's over: a tilted stamp says how it went (nothing checked: no stamp). You can still read everything, just not change it. */}
+        {isPast && checked > 0 && (
           <div
-            className="stamp pointer-events-none absolute end-6 top-6 z-[5] rounded-xl border-[3px] border-acc/70 px-4 py-1 text-[34px] font-black tracking-[0.12em] text-acc/70 uppercase"
-            aria-hidden
+            className={cn(
+              'stamp pointer-events-none absolute end-6 top-6 z-[5] rounded-xl border-[3px] border-current px-4 py-1 text-[34px] font-black tracking-[0.12em] whitespace-nowrap uppercase tabular-nums',
+              checked === dayTasks.length ? 'text-acc/70' : 'text-mut/70',
+            )}
           >
-            {t('doneStamp')}
+            {checked === dayTasks.length ? `${t('doneStamp')} ✓` : t('doneCount', { done: checked, total: dayTasks.length })}
           </div>
         )}
         {laidOut && view === 'grid' ? (
@@ -149,6 +200,11 @@ export function Timetable() {
               />
             ))}
           </ol>
+        ) : !dayTasks.length ? (
+          // An empty day says so in the middle of the page, not in a corner.
+          <p className="m-0 flex min-h-[45vh] items-center justify-center text-center text-[15px] text-mut">
+            {t(isPast ? 'nothingThatDay' : 'laterDayEmpty')}
+          </p>
         ) : (
           <>
             <ul className="m-0 list-none p-0" aria-label={t('tasksOf', { day: title })}>
@@ -163,7 +219,7 @@ export function Timetable() {
                 </li>
               ))}
             </ul>
-            {!isPast && <p className="mt-4 text-sm text-mut">{t(dayTasks.length ? 'laterDayHint' : 'laterDayEmpty')}</p>}
+            {!isPast && <p className="mt-4 text-sm text-mut">{t('laterDayHint')}</p>}
           </>
         )}
 
