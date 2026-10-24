@@ -243,7 +243,6 @@ export const useStore = create<Store>()(
         for (const d of [...new Set(laterNoFit.map((u) => u.date))]) {
           notes.push(msg('noteNoFitOn', { date: d, items: laterNoFit.filter((u) => u.date === d).map((u) => title(u.id)) }))
         }
-        if (result.plannedDays.length) notes.push(msg('notePlanned', { dates: result.plannedDays }))
         // (The one Startly is asking about is covered by its question.)
         const unasked = newlyUnplaced.filter((id) => !pending?.options.some((o) => o.extra.some((a) => 'id' in a && a.id === id)))
         if (unasked.length) notes.push(msg('noteNoFitToday', { end: clock(endOfDayFor(next, today)), items: unasked.map(title) }))

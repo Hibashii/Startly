@@ -165,6 +165,9 @@ export const fr: Dict = {
   dayOver: 'Cette journée est passée : elle reste telle quelle',
   closeChat: 'Fermer la discussion',
   thinking: 'Je réfléchis…',
+  thinking2: 'Je prépare ton planning…',
+  thinking3: 'Je place tout heure par heure…',
+  thinking4: 'Presque fini…',
   messageLabel: 'Écrire à Startly',
   messagePlaceholder: 'Écris à Startly…',
   send: 'Envoyer',
@@ -197,7 +200,6 @@ export const fr: Dict = {
   noteWhenFree: (p, f) =>
     `Quand es-tu libre ${f.weekday(p.date)} ?` +
     (p.waiting.length ? ` J’aimerais caser ${f.list(p.waiting.map((x) => f.quote(f.name(x))))} avant l’échéance.` : ' Dis-le-moi et je planifie.'),
-  notePlanned: (p, f) => `J’ai planifié ${f.list(p.dates.map(f.weekday))} heure par heure.`,
   noteNoFitToday: (p, f) => `Ça ne rentre pas avant ${p.end} aujourd’hui : ${f.list(p.items.map(f.name))}.`,
   noteNoFitOn: (p, f) => `Ça ne rentre pas ${f.weekday(p.date)} : ${f.list(p.items.map(f.name))}.`,
 

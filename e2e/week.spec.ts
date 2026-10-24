@@ -76,3 +76,32 @@ test('opening the week never hides a later morning above now', async ({ page }) 
   const header = await page.getByRole('region', { name: 'Week grid' }).getByRole('button', { name: /Sun\s*18/ }).boundingBox()
   expect((await revise.boundingBox())!.y).toBeGreaterThan(header!.y + header!.height)
 })
+
+test('a long wait says what Startly is doing, a quick one just "Thinking…"', async ({ page }) => {
+  await freshApp(page, '10:00')
+  let release = () => {}
+  const held = new Promise<void>((r) => (release = r))
+  let n = 0
+  await page.route('**/api/assistant', async (route) => {
+    if (n++ === 0) return route.fulfill({ json: { reply: 'Which days should I plan?', order: null, slots: null, suggestions: ['Mon 19 Oct – Sun 25 Oct'], actions: [] } })
+    await held
+    await route.fulfill({ json: {
+      reply: "Here's your week.", order: null, suggestions: null,
+      actions: [{ type: 'set_availability', key: '2026-10-19', windows: [{ start: '10:00', end: '22:00' }] }, { ...task('Portfolio', 120), date: '2026-10-19' }],
+      slots: [{ ref: 'Portfolio', date: '2026-10-19', start: '10:00' }],
+    } })
+  })
+  await page.getByLabel('What do you need to get done today or this week?').fill('plan my week')
+  await page.keyboard.press('Enter')
+  const talk = page.getByRole('region', { name: 'Chat with Startly' })
+  await talk.getByRole('button', { name: 'Mon 19 Oct – Sun 25 Oct' }).click()
+  await expect(talk.getByRole('status')).toHaveText('Thinking…')
+  await page.clock.fastForward(3000)
+  await expect(talk.getByRole('status')).toHaveText('Working out your plan…')
+  await page.clock.fastForward(4000)
+  await expect(talk.getByRole('status')).toHaveText('Placing everything hour by hour…')
+  release()
+  const chat = page.getByRole('complementary', { name: 'Chat with Startly' })
+  await expect(chat).toContainText("Here's your week.")
+  await expect(chat).not.toContainText('hour by hour') // Startly's own words, no extra note repeating them
+})

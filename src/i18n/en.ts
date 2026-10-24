@@ -180,6 +180,9 @@ export const en = {
   dayOver: 'This day is over: it stays as it was',
   closeChat: 'Close chat',
   thinking: 'Thinking…',
+  thinking2: 'Working out your plan…',
+  thinking3: 'Placing everything hour by hour…',
+  thinking4: 'Almost there…',
   messageLabel: 'Message Startly',
   messagePlaceholder: 'Message Startly…',
   send: 'Send',
@@ -214,7 +217,6 @@ export const en = {
   noteWhenFree: (p: { date: string; waiting: Name[] }, f: Fmt) =>
     `When are you free on ${f.weekday(p.date)}?` +
     (p.waiting.length ? ` I'd like to fit ${f.list(p.waiting.map((x) => f.quote(f.name(x))))} in before it's due.` : " Tell me and I'll plan it."),
-  notePlanned: (p: { dates: string[] }, f: Fmt) => `Planned ${f.list(p.dates.map(f.weekday))} hour by hour.`,
   noteNoFitToday: (p: { end: string; items: Name[] }, f: Fmt) => `These don't fit before ${p.end} today: ${f.list(p.items.map(f.name))}.`,
   noteNoFitOn: (p: { date: string; items: Name[] }, f: Fmt) => `These don't fit on ${f.weekday(p.date)}: ${f.list(p.items.map(f.name))}.`,
 

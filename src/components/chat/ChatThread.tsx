@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStore } from '@/state/store'
 import { useT } from '@/i18n/useT'
 import { cn } from '@/lib/utils'
@@ -24,18 +24,7 @@ export function ChatThread({ className }: { className?: string }) {
       {messages.map((m, i) => (
         <ChatMessage key={m.id} message={m} last={i === messages.length - 1 && !thinking} latestChange={m.id === latestChange} />
       ))}
-      {thinking && (
-        <StartlyLine>
-          <span className="inline-flex items-center gap-2.5 pt-1" role="status">
-            <span className="inline-flex gap-1" aria-hidden>
-              {[0, 150, 300].map((d) => (
-                <span key={d} className="size-1.5 animate-bounce rounded-full bg-mut" style={{ animationDelay: `${d}ms` }} />
-              ))}
-            </span>
-            <span className="status-line text-[13.5px] text-mut">{t('thinking')}</span>
-          </span>
-        </StartlyLine>
-      )}
+      {thinking && <Thinking />}
       {failed && !thinking && (
         <>
           <UserBubble faded>{failed.text}</UserBubble>
@@ -53,5 +42,29 @@ export function ChatThread({ className }: { className?: string }) {
       )}
       <div ref={end} />
     </div>
+  )
+}
+
+// A quick answer just says "Thinking…"; a longer one (a whole week being planned) says what's happening.
+const STEPS = [[0, 'thinking'], [2500, 'thinking2'], [6000, 'thinking3'], [12000, 'thinking4']] as const
+
+function Thinking() {
+  const t = useT()
+  const [step, setStep] = useState(0)
+  useEffect(() => {
+    const timers = STEPS.slice(1).map(([at], i) => setTimeout(() => setStep(i + 1), at))
+    return () => timers.forEach(clearTimeout)
+  }, [])
+  return (
+    <StartlyLine>
+      <span className="inline-flex items-center gap-2.5 pt-1" role="status">
+        <span className="inline-flex gap-1" aria-hidden>
+          {[0, 150, 300].map((d) => (
+            <span key={d} className="size-1.5 animate-bounce rounded-full bg-mut" style={{ animationDelay: `${d}ms` }} />
+          ))}
+        </span>
+        <span key={step} className="status-line text-[13.5px] text-mut">{t(STEPS[step][1])}</span>
+      </span>
+    </StartlyLine>
   )
 }

@@ -167,6 +167,9 @@ export const ar: Dict = {
   dayOver: 'انتهى هذا اليوم: يبقى كما كان',
   closeChat: 'إغلاق المحادثة',
   thinking: 'أفكر…',
+  thinking2: 'أُعدّ خطتك…',
+  thinking3: 'أرتّب كل شيء ساعة بساعة…',
+  thinking4: 'اقتربت…',
   messageLabel: 'راسل Startly',
   messagePlaceholder: 'راسل Startly…',
   send: 'إرسال',
@@ -199,7 +202,6 @@ export const ar: Dict = {
   noteWhenFree: (p, f) =>
     `متى تكون متاحًا يوم ${f.weekday(p.date)}؟` +
     (p.waiting.length ? ` أودّ إدراج ${f.list(p.waiting.map((x) => f.quote(f.name(x))))} قبل الموعد.` : ' أخبرني وسأخطّط له.'),
-  notePlanned: (p, f) => `خطّطت ${f.list(p.dates.map(f.weekday))} ساعة بساعة.`,
   noteNoFitToday: (p, f) => `هذا لا يتّسع قبل ${p.end} اليوم: ${f.list(p.items.map(f.name))}.`,
   noteNoFitOn: (p, f) => `هذا لا يتّسع يوم ${f.weekday(p.date)}: ${f.list(p.items.map(f.name))}.`,
 
