@@ -44,7 +44,7 @@ export type ChatMessage = ChatBody & ({ role: 'user'; text: string } | { role: '
 
 interface ChatBody {
   id: string
-  moved?: { id?: string; title: Name; from: string; to: string | null }[] // what moved: to = "HH:MM", a later date, or null (not today)
+  moved?: { id?: string; title: Name; from: string; to: string | null; at?: string | null }[] // what moved: to = "HH:MM", a later date (at: its time there, null = not set), or null (not today)
   notes?: Text[] // code-written notes: removed, didn't fit…
   suggestions?: string[] // Startly asked something: answers to tap (they're sent as your message)
   question?: {

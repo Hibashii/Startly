@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { Undo2 } from 'lucide-react'
 import type { ChatMessage as Msg } from '@/types'
 import type { Text } from '@/i18n'
 import { Avatar } from '@/components/Avatar'
@@ -98,9 +99,10 @@ export function StartlyLine({ children }: { children: ReactNode }) {
   )
 }
 
-export function ChatMessage({ message, last }: { message: Msg; last?: boolean }) {
+/** latestChange: this is the newest list of what moved (older ones fade: they're history, the timetable is now). */
+export function ChatMessage({ message, last, latestChange }: { message: Msg; last?: boolean; latestChange?: boolean }) {
   if (message.role === 'user') return <UserBubble>{'text' in message ? message.text : null}</UserBubble>
-  return <StartlyMessage message={message} last={last} />
+  return <StartlyMessage message={message} last={last} latestChange={latestChange} />
 }
 
 /** How an answered question reads afterwards: the answer you picked, or why it closed. */
@@ -109,12 +111,16 @@ function answeredLine(answered: Text, t: ReturnType<typeof useT>) {
   return closed.includes(answered.k) ? t.text(answered) : t('youChose', { answer: t.text(answered) })
 }
 
-function StartlyMessage({ message, last }: { message: Msg; last?: boolean }) {
+function StartlyMessage({ message, last, latestChange }: { message: Msg; last?: boolean; latestChange?: boolean }) {
   const t = useT()
   const send = useStore((s) => s.send)
   const thinking = useStore((s) => s.thinking)
-  // Where a task went: a time ("16:15"), a later day ("Sun"), or not today.
-  const target = (to: string | null) => (to === null ? t('notToday') : to.includes(':') ? clock(to) : t.fmt.weekdayShort(to))
+  const undo = useStore((s) => s.undo)
+  // Only the newest change can be taken back, from the reply that announced it.
+  const undoable = useStore((s) => s.undoStack.at(-1)?.msgId === message.id)
+  // Where a task went: a time ("16:15"), a later day ("Sun 10:00", "Sun, time not set"), or not today.
+  const target = (to: string | null, at?: string | null) =>
+    to === null ? t('notToday') : to.includes(':') ? clock(to) : t('onDay', { date: to, at: at ? clock(at) : null })
   return (
     <StartlyLine>
       {'content' in message ? (
@@ -124,12 +130,13 @@ function StartlyMessage({ message, last }: { message: Msg; last?: boolean }) {
         <p className="m-0 whitespace-pre-wrap" dir="auto">{message.text}</p>
       )}
       {message.moved && (
-        <ul className="my-2 grid list-none gap-1 p-0" aria-label={t('whatMoved')}>
+        <ul className="my-2 grid list-none gap-1 p-0 data-[old=true]:opacity-55" aria-label={t('whatMoved')} data-old={!latestChange}>
           {message.moved.map((m) => (
             <li key={(m.id ?? '') + m.from} className="flex justify-between gap-3 text-sm">
               {t.taskName(m.title)}
-              <span className="text-[13px] text-mut tabular-nums" dir="ltr">
-                {clock(m.from)} → {target(m.to)}
+              {/* The old time crossed out, then the new one: never read as a range "18:15 → 19:35". */}
+              <span className="text-[13px] tabular-nums" dir="ltr">
+                <s className="text-mut">{clock(m.from)}</s> <span className="font-medium">{target(m.to, m.at)}</span>
               </span>
             </li>
           ))}
@@ -139,6 +146,17 @@ function StartlyMessage({ message, last }: { message: Msg; last?: boolean }) {
         <p key={i} className="mt-2 mb-0">{t.text(n)}</p>
       ))}
       {message.question && <QuestionButtons q={message.question} />}
+      {undoable && (
+        <button
+          type="button"
+          disabled={thinking}
+          onClick={undo}
+          className="press mt-2 inline-flex cursor-pointer items-center gap-1.5 rounded-full border px-3 py-1 text-[13px] font-medium hover:bg-blk disabled:cursor-default disabled:opacity-40"
+        >
+          <Undo2 className="size-3.5 rtl:-scale-x-100" aria-hidden />
+          {t('undo')}
+        </button>
+      )}
       {/* Answers to tap, only while it's the latest thing Startly said */}
       {last && message.suggestions && (
         <div className="mt-2 flex flex-wrap gap-2">

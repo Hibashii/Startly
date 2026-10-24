@@ -9,7 +9,7 @@ const say = async (page: Page, text: string) => {
 async function dump(page: Page, time: string, ...responses: { status?: number; body: unknown }[]) {
   await freshApp(page, time)
   const sent = await mockAssistant(page, ...responses)
-  await page.getByLabel('Tell me everything you have to do').fill('my day')
+  await page.getByLabel('What do you need to get done today or this week?').fill('my day')
   await page.keyboard.press('Enter')
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
   return sent

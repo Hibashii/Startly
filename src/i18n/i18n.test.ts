@@ -6,7 +6,7 @@ import { VARIANTS, type CheerStage, type DayPart } from './shared'
 type Samples = { [K in Key]: ParamsOf<K> extends never ? null : ParamsOf<K> }
 const D = '2026-10-18'
 const SAMPLES: Samples = {
-  hookQuestion: null, hookAnswer: null, step1: null, step2: null, step3: null, stepArrow: null, dumpLabel: null, dumpPlaceholder: null,
+  hookQuestion: null, hookAnswer: null, hookSub: null, step1: null, step2: null, step3: null, stepArrow: null, dumpLabel: null, dumpExample: null,
   planMyDay: null, obTitle: null, obSub: null, obFocus: null, obMorning: null, obAfternoon: null, obEvening: null, obEnd: null,
   obHabits: null, obHabitsHint: null, obSkip: null, planning1: null, planning2: null, planning3: null, planning4: null, planning5: null,
   askStartly: null, weekToggle: { date: D, open: true }, settings: null, color: null, accent: { accent: 'coral' },
@@ -23,7 +23,7 @@ const SAMPLES: Samples = {
   save: null, howYouWorkSub: null, chooseFocus: null, oneCountdown: null, oneCountdownSub: null, pomodoroSub: null, switchHint: null,
   countdown: null, mute: null, unmute: null, modeOn: { mode: 'pomodoro' },
   chatWithStartly: null, clearChat: null, clearChatHint: null, doneStamp: null, doneCount: { done: 3, total: 5 }, checkOnTheDay: null, dayOver: null, closeChat: null, thinking: null, messageLabel: null,
-  messagePlaceholder: null, send: null, retry: null, whatMoved: null, notToday: null, errRateLimited: null, errUnavailable: null,
+  messagePlaceholder: null, send: null, retry: null, whatMoved: null, notToday: null, onDay: { date: D, at: null }, errRateLimited: null, errUnavailable: null,
   didntGet: null, answerWithButtons: null, youChose: { answer: 'Keep it' }, questionExpired: null, questionSkipped: null,
   questionLater: null, nAdded: { n: 2 }, chooseLegend: null, addSelected: null, backToEarlier: null,
   noteRemoved: { items: ['Gym', { cont: 'Groceries' }] }, notePutOn: { title: 'Report', date: D, due: '2026-10-19' },
@@ -33,7 +33,9 @@ const SAMPLES: Samples = {
   dayOption: { date: D }, dropIt: null, dropThem: null, greeting: { part: 'morning', i: 1, hasPlan: true },
   leftoverOne: { title: 'Groceries', yesterday: true }, leftoverMany: { items: ['Groceries', 'Gym'], yesterday: true },
   addIt: null, addBoth: null, addAll: null, choose: null, addedMore: { title: 'Gym' }, startsNow: { title: 'Gym' },
-  movedTo: { title: 'Gym', date: D }, addedToToday: null, droppedThem: null, toastReshuffled: { n: 3 },
+  movedTo: { title: 'Gym', date: D }, addedToToday: null, droppedThem: null,
+  undo: null, undoneOne: { title: 'Gym', date: D, at: '22:30' }, undoneMany: { items: ['Gym', { cont: 'Study' }] }, undone: null, nothingToUndo: null,
+  toastReshuffled: { n: 3 },
   toastRemoved: { items: ['Gym'] }, toastAdded: { n: 1 }, toastRenamed: null, toastSaved: null, toastChatCleared: null,
   cheer: { stage: 'half', i: 2 }, dayCompleteTitle: null, celebrationMessage: { i: 3 }, celebrationQuote: { i: 3 }, restWell: null,
 }
@@ -105,7 +107,7 @@ describe('i18n', () => {
   })
 
   it('never crashes on odd saved data: unknown language or message', () => {
-    expect(translate('xx' as never, msg('hookAnswer'))).toBe('Start here.')
+    expect(translate('xx' as never, msg('hookAnswer'))).toBe('not sure where to start?')
     expect(translate('fr', { k: 'gone' } as never)).toBe('')
   })
 })

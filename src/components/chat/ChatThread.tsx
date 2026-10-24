@@ -13,6 +13,7 @@ export function ChatThread({ className }: { className?: string }) {
   const send = useStore((s) => s.send)
   const t = useT()
   const end = useRef<HTMLDivElement>(null)
+  const latestChange = messages.findLast((m) => m.moved)?.id
 
   useEffect(() => {
     end.current?.scrollIntoView({ block: 'end' })
@@ -21,7 +22,7 @@ export function ChatThread({ className }: { className?: string }) {
   return (
     <div className={cn('flex flex-1 flex-col gap-4 overflow-y-auto', className)}>
       {messages.map((m, i) => (
-        <ChatMessage key={m.id} message={m} last={i === messages.length - 1 && !thinking} />
+        <ChatMessage key={m.id} message={m} last={i === messages.length - 1 && !thinking} latestChange={m.id === latestChange} />
       ))}
       {thinking && (
         <StartlyLine>

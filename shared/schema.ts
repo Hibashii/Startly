@@ -63,6 +63,7 @@ export const Action = z.discriminatedUnion('type', [
     habits: z.string().nullable().describe("the user's fixed habits and routines in their words, the whole updated text; null = unchanged"),
   }),
   z.object({ type: z.literal('resolve_pending'), optionId: z.string() }),
+  z.object({ type: z.literal('undo') }),
 ])
 export type Action = z.infer<typeof Action>
 
@@ -114,7 +115,8 @@ export const AssistantContext = z.object({
   timetable: z.array(z.string()).describe("today's timetable as the app placed it, e.g. \"19:55-20:55 Prepare for interview\", \"20:55-21:10 break\""),
   breaks: z.object({ afterMin: z.number(), lengthMin: z.number() }),
   language: z.string().describe("the app's language (en, fr, es, de, nl, ar): reply in the language the user writes in; if unclear, in this one"),
-  recentMessages: z.array(z.object({ role: z.enum(['user', 'assistant']), text: z.string() })),
+  recentMessages: z.array(z.object({ role: z.enum(['user', 'assistant']), text: z.string() })).describe("Startly's messages include the app's notes on what each change did"),
+  canUndo: z.boolean().optional().describe('true = there is a change of Startly\'s that the undo action can take back'),
   profile: z
     .object({ focusBest: z.string().nullable(), habits: z.string() })
     .nullable()

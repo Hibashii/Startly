@@ -30,15 +30,16 @@ const s = (n: number, one: string, many: string) => (n === 1 ? one : many)
 
 export const en = {
   // First screen
-  hookQuestion: "Don't know where to start?",
-  hookAnswer: 'Start here.',
-  step1: 'Dump everything',
-  step2: 'Get your timetable',
-  step3: 'Tell me when things change',
+  hookQuestion: 'Too much to do,',
+  hookAnswer: 'not sure where to start?',
+  hookSub: 'Tell Startly what you need to do. Get a realistic schedule for your day or week, with breaks built in.',
+  step1: 'List your tasks',
+  step2: 'Get your schedule',
+  step3: 'Adjust anytime',
   stepArrow: '→',
-  dumpLabel: 'Tell me everything you have to do',
-  dumpPlaceholder: 'Tell me everything you have to do…',
-  planMyDay: 'Plan my day →',
+  dumpLabel: 'What do you need to get done today or this week?',
+  dumpExample: 'e.g. Study for 2 hours, buy groceries, finish my project by Friday…',
+  planMyDay: 'Plan it for me →',
   obTitle: 'Before I plan: 3 quick questions',
   obSub: "So your timetable fits how you work. I'll remember, you won't be asked again.",
   obFocus: 'When do you focus best?',
@@ -184,6 +185,7 @@ export const en = {
   retry: 'Retry',
   whatMoved: 'What moved',
   notToday: 'not today',
+  onDay: (p: { date: string; at: string | null }, f: Fmt) => `${f.weekdayShort(p.date)}${p.at ? ` ${p.at}` : ', time not set'}`,
   errRateLimited: "That's a lot of messages for one hour. Give me a few minutes.",
   errUnavailable: "I couldn't reach my brain just now. Try again?",
   didntGet: "Sorry, I didn't quite get that. Could you say it another way?",
@@ -243,6 +245,14 @@ export const en = {
   movedTo: (p: { title: Name; date: string }, f: Fmt) => `Moved ${f.quote(f.name(p.title))} to ${f.weekday(p.date)}.`,
   addedToToday: 'Added to today.',
   droppedThem: 'Dropped them.',
+
+  // Undo: taking back Startly's last change
+  undo: 'Undo',
+  undoneOne: (p: { title: Name; date: string | null; at: string | null }, f: Fmt) =>
+    `Undone: ${f.quote(f.name(p.title))} is back${p.date ? ` on ${f.weekday(p.date)}` : ''}${p.at ? ` at ${p.at}` : ''}.`,
+  undoneMany: (p: { items: Name[] }, f: Fmt) => `Undone: ${f.list(p.items.map(f.name))} are back where they were.`,
+  undone: 'Undone. Your plan is back to how it was.',
+  nothingToUndo: "There's nothing left to undo.",
 
   // Toasts and rewards
   toastReshuffled: (p: { n: number }) => `↻ Reshuffled ${p.n} ${s(p.n, 'task', 'tasks')}`,

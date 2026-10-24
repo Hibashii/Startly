@@ -5,7 +5,7 @@ const SUN = '2026-10-18'
 async function yesterdayWithLeftovers(page: Page) {
   await freshApp(page, '14:00')
   await mockAssistant(page, { body: { reply: 'Here you go.', order: null, actions: [task('Hackathon', 60), task('Groceries', 45), task('Job application #3', 45)] } })
-  await page.getByLabel('Tell me everything you have to do').fill('x')
+  await page.getByLabel('What do you need to get done today or this week?').fill('x')
   await page.keyboard.press('Enter')
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
   await page.getByRole('checkbox', { name: 'Done: Hackathon' }).click()
@@ -64,7 +64,7 @@ test('your first message of the day does not make the morning question go away',
 test('a day that runs until 1 am is still the same day at 00:30 (no reset, tasks still there)', async ({ page }) => {
   await freshApp(page, '22:00')
   await mockAssistant(page, { body: { reply: 'ok', order: null, actions: [{ type: 'set_end_of_day', time: '01:00' }, task('Hackathon', 150)] } })
-  await page.getByLabel('Tell me everything you have to do').fill('hackathon 2h30, I can stay until 1 am')
+  await page.getByLabel('What do you need to get done today or this week?').fill('hackathon 2h30, I can stay until 1 am')
   await page.keyboard.press('Enter')
   await expect.poll(() => rows(page)).toContainEqual(expect.stringMatching(/^task 22:00–00:30 Hackathon/))
   await page.clock.setFixedTime(new Date('2026-10-18T00:20:00'))

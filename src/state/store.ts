@@ -30,6 +30,15 @@ export interface Pending {
   base: { actions: AnyAction[]; order: string[] | null; slots?: Slots } // the change that raised the question
 }
 
+/** The plan as it was before one of Startly's changes, so it can be taken back (msgId: the reply that announced it). */
+export interface Undo {
+  msgId: string | null
+  before: Omit<Plan, 'settings'> & { settings: Pick<Settings, 'endOfDay' | 'breaks' | 'profile'> }
+}
+
+// "undo" typed on its own is taken back at once, without asking the AI (any other wording goes through the AI).
+const UNDO_WORDS = /^(undo( (it|that))?|annule[rz]?( (ça|ca))?|d[ée]faire|deshacer|deshazlo|r[üu]ckg[äa]ngig( machen)?|ongedaan maken|تراجع)[.!]?$/i
+
 interface Persisted {
   tasks: Task[]
   blocks: Record<string, Block[]>
@@ -43,6 +52,8 @@ interface Persisted {
   timer: Timer | null
   /** The day you last used the timer: breaks get a countdown too. */
   focusDay: string | null
+  /** Startly's last few changes, newest last: Undo takes back the newest. */
+  undoStack: Undo[]
 }
 
 interface Ui {
@@ -70,6 +81,8 @@ interface Ui {
 interface Actions {
   /** Send a message to Startly; returns false if the assistant couldn't be reached. */
   send: (text: string) => Promise<{ ok: boolean; error?: string }>
+  /** Take back Startly's last change (the Undo button, or "undo" in the chat). */
+  undo: () => void
   /** Answer Startly's question with one of its buttons. */
   answer: (optionId: string) => void
   /** Check or uncheck a task. */
@@ -126,10 +139,19 @@ const fresh = (): Persisted => ({
   lastCelebratedDate: null,
   timer: null,
   focusDay: null,
+  undoStack: [],
 })
 
 let msgId = 0
 const mid = () => `m${Date.now().toString(36)}${msgId++}`
+
+const snapshot = (p: Plan): Undo['before'] => ({
+  tasks: p.tasks,
+  blocks: p.blocks,
+  availability: p.availability,
+  dayEnds: p.dayEnds ?? {},
+  settings: { endOfDay: p.settings.endOfDay, breaks: p.settings.breaks, profile: p.settings.profile },
+})
 
 export const planOf = (s: Persisted): Plan => ({
   tasks: s.tasks,
@@ -241,6 +263,8 @@ export const useStore = create<Store>()(
           flash,
           justPlanned: firstPlan,
           chat: { ...cur.chat, messages: post ? [...skipOpen(cur.chat.messages), reply] : cur.chat.messages },
+          // (The first plan isn't taken back: that would empty the whole day.)
+          undoStack: firstPlan ? [] : [...cur.undoStack, { msgId: post ? reply.id : null, before: snapshot(prev) }].slice(-5),
         }))
         const note = firstPlan ? null : toastText(diff)
         if (note) say(note)
@@ -424,7 +448,7 @@ export const useStore = create<Store>()(
           }
           // The plan is kept: today is (re)laid out; what wasn't checked waits for the question.
           const plan = applyActions(planOf(s), [], today, nowMin).plan
-          set({ ...plan, dayEnds: plan.dayEnds ?? {}, pending: null })
+          set({ ...plan, dayEnds: plan.dayEnds ?? {}, pending: null, undoStack: [] })
           askMorning(today, true, at)
         },
 
@@ -488,7 +512,12 @@ export const useStore = create<Store>()(
             question: words(s.pending.question),
             options: s.pending.options.filter((o) => o.id !== 'choose').map(({ id, label }) => ({ id, label: words(label) })),
           }
-          const res = await askStartly(text, buildContext(planOf(s), s.chat.messages, pendingForAi, at))
+          if (UNDO_WORDS.test(text.trim())) {
+            set({ thinking: false })
+            get().undo()
+            return { ok: true }
+          }
+          const res = await askStartly(text, buildContext(planOf(s), s.chat.messages, pendingForAi, at, s.undoStack.length > 0))
           if (!res.ok) {
             // Leave the plan untouched; take the message back out so it can be retried.
             set((cur) => ({
@@ -500,6 +529,11 @@ export const useStore = create<Store>()(
           }
           set({ thinking: false })
 
+          if (res.data.actions.some((a) => a.type === 'undo')) {
+            get().undo() // the app writes the reply: it knows exactly what comes back
+            get().morningReset()
+            return { ok: true }
+          }
           // "ok keep it" in words answers the open question.
           const resolve = res.data.actions.find((a) => a.type === 'resolve_pending')
           const cur = get()
@@ -521,6 +555,65 @@ export const useStore = create<Store>()(
           }
           get().morningReset() // in case the day changed during the request
           return { ok: true }
+        },
+
+        undo: () => {
+          const s = get()
+          const last = s.undoStack.at(-1)
+          if (!last) {
+            set((cur) => ({ chatOpen: true, chat: { ...cur.chat, messages: [...cur.chat.messages, { id: mid(), role: 'assistant', content: msg('nothingToUndo') }] } }))
+            return
+          }
+          const { today } = clockNow()
+          // What you did yourself since then stays: checked tasks, new names, focus or not.
+          const current = new Map(s.tasks.map((t) => [t.id, t]))
+          const tasks = last.before.tasks.map((t) => {
+            const c = current.get(t.id)
+            return c ? { ...t, status: c.status, title: c.title, focus: c.focus } : t
+          })
+          const kept = new Set(tasks.map((t) => t.id))
+          // What comes back (a split task counts once): first what changed day or was deleted, else what changed time.
+          // (The tasks that only shifted around it show in the list of what moved.)
+          const comesBack = (sameDayToo: boolean) => {
+            const roots = new Set<string>()
+            return tasks.filter((t) => {
+              const c = current.get(t.id)
+              const root = t.partOf ?? t.id
+              const changed = !c || c.date !== t.date || (sameDayToo && c.start !== t.start)
+              if (t.status === 'done' || !changed || roots.has(root)) return false
+              roots.add(root)
+              return true
+            })
+          }
+          const otherDay = comesBack(false)
+          const back = otherDay.length ? otherDay : comesBack(true)
+          const gone = s.tasks.filter((t) => !kept.has(t.id) && !t.partOf).map(nameOf)
+
+          const reply: ChatMessage =
+            back.length === 1
+              ? { id: mid(), role: 'assistant', content: msg('undoneOne', { title: nameOf(back[0]), date: back[0].date && back[0].date !== today ? back[0].date : null, at: back[0].start && clock(back[0].start) }) }
+              : { id: mid(), role: 'assistant', content: back.length ? msg('undoneMany', { items: back.map(nameOf) }) : msg('undone') }
+          const moved = diffToday(s.tasks, tasks, today).moved.filter((m) => m.to !== null)
+          if (moved.length) reply.moved = moved
+          if (gone.length) reply.notes = [msg('noteRemoved', { items: gone })]
+
+          // An open question was about the plan being taken back: it no longer applies (the morning one still does).
+          const open = s.pending && s.pending.kind !== 'morning' ? s.pending : null
+          const flash = back.map((t) => t.id)
+          set((cur) => ({
+            tasks,
+            blocks: last.before.blocks,
+            availability: last.before.availability,
+            dayEnds: last.before.dayEnds ?? {},
+            settings: { ...cur.settings, ...last.before.settings },
+            undoStack: cur.undoStack.slice(0, -1),
+            pending: open ? null : cur.pending,
+            timer: cur.timer && kept.has(cur.timer.taskId) ? cur.timer : null,
+            chatOpen: true,
+            flash,
+            chat: { ...cur.chat, messages: [...(open ? closeQuestion(cur.chat.messages, open.id, msg('questionSkipped')) : cur.chat.messages), reply] },
+          }))
+          if (flash.length) setTimeout(() => set({ flash: [] }), 2600)
         },
 
         answer: (optionId) => {
@@ -551,9 +644,10 @@ export const useStore = create<Store>()(
         lastCelebratedDate: s.lastCelebratedDate,
         timer: s.timer,
         focusDay: s.focusDay,
+        undoStack: s.undoStack,
       }),
       // Older saves may miss newer fields.
-      merge: (saved, current) => ({ ...current, ...(saved as Partial<Persisted>), dayEnds: (saved as Partial<Persisted>)?.dayEnds ?? {}, timer: (saved as Partial<Persisted>)?.timer ?? null }),
+      merge: (saved, current) => ({ ...current, ...(saved as Partial<Persisted>), dayEnds: (saved as Partial<Persisted>)?.dayEnds ?? {}, timer: (saved as Partial<Persisted>)?.timer ?? null, undoStack: (saved as Partial<Persisted>)?.undoStack ?? [] }),
       migrate: (saved, version) => (version === 1 ? fromV1(saved) : fresh()), // anything unknown starts fresh
     },
   ),

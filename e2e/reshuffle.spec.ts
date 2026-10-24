@@ -6,7 +6,7 @@ const plan = { body: { reply: "Here's your Saturday.", actions: [task('Hackathon
 async function planDay(page: Page, ...then: { status?: number; body: unknown }[]) {
   await freshApp(page, '14:00')
   const sent = await mockAssistant(page, plan, ...then)
-  await page.getByLabel('Tell me everything you have to do').fill('hackathon, gym, review notes, mentor call at 20:00')
+  await page.getByLabel('What do you need to get done today or this week?').fill('hackathon, gym, review notes, mentor call at 20:00')
   await page.keyboard.press('Enter')
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
   return sent
@@ -33,7 +33,8 @@ test('started late → the day reshuffles, a toast appears then goes, and the ch
   const moved = page.getByRole('list', { name: 'What moved' }).last()
   await expect(moved).toContainText('Hackathon')
   await expect(moved).toContainText('Gym')
-  await expect(moved).toContainText('14:00 → 16:00')
+  await expect(moved.locator('li', { hasText: 'Hackathon' })).toHaveText(/Hackathon\s*14:00\s+16:00/)
+  await expect(moved.locator('li', { hasText: 'Hackathon' }).locator('s')).toHaveText('14:00') // the old time, crossed out
   // Moved cards glow, then the glow leaves.
   await expect(page.locator('li[data-flash]')).not.toHaveCount(0)
   await page.clock.runFor(4000)
@@ -88,7 +89,7 @@ test('Ask Startly toggles the drawer', async ({ page }) => {
 test('a task that does not fit is listed under the timetable, never invisible', async ({ page }) => {
   await freshApp(page, '21:00')
   const sent = await mockAssistant(page, { body: { reply: 'Here you go.', actions: [task('Hackathon', 90), task('Groceries', 45)] } }, { body: { reply: 'It does not fit today.', actions: [] } })
-  await page.getByLabel('Tell me everything you have to do').fill('hackathon 1h30, groceries')
+  await page.getByLabel('What do you need to get done today or this week?').fill('hackathon 1h30, groceries')
   await page.keyboard.press('Enter')
   const notFit = page.getByRole('list', { name: "Doesn't fit today" })
   await expect(notFit).toContainText('Groceries')

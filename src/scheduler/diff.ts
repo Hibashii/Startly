@@ -6,6 +6,7 @@ export interface Moved {
   title: Name
   from: string // "HH:MM"
   to: string | null // "HH:MM", a later date "YYYY-MM-DD", or null (not today)
+  at?: string | null // moved to a later date: its time there, or null (not set yet)
 }
 
 export interface Diff {
@@ -37,7 +38,7 @@ export function diffToday(before: Task[], after: Task[], today: string): Diff {
     if (wasToday && isToday && old.start !== t.start) moved.push({ id: t.id, title: nameOf(t), from: old.start!, to: t.start! })
     else if (wasToday && !isToday) {
       const to = t.date && t.date > today ? t.date : null
-      moved.push({ id: t.id, title: nameOf(t), from: old.start!, to })
+      moved.push({ id: t.id, title: nameOf(t), from: old.start!, to, ...(to && { at: t.start }) })
     }
   }
   const removed = before.filter((t) => !next.has(t.id)).map(nameOf)

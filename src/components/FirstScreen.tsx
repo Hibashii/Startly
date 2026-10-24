@@ -59,10 +59,10 @@ export function FirstScreen() {
 
   return (
     <main className="flex flex-1 flex-col items-center justify-center gap-[22px] px-6 pb-[60px] text-center">
-      <h1 className="m-0 text-[44px] leading-[1.15] font-semibold tracking-[-0.025em]">
-        <span className="font-medium text-[var(--q)]">{t('hookQuestion')}</span>
-        <br />
-        <span className="highlight">{t('hookAnswer')}</span>
+      <h1 className="m-0 text-[40px] leading-[1.15] font-[650] tracking-[-0.03em] text-balance sm:text-[50px]">
+        <span className="block font-medium text-[var(--q)]">{t('hookQuestion')}</span>
+        {/* Balanced, so a phone splits it in two even lines instead of leaving one word alone */}
+        <span className="block"><span className="highlight">{t('hookAnswer')}</span></span>
       </h1>
       <ol className="m-0 flex list-none flex-wrap items-center justify-center gap-2.5 p-0">
         {[t('step1'), t('step2'), t('step3')].map((step, i) => (
@@ -82,7 +82,7 @@ export function FirstScreen() {
             onChange={(e) => setText(e.target.value)}
             onKeyDown={onKeyDown}
             aria-label={t('dumpLabel')}
-            placeholder={t('dumpPlaceholder')}
+            placeholder={t('dumpExample')}
             className="max-h-[40vh] min-h-[84px] resize-none border-0 bg-transparent p-1 text-[17px] text-ink shadow-none placeholder:text-mut focus-visible:ring-0 md:text-[17px] dark:bg-transparent"
           />
           <div className="mt-1 flex justify-end">

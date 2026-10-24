@@ -17,7 +17,7 @@ test('planning a week: Startly asks with answers to tap, then lays out each day'
       slots: [{ ref: 'Portfolio', date: '2026-10-19', start: '10:00' }, { ref: 'Spanish', date: '2026-10-20', start: '14:00' }],
     } },
   )
-  await page.getByLabel('Tell me everything you have to do').fill('plan my vacation next week')
+  await page.getByLabel('What do you need to get done today or this week?').fill('plan my vacation next week')
   await page.keyboard.press('Enter')
   // No plan yet: the question is asked in the middle of the screen, with its answers to tap.
   const talk = page.getByRole('region', { name: 'Chat with Startly' })
@@ -66,7 +66,7 @@ test('opening the week never hides a later morning above now', async ({ page }) 
     ],
     slots: [{ ref: 'Revise', date: '2026-10-18', start: '09:00' }],
   } })
-  await page.getByLabel('Tell me everything you have to do').fill('gym today, revise tomorrow morning')
+  await page.getByLabel('What do you need to get done today or this week?').fill('gym today, revise tomorrow morning')
   await page.keyboard.press('Enter')
   await page.getByRole('button', { name: 'Week', exact: true }).click()
   const sunday = page.getByRole('region', { name: 'Week grid' }).getByRole('list', { name: 'Sunday 18 October' })

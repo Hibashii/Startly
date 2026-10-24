@@ -13,10 +13,10 @@ test('dump → timetable with lunch, a break and the appointment at its time; su
     },
   })
 
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Don't know where to start\?\s*Start here\./)
-  const go = page.getByRole('button', { name: 'Plan my day →' })
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Too much to do,\s*not sure where to start\?/)
+  const go = page.getByRole('button', { name: 'Plan it for me →' })
   await expect(go).toBeDisabled()
-  await page.getByLabel('Tell me everything you have to do').fill('apply to 3 jobs, hackathon, gym, groceries, dentist 15:00-15:30')
+  await page.getByLabel('What do you need to get done today or this week?').fill('apply to 3 jobs, hackathon, gym, groceries, dentist 15:00-15:30')
   await go.click()
 
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
@@ -40,7 +40,7 @@ test('unclear dump → Startly asks in the middle of the screen; the main screen
     { body: { reply: 'What do you need to get done today?', actions: [] } },
     { body: { reply: 'Here you go.', order: null, actions: [task('Essay', 60)] } },
   )
-  await page.getByLabel('Tell me everything you have to do').fill('hmm')
+  await page.getByLabel('What do you need to get done today or this week?').fill('hmm')
   await page.keyboard.press('Enter')
   const talk = page.getByRole('region', { name: 'Chat with Startly' })
   await expect(talk.locator('[data-role=assistant]')).toContainText('What do you need to get done today?')
@@ -59,8 +59,8 @@ test('unclear dump → Startly asks in the middle of the screen; the main screen
 test('assistant down → friendly error, still on the first screen', async ({ page }) => {
   await freshApp(page)
   await mockAssistant(page, { status: 502, body: { error: 'assistant_unavailable' } })
-  await page.getByLabel('Tell me everything you have to do').fill('gym')
-  await page.getByRole('button', { name: 'Plan my day →' }).click()
+  await page.getByLabel('What do you need to get done today or this week?').fill('gym')
+  await page.getByRole('button', { name: 'Plan it for me →' }).click()
   await expect(page.getByRole('alert')).toHaveText("I couldn't reach my brain just now. Try again?")
-  await expect(page.getByLabel('Tell me everything you have to do')).toHaveValue('gym')
+  await expect(page.getByLabel('What do you need to get done today or this week?')).toHaveValue('gym')
 })

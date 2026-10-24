@@ -4,7 +4,7 @@ import { freshApp, mockAssistant, rows, task } from './helpers'
 async function planned(page: Page, actions = [task('Hackathon', 90), task('Gym', 60)], opts = {}) {
   await freshApp(page, '14:00', opts)
   await mockAssistant(page, { body: { reply: 'ok', order: null, actions } })
-  await page.getByLabel('Tell me everything you have to do').fill('x')
+  await page.getByLabel('What do you need to get done today or this week?').fill('x')
   await page.keyboard.press('Enter')
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
 }

@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/compone
 export const ACCENTS: { id: Accent; light: string; dark: string }[] = [
   { id: 'iris', light: '#5b5bd6', dark: '#a5a6ff' },
   { id: 'ocean', light: '#0e7490', dark: '#67d3e8' },
-  { id: 'sage', light: '#3f7d5c', dark: '#8fd1ac' },
+  { id: 'sage', light: '#326b52', dark: '#86c3a6' },
   { id: 'plum', light: '#8e4ec6', dark: '#d2a8ff' },
   { id: 'pink', light: '#d6409f', dark: '#f48cc8' },
   { id: 'coral', light: '#e5484d', dark: '#ff9592' },

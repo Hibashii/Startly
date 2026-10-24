@@ -333,7 +333,7 @@ export function applyActions(
         break
       }
       default:
-        // resolve_pending is handled by the store (it picks one of the prepared answers).
+        // resolve_pending and undo are handled by the store (an answer it prepared; the plan before the last change).
         skipped.push(a)
     }
   }

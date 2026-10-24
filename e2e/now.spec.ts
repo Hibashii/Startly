@@ -4,7 +4,7 @@ import { TODAY, freshApp, mockAssistant, rows, task } from './helpers'
 async function day(page: Page, time = '14:10', hackMin = 60) {
   await freshApp(page, '14:00')
   await mockAssistant(page, { body: { reply: 'Here you go.', order: null, actions: [task('Hackathon', hackMin), task('Gym', 60), task('Review notes', 30)] } })
-  await page.getByLabel('Tell me everything you have to do').fill('my day')
+  await page.getByLabel('What do you need to get done today or this week?').fill('my day')
   await page.keyboard.press('Enter')
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
   await page.clock.setFixedTime(new Date(`${TODAY}T${time}:00`))
@@ -111,7 +111,7 @@ test('checking a part of a split task finishes it all', async ({ page }) => {
   await mockAssistant(page,
     { body: { reply: 'ok', order: null, actions: [task('Hackathon', 60), task('Gym', 60)] } },
     { body: { reply: 'ok', order: null, actions: [{ type: 'add_fixed', title: 'Call', date: TODAY, start: '14:30', end: '15:00' }] } })
-  await page.getByLabel('Tell me everything you have to do').fill('x')
+  await page.getByLabel('What do you need to get done today or this week?').fill('x')
   await page.keyboard.press('Enter')
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
   await page.clock.setFixedTime(new Date(`${TODAY}T14:10:00`))

@@ -7,7 +7,7 @@ const bgOf = (page: Page) => page.evaluate(() => getComputedStyle(document.body)
 async function planned(page: Page) {
   await freshApp(page, '14:00')
   await mockAssistant(page, { body: { reply: 'ok', order: null, actions: [task('Hackathon', 90), task('Gym', 60), { type: 'add_fixed', title: 'Call', date: TODAY, start: '17:00', end: '17:30' }] } })
-  await page.getByLabel('Tell me everything you have to do').fill('x')
+  await page.getByLabel('What do you need to get done today or this week?').fill('x')
   await page.keyboard.press('Enter')
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
 }
@@ -32,19 +32,19 @@ test('a swatch recolors everything at once (Now card, avatar), light and dark; b
 
   await page.getByRole('button', { name: 'Settings' }).click()
   await page.getByRole('radio', { name: 'Sage' }).click()
-  expect(await accentOf(page)).toBe('#3f7d5c')
+  expect(await accentOf(page)).toBe('#326b52')
   const nowBar = await page.locator('li[data-now]').evaluate((e) => getComputedStyle(e).boxShadow)
-  expect(nowBar).toContain('rgb(63, 125, 92)')
+  expect(nowBar).toContain('rgb(50, 107, 82)')
   const avatarStop = await page.locator('header svg stop').first().evaluate((e) => getComputedStyle(e).stopColor)
   expect(avatarStop).not.toBe('')
 
   await page.getByRole('switch', { name: 'Dark mode' }).click()
   await expect.poll(() => bgOf(page)).toBe('rgb(22, 21, 18)') // #161512
-  expect(await accentOf(page)).toBe('#8fd1ac') // Sage, the dark-mode version
+  expect(await accentOf(page)).toBe('#86c3a6') // Sage, the dark-mode version
 
   await page.reload()
   await expect.poll(() => bgOf(page)).toBe('rgb(22, 21, 18)')
-  expect(await accentOf(page)).toBe('#8fd1ac')
+  expect(await accentOf(page)).toBe('#86c3a6')
 })
 
 test('the first visit follows the computer\'s mode', async ({ page }) => {
@@ -84,16 +84,16 @@ test('Start fresh asks first; Cancel keeps everything, Delete everything goes ba
   // Cancel goes back to the open menu.
   await page.getByRole('button', { name: 'Start fresh…' }).click()
   await page.getByRole('button', { name: 'Delete everything' }).click()
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Start here/)
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(/not sure where to start/)
   await page.reload()
-  await expect(page.getByRole('heading', { level: 1 })).toHaveText(/Start here/)
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText(/not sure where to start/)
   expect(await accentOf(page)).toBe('#8e4ec6')
 })
 
 test('grid: a 5-minute block is still readable and never overlaps the next one', async ({ page }) => {
   await freshApp(page, '14:00')
   await mockAssistant(page, { body: { reply: 'ok', order: null, actions: [task('Quick call', 5), task('Email', 5), task('Hackathon', 60)] } })
-  await page.getByLabel('Tell me everything you have to do').fill('x')
+  await page.getByLabel('What do you need to get done today or this week?').fill('x')
   await page.keyboard.press('Enter')
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
   await page.getByRole('button', { name: 'grid' }).click()
