@@ -7,17 +7,22 @@ type Samples = { [K in Key]: ParamsOf<K> extends never ? null : ParamsOf<K> }
 const D = '2026-10-18'
 const SAMPLES: Samples = {
   hookQuestion: null, hookAnswer: null, step1: null, step2: null, step3: null, stepArrow: null, dumpLabel: null, dumpPlaceholder: null,
-  planMyDay: null, planning1: null, planning2: null, planning3: null, planning4: null, planning5: null,
+  planMyDay: null, obTitle: null, obSub: null, obFocus: null, obMorning: null, obAfternoon: null, obEvening: null, obEnd: null,
+  obHabits: null, obHabitsHint: null, obSkip: null, planning1: null, planning2: null, planning3: null, planning4: null, planning5: null,
   askStartly: null, weekToggle: { date: D, open: true }, settings: null, color: null, accent: { accent: 'coral' },
-  remembers: { name: 'Coral' }, darkMode: null, language: null, startFresh: null, startFreshTitle: null, startFreshBody: null,
+  remembers: { name: 'Coral' }, darkMode: null, timerPomodoro: null, howYouWork: null, language: null, startFresh: null, startFreshTitle: null, startFreshBody: null,
   cancel: null, deleteEverything: null, thisWeek: null, today: null, tomorrow: null, weekDay: { date: D, planned: '2h30', pinned: true },
-  dayComplete: null, plannedUntil: { planned: '6h', until: '21:15' }, nothingPlanned: null, freeTime: { windows: ['18:00–23:00'] },
-  freeUnknown: null, planned: { planned: '1h30' }, view: null, viewList: null, viewGrid: null, timetableOf: { day: 'X' },
+  dayComplete: null, plannedUntil: { planned: '6h', until: '21:15' }, nothingPlanned: null, nothingThatDay: null, freeTime: { windows: ['18:00–23:00'] },
+  freeUnknown: null, planned: { planned: '1h30' }, view: null, viewList: null, viewGrid: null, prevWeek: null, nextWeek: null, viewWeek: null, weekGrid: null, noTimeYet: null, timetableOf: { day: 'X' },
   todaysTimetable: null, tasksOf: { day: 'X' }, laterDayHint: null, laterDayEmpty: null, noFitBefore: { end: '23:00' },
-  noFitToday: null, noFitOn: { day: 'X' }, lunch: null, break: null, hourGrid: null, now: null, fixedAppointment: null,
+  noFitToday: null, noFitOn: { day: 'X' }, lunch: null, break: null, hourGrid: null, now: null, fixedTag: null,
   doneLabel: { title: 'Gym' }, nowLeft: { left: '1h40' }, didYouFinish: null, btnDone: null, needMoreTime: null, notStarted: null,
-  toTomorrow: null, skipToTomorrow: null, clickToRename: null, renameLabel: { title: 'Gym' }, continued: { title: 'Gym' },
-  chatWithStartly: null, clearChat: null, clearChatHint: null, closeChat: null, rearranging: null, messageLabel: null,
+  toTomorrow: null, skipToTomorrow: null, clickToRename: null, renameLabel: { title: 'Gym' }, continued: { title: 'Gym' }, focusTimer: null, nextUp: null, untilTime: { time: '15:30' }, startTimer: null, startNow: null,
+  focus: null, focusRound: { n: 2, of: 3 }, shortBreak: null, backAt: { time: '15:30' }, breakTime: null, timesUp: null, plus15: null, stopTimer: null,
+  pauseTimer: null, resumeTimer: null, pausedFor: { d: '4 min' }, addBack: { min: 10 }, yourPause: null, useTimer: null, roundDone: { n: 1, i: 0 },
+  save: null, howYouWorkSub: null, chooseFocus: null, oneCountdown: null, oneCountdownSub: null, pomodoroSub: null, switchHint: null,
+  countdown: null, mute: null, unmute: null, modeOn: { mode: 'pomodoro' },
+  chatWithStartly: null, clearChat: null, clearChatHint: null, doneStamp: null, checkOnTheDay: null, dayOver: null, closeChat: null, thinking: null, messageLabel: null,
   messagePlaceholder: null, send: null, retry: null, whatMoved: null, notToday: null, errRateLimited: null, errUnavailable: null,
   didntGet: null, answerWithButtons: null, youChose: { answer: 'Keep it' }, questionExpired: null, questionSkipped: null,
   questionLater: null, nAdded: { n: 2 }, chooseLegend: null, addSelected: null, backToEarlier: null,
@@ -29,12 +34,12 @@ const SAMPLES: Samples = {
   leftoverOne: { title: 'Groceries', yesterday: true }, leftoverMany: { items: ['Groceries', 'Gym'], yesterday: true },
   addIt: null, addBoth: null, addAll: null, choose: null, addedMore: { title: 'Gym' }, startsNow: { title: 'Gym' },
   movedTo: { title: 'Gym', date: D }, addedToToday: null, droppedThem: null, toastReshuffled: { n: 3 },
-  toastRemoved: { items: ['Gym'] }, toastAdded: { n: 1 }, toastRenamed: null, toastChatCleared: null,
+  toastRemoved: { items: ['Gym'] }, toastAdded: { n: 1 }, toastRenamed: null, toastSaved: null, toastChatCleared: null,
   cheer: { stage: 'half', i: 2 }, dayCompleteTitle: null, celebrationMessage: { i: 3 }, celebrationQuote: { i: 3 }, restWell: null,
 }
 const texts = (Object.keys(SAMPLES) as Key[]).map((k) => (SAMPLES[k] === null ? { k } : { k, p: SAMPLES[k] }) as Text)
 // Words that are the same in some languages (e.g. "Lunch" in Dutch, "Iris" everywhere): not a missing translation.
-const SAME_OK = new Set<Key>(['stepArrow', 'accent', 'lunch', 'color', 'continued', 'freeTime', 'dayOption'])
+const SAME_OK = new Set<Key>(['stepArrow', 'accent', 'lunch', 'color', 'continued', 'freeTime', 'dayOption', 'timerPomodoro', 'countdown', 'focus', 'focusRound', 'plus15', 'pauseTimer'])
 
 describe('i18n', () => {
   it('every message renders in every language, with no holes', () => {

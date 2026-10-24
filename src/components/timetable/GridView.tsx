@@ -1,37 +1,36 @@
-import { Pin } from 'lucide-react'
+import { useEffect, useRef } from 'react'
 import type { Block, Task } from '@/types'
 import type { NowState } from '@/scheduler/now'
 import { clock, toMin } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import { useT } from '@/i18n/useT'
 import { taskTitle } from './taskTitle'
+import { FixedTag } from './FixedTag'
 
-const HOUR = 64 // px per hour
+const HOUR = 72 // px per hour
+const DAY_START = 7 // the grid always shows the whole day: 7:00…
+const DAY_END = 26 // …to 2:00 at night, wider if a task sits outside
 
 /** The day as an hour grid, like a calendar day view, with a line at the current time. */
 export function GridView({ blocks, tasks, nowMin, now }: { blocks: Block[]; tasks: Task[]; nowMin: number | null; now: NowState }) {
   const t = useT()
+  const anchor = useRef<HTMLDivElement>(null)
+  // Opening the grid lands on now (or the first task), not on an empty morning.
+  // (Again for each day you open: the grid stays on screen when you switch days.)
+  const day = blocks[0]?.date
+  useEffect(() => {
+    anchor.current?.scrollIntoView({ block: 'start' })
+  }, [day])
   if (!blocks.length) return null
   const byId = new Map(tasks.map((t) => [t.id, t]))
   const first = Math.min(...blocks.map((b) => toMin(b.start)), nowMin ?? Infinity)
   const last = Math.max(...blocks.map((b) => toMin(b.end)), nowMin ?? 0)
-  const startH = Math.floor(first / 60)
-  const endH = Math.ceil(last / 60)
+  const startH = Math.min(DAY_START, Math.floor(first / 60))
+  const endH = Math.max(DAY_END, Math.ceil(last / 60))
   const top = (min: number) => ((min - startH * 60) / 60) * HOUR
   const hours = Array.from({ length: endH - startH + 1 }, (_, i) => startH + i)
-  // Every block gets at least one readable line (a 5-minute task too); a short one nudges the next down a little.
-  const MIN_H = 22
-  let bottom = -Infinity
-  const layout = [...blocks]
-    .sort((a, b) => toMin(a.start) - toMin(b.start))
-    .map((b) => {
-      const real = ((toMin(b.end) - toMin(b.start)) / 60) * HOUR - 2
-      const y = Math.max(top(toMin(b.start)) + 1, bottom + 2)
-      const rest = b.type === 'lunch' || b.type === 'break'
-      const height = Math.max(real, rest ? 13 : MIN_H) // breaks keep their real height: one small line fits
-      bottom = y + height
-      return { b, y, height }
-    })
+  const layout = layoutBlocks(blocks, top, HOUR)
+  const bottom = layout.length ? layout[layout.length - 1].y + layout[layout.length - 1].height : -Infinity
   const gridHeight = Math.max((endH - startH) * HOUR, bottom + 4)
   // The now line follows the same layout: inside a block it sits at the right fraction, after blocks it sits below them.
   let nowY: number | null = null
@@ -74,7 +73,7 @@ export function GridView({ blocks, tasks, nowMin, now }: { blocks: Block[]; task
           >
             <div className={cn('flex min-w-0 items-center gap-1.5 truncate', !rest && 'font-medium', task?.status === 'done' && 'line-through')}>
               {rest ? t(b.type === 'lunch' ? 'lunch' : 'break') : task && taskTitle(task, t)}
-              {b.type === 'fixed' && <Pin className="size-3 shrink-0 opacity-60" aria-label={t('fixedAppointment')} />}
+              {b.type === 'fixed' && <FixedTag />}
             </div>
             {short ? (
               <span className="shrink-0 text-[11px] opacity-75 tabular-nums" dir="ltr">{clock(b.start)}–{clock(b.end)}</span>
@@ -88,6 +87,8 @@ export function GridView({ blocks, tasks, nowMin, now }: { blocks: Block[]; task
         )
       })}
 
+      <div ref={anchor} className="pointer-events-none absolute scroll-mt-[190px]" style={{ top: nowY ?? layout[0].y }} aria-hidden />
+
       {nowY !== null && (
         <div className="pointer-events-none absolute end-0 -start-2 z-10 flex items-center" style={{ top: nowY }} aria-label={t('now')}>
           <span className="size-2 rounded-full bg-acc" />
@@ -96,4 +97,22 @@ export function GridView({ blocks, tasks, nowMin, now }: { blocks: Block[]; task
       )}
     </div>
   )
+}
+
+/**
+ * Where each block sits in an hour grid: at its time, and at least one readable line tall
+ * (a 5-minute task too); a short one nudges the next down a little so nothing overlaps.
+ */
+export function layoutBlocks(blocks: Block[], top: (min: number) => number, hour: number, minH = 22) {
+  let bottom = -Infinity
+  return [...blocks]
+    .sort((a, b) => toMin(a.start) - toMin(b.start))
+    .map((b) => {
+      const real = ((toMin(b.end) - toMin(b.start)) / 60) * hour - 2
+      const y = Math.max(top(toMin(b.start)) + 1, bottom + 2)
+      const rest = b.type === 'lunch' || b.type === 'break'
+      const height = Math.max(real, rest ? 13 : minH) // breaks keep their real height: one small line fits
+      bottom = y + height
+      return { b, y, height }
+    })
 }

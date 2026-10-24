@@ -2,11 +2,20 @@ import type { Page } from '@playwright/test'
 
 export const TODAY = '2026-10-17'
 
-/** Freeze the browser clock (Saturday 17 Oct 2026) and start from an empty localStorage. */
-export async function freshApp(page: Page, time = '10:00') {
+/**
+ * Freeze the browser clock (Saturday 17 Oct 2026) and start from an empty localStorage.
+ * The first-time questions count as skipped, unless `askFirst` (the test for those questions),
+ * and the timer kind as chosen (one countdown), unless `chooseTimer` (the test for the first Start).
+ */
+export async function freshApp(page: Page, time = '10:00', { askFirst = false, chooseTimer = false } = {}) {
   await page.clock.install({ time: new Date(`${TODAY}T${time}:00`) })
   await page.goto('/')
-  await page.evaluate(() => localStorage.clear())
+  await page.evaluate(({ askFirst, chooseTimer }) => {
+    localStorage.clear()
+    if (askFirst) return
+    const settings = { lang: 'en', accent: 'iris', theme: null, endOfDay: '23:00', profile: { focusBest: null, habits: '' }, ...(!chooseTimer && { timerMode: 'normal' }) }
+    localStorage.setItem('startly-v1', JSON.stringify({ state: { settings }, version: 2 }))
+  }, { askFirst, chooseTimer })
   await page.reload()
 }
 
@@ -22,8 +31,8 @@ export async function mockAssistant(page: Page, ...responses: { status?: number;
   return sent
 }
 
-export const task = (title: string, durationMin: number) => ({
-  type: 'add_task', title, durationMin, priority: 'medium', deadline: null, preferredStart: null, endBy: null, date: null,
+export const task = (title: string, durationMin: number, focus = true) => ({
+  type: 'add_task', title, durationMin, priority: 'medium', deadline: null, preferredStart: null, endBy: null, date: null, focus,
 })
 
 /** Each timetable row as "type time name duration" (only the row's own parts, not its buttons or Now tag). */

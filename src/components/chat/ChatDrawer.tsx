@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Eraser, X } from 'lucide-react'
+import { Tip } from '../ui/tooltip'
 import { useStore } from '@/state/store'
 import { Avatar } from '@/components/Avatar'
 import { useT } from '@/i18n/useT'
@@ -35,16 +36,19 @@ export function ChatDrawer() {
       <div className="flex h-[54px] flex-none items-center gap-[9px] border-b px-[18px] font-semibold whitespace-nowrap">
         <Avatar className="size-[26px]" />
         Startly
-        <button
-          type="button"
-          onClick={clearChat}
-          disabled={!messages.length || thinking}
-          aria-label={t('clearChat')}
-          title={t('clearChatHint')}
-          className="ms-auto grid size-8 cursor-pointer place-items-center rounded-full text-mut hover:bg-blk disabled:cursor-default disabled:opacity-30"
-        >
-          <Eraser className="size-4" />
-        </button>
+        <Tip label={t('clearChatHint')} side="bottom">
+          <span className="ms-auto">
+            <button
+              type="button"
+              onClick={clearChat}
+              disabled={!messages.length || thinking}
+              aria-label={t('clearChat')}
+              className="grid size-8 cursor-pointer place-items-center rounded-full text-mut hover:bg-blk disabled:cursor-default disabled:opacity-30"
+            >
+              <Eraser className="size-4" />
+            </button>
+          </span>
+        </Tip>
         <button
           type="button"
           onClick={() => setOpen(false)}
@@ -55,8 +59,8 @@ export function ChatDrawer() {
         </button>
       </div>
       <div className="flex min-w-[300px] flex-1 flex-col gap-4 overflow-y-auto px-[18px] py-5 text-[14.5px] leading-[1.55]">
-        {messages.map((m) => (
-          <ChatMessage key={m.id} message={m} />
+        {messages.map((m, i) => (
+          <ChatMessage key={m.id} message={m} last={i === messages.length - 1 && !thinking} />
         ))}
         {thinking && (
           <StartlyLine>
@@ -66,7 +70,7 @@ export function ChatDrawer() {
                   <span key={d} className="size-1.5 animate-bounce rounded-full bg-mut" style={{ animationDelay: `${d}ms` }} />
                 ))}
               </span>
-              <span className="status-line text-[13.5px] text-mut">{t('rearranging')}</span>
+              <span className="status-line text-[13.5px] text-mut">{t('thinking')}</span>
             </span>
           </StartlyLine>
         )}

@@ -4,6 +4,7 @@ import { dirOf } from '@/i18n'
 import { TopBar } from '@/components/TopBar'
 import { FirstScreen } from '@/components/FirstScreen'
 import { MainScreen } from '@/components/MainScreen'
+import { TipProvider } from '@/components/ui/tooltip'
 
 const darkQuery = window.matchMedia('(prefers-color-scheme: dark)')
 const subscribe = (cb: () => void) => {
@@ -46,9 +47,11 @@ export default function App() {
   }, [theme, settings.accent, settings.lang])
 
   return (
-    <div className="flex h-full flex-col">
-      <TopBar main={started} theme={theme} />
-      {started ? <MainScreen /> : <FirstScreen />}
-    </div>
+    <TipProvider delayDuration={250} skipDelayDuration={400}>
+      <div className="flex h-full flex-col">
+        <TopBar main={started} theme={theme} />
+        {started ? <MainScreen /> : <FirstScreen />}
+      </div>
+    </TipProvider>
   )
 }

@@ -62,24 +62,62 @@ test("first dump: a new task that doesn't fit → the plan still appears, Startl
   await expect(page.getByRole('list', { name: "Doesn't fit today" })).toBeHidden()
 })
 
-test('the week strip: hidden by default, 7 days from today, planned hours and 📌', async ({ page }) => {
+test('the week strip: fixed Monday to Sunday, arrows a week at a time, Today, past days read-only', async ({ page }) => {
   await dump(page, '10:00', { body: { reply: 'ok', order: null, actions: [
     task('Gym', 60),
     { type: 'add_fixed', title: 'Interview', date: '2026-10-21', start: '11:30', end: '12:00' },
     { ...task('Revise', 90), date: SUN },
   ] } })
-  await expect(page.getByRole('navigation', { name: 'This week' })).toBeHidden()
+  const strip = page.getByRole('navigation', { name: 'This week' })
+  await expect(strip).toBeHidden()
   await page.getByRole('button', { name: /show the week/ }).click()
-  const days = page.getByRole('navigation', { name: 'This week' }).getByRole('button')
+  const days = strip.getByRole('listitem')
   await expect(days).toHaveCount(7)
-  await expect(days.first()).toContainText('Today')
+  await expect(days.first()).toContainText('Mon12') // Saturday 17: the week of Monday 12
+  await expect(days.nth(5)).toContainText('Today')
+  await expect(strip).toContainText('October 2026')
   await expect(page.getByRole('button', { name: /Sunday 18 October: 1h30 planned/ })).toBeVisible()
-  await expect(page.getByRole('button', { name: /Wednesday 21 October: 30m planned, fixed appointment/ })).toContainText('📌')
+  await expect(strip.getByRole('button', { name: 'Today' })).toBeDisabled() // already on today
+
+  // Next week: the same weekday, one week later.
+  await strip.getByRole('button', { name: 'Next week' }).click()
+  await expect(days.first()).toContainText('Mon19')
+  await expect(page.getByRole('heading', { name: 'Saturday 24 October' })).toBeVisible()
+  await expect(page.getByRole('button', { name: /Wednesday 21 October: 30m planned, fixed appointment/ })).toContainText('Fixed')
   await page.getByRole('button', { name: /Wednesday 21 October/ }).click()
-  await expect(page.getByRole('heading', { name: 'Wednesday' })).toBeVisible()
-  await expect(page.getByRole('list', { name: "Wednesday's tasks" })).toContainText('11:30Interview')
+  await expect(page.getByRole('heading', { name: 'Wednesday 21 October' })).toBeVisible()
+  await expect(page.getByRole('list', { name: "Wednesday 21 October's tasks" })).toContainText('11:30Interview')
+
+  // Today brings you back; a past day of the week opens read-only.
+  await strip.getByRole('button', { name: 'Today' }).click()
+  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
+  await page.getByRole('button', { name: /Monday 12 October/ }).click()
+  await expect(page.getByRole('heading', { name: 'Monday 12 October' })).toBeVisible()
+  await strip.getByRole('button', { name: 'Previous week' }).click()
+  await expect(days.first()).toContainText('Mon5')
   await page.getByRole('button', { name: /hide the week/ }).click()
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
+})
+
+test('Week view: 7 columns of hours, a click on a day opens it, the chat stays open', async ({ page }) => {
+  await dump(page, '10:00', { body: { reply: 'ok', order: null, actions: [
+    task('Gym', 60),
+    { type: 'add_fixed', title: 'Interview', date: '2026-10-21', start: '11:30', end: '12:00' },
+    { ...task('Revise', 90), date: SUN },
+  ] } })
+  await page.getByRole('button', { name: 'Week', exact: true }).click()
+  await expect(page.getByRole('complementary', { name: 'Chat with Startly' })).toBeVisible()
+  const grid = page.getByRole('region', { name: 'Week grid' })
+  await expect(page.getByRole('heading', { name: /^12\s*–\s*18 Oct$/ })).toBeVisible()
+  await expect(grid.getByRole('list', { name: 'Saturday 17 October' })).toContainText('Gym')
+  await expect(grid).toContainText('No time yet') // Sunday's revision has no time: free time that day is unknown
+  await expect(grid.getByRole('list', { name: 'Saturday 17 October' }).getByLabel('Now')).toBeVisible()
+  await page.getByRole('button', { name: 'Next week' }).click()
+  await expect(page.getByRole('heading', { name: /^19\s*–\s*25 Oct$/ })).toBeVisible()
+  await expect(grid).toContainText('Interview')
+  await grid.getByRole('button', { name: /Wed\s*21/ }).click()
+  await expect(page.getByRole('heading', { name: 'Wednesday 21 October' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Grid', exact: true })).toHaveAttribute('aria-pressed', 'true')
 })
 
 test('a reply that does not answer keeps the question open; a question from yesterday expires', async ({ page }) => {
@@ -99,4 +137,23 @@ test('a reply that does not answer keeps the question open; a question from yest
   await page.reload()
   await expect(page.locator('[data-role=assistant]').first()).toContainText(/Good morning/)
   await expect(page.getByRole('button', { name: 'Keep it' })).toHaveCount(0)
+})
+
+test('a day that is over: stamped Done, nothing to check; you can still read it', async ({ page }) => {
+  await dump(page, '10:00', { body: { reply: 'ok', order: null, actions: [task('Gym', 60), task('Read', 30)] } })
+  await page.getByRole('checkbox', { name: 'Done: Gym' }).click()
+  await page.clock.setFixedTime(new Date('2026-10-18T09:00:00'))
+  await page.reload()
+  await page.getByRole('button', { name: /show the week/ }).click()
+  await page.getByRole('button', { name: /Saturday 17 October/ }).click()
+  await expect(page.getByRole('heading', { name: 'Saturday 17 October' })).toBeVisible()
+  await expect(page.locator('.stamp')).toHaveText('Done')
+  await expect(page.getByRole('checkbox', { name: 'Done: Gym' })).toBeDisabled()
+  await expect(page.getByRole('checkbox', { name: 'Done: Gym' })).toBeChecked()
+  await expect(page.getByRole('checkbox', { name: 'Done: Read' })).toBeDisabled()
+  await page.getByRole('checkbox', { name: 'Done: Read' }).hover({ force: true })
+  await expect(page.getByRole('tooltip')).toContainText('This day is over')
+  // Today has no stamp.
+  await page.getByRole('navigation', { name: 'This week' }).getByRole('button', { name: 'Today' }).click()
+  await expect(page.locator('.stamp')).toHaveCount(0)
 })

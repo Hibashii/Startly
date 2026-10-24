@@ -9,6 +9,10 @@ import { dateKey } from '@/lib/time'
 export const WEEKDAYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'] as const
 export const weekdayKey = (date: string) => WEEKDAYS[parseISO(date).getDay()]
 export const plusDays = (date: string, n: number) => format(addDays(parseISO(date), n), 'yyyy-MM-dd')
+/** The Monday of that date's week (weeks run Monday to Sunday). */
+export const mondayOf = (date: string) => plusDays(date, -((parseISO(date).getDay() + 6) % 7))
+/** The 7 dates of the week that starts on `monday`. */
+export const weekOf = (monday: string) => Array.from({ length: 7 }, (_, i) => plusDays(monday, i))
 
 /** Your free time on a date: set for that date, else for that weekday, else unknown (null). */
 export function windowsFor(plan: Plan, date: string): Window[] | null {

@@ -1,7 +1,7 @@
 import express from 'express'
 import { rateLimit } from 'express-rate-limit'
-import { AssistantRequest, AssistantResponse } from '../shared/schema'
-import { callAssistant } from './assistant'
+import { AssistantRequest, AssistantResponse } from '../shared/schema.js'
+import { callAssistant } from './assistant.js'
 
 // Routes only, no listen(): server/index.ts runs it locally, api/index.ts exports it for Vercel.
 export function createApp(call = callAssistant) {

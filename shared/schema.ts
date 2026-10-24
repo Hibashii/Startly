@@ -17,6 +17,7 @@ export const Action = z.discriminatedUnion('type', [
     preferredStart: hhmm.nullable().describe('not before this time ("gym in the morning")'),
     endBy: hhmm.nullable().describe('must be finished by this time today ("before 20:00, the shop closes")'),
     date: ymd.nullable().describe('only if the user asked for a specific day; otherwise null'),
+    focus: z.boolean().describe('true = focus work you sit down to do (study, coding, writing, applications); false = an activity or errand (gym, groceries, cooking, a walk)'),
   }),
   z.object({
     type: z.literal('add_fixed'),
@@ -56,6 +57,11 @@ export const Action = z.discriminatedUnion('type', [
     lengthMin: z.number().int().describe('break length in minutes'),
   }),
   z.object({ type: z.literal('plan_days'), dates: z.array(ymd) }),
+  z.object({
+    type: z.literal('update_profile'),
+    focusBest: z.enum(['morning', 'afternoon', 'evening']).nullable().describe('null = unchanged'),
+    habits: z.string().nullable().describe("the user's fixed habits and routines in their words, the whole updated text; null = unchanged"),
+  }),
   z.object({ type: z.literal('resolve_pending'), optionId: z.string() }),
 ])
 export type Action = z.infer<typeof Action>
@@ -67,6 +73,20 @@ export const AssistantResponse = z.object({
     .array(z.string())
     .nullable()
     .describe("Today's suggested order: ids of today's todo tasks not started yet (new tasks: their exact title), first to last. null = keep the current order."),
+  slots: z
+    .array(
+      z.object({
+        ref: z.string().describe('task id, or the exact title of a task added now'),
+        date: ymd.nullable().describe('the day it goes on; null = today'),
+        start: hhmm,
+      }),
+    )
+    .nullable()
+    .describe("Where you plan each not-started task: a day and a start time for each, like a school timetable. Today's earliest slot is at most 45 min after now. null = keep the current times."),
+  suggestions: z
+    .array(z.string())
+    .nullable()
+    .describe('when you ask the user something: 2 or 3 short answers they can tap (in their language), e.g. "Mon 26 Oct – Sun 1 Nov"; null otherwise'),
 })
 export type AssistantResponse = z.infer<typeof AssistantResponse>
 
@@ -95,6 +115,11 @@ export const AssistantContext = z.object({
   breaks: z.object({ afterMin: z.number(), lengthMin: z.number() }),
   language: z.string().describe("the app's language (en, fr, es, de, nl, ar): reply in the language the user writes in; if unclear, in this one"),
   recentMessages: z.array(z.object({ role: z.enum(['user', 'assistant']), text: z.string() })),
+  profile: z
+    .object({ focusBest: z.string().nullable(), habits: z.string() })
+    .nullable()
+    .optional()
+    .describe('what Startly knows about how the user works: when they focus best, and their fixed habits'),
 })
 export type AssistantContext = z.infer<typeof AssistantContext>
 

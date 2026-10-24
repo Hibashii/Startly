@@ -36,6 +36,17 @@ export function compareTasks(a: Task, b: Task) {
 
 export const taskEnd = (t: Task) => toMin(t.start!) + t.durationMin
 
+/**
+ * Not before this time: your own preferred time, else where Startly planned it. Startly's time is
+ * only a suggestion: one that would miss the task's finish-by time ("the shop closes at 20:00") is dropped,
+ * so the task is placed earlier, where it fits.
+ */
+const holdOf = (t: Task) => {
+  if (t.preferredStart) return t.preferredStart
+  if (!t.slot || (t.endBy && toMin(t.slot) + t.durationMin > toMin(t.endBy))) return null
+  return t.slot
+}
+
 interface Span {
   start: number
   end: number
@@ -158,20 +169,27 @@ export function scheduleDay(input: DayInput): DayResult {
       continue
     }
     const next = locked.find((s) => s.start > cursor)
-    // A preferred time still ahead is held: whatever goes before it has to fit before it.
-    const holds = queue.map((t) => (t.preferredStart ? toMin(t.preferredStart) : Infinity)).filter((m) => m > cursor)
-    const limit = Math.min(next ? next.start : winEnd, winEnd, ...holds)
+    // Your own preferred time still ahead is a wall: whatever goes before it has to fit before it.
+    // Startly's times are softer, like a school timetable: a task it planned for now may run into the next
+    // planned time (that one just starts a little later), but a task with no planned time only fills a gap that fits.
+    const hard = queue.map((t) => (t.preferredStart ? toMin(t.preferredStart) : Infinity)).filter((m) => m > cursor)
+    const soft = queue.map((t) => (!t.preferredStart && holdOf(t) ? toMin(holdOf(t)!) : Infinity)).filter((m) => m > cursor)
+    const limit = Math.min(next ? next.start : winEnd, winEnd, ...hard)
+    const gapEnd = Math.min(limit, ...soft)
 
-    // A task whose preferred time has arrived takes the slot first (before lunch or a break).
-    // A task must end before the next locked block, a held time, and its own finish-by time.
-    const fits = (t: Task) => cursor + t.durationMin <= Math.min(limit, t.endBy ? toMin(t.endBy) : Infinity)
-    let i = queue.findIndex((t) => t.preferredStart !== null && toMin(t.preferredStart) <= cursor && fits(t))
+    // A task whose preferred time (yours) has arrived takes the slot first (before lunch or a break).
+    // Startly's own times wait for lunch and breaks (below). A task must end before the next locked block,
+    // a held time, and its own finish-by time.
+    const fitsBy = (t: Task, by: number) => cursor + t.durationMin <= Math.min(by, t.endBy ? toMin(t.endBy) : Infinity)
+    const fits = (t: Task) => fitsBy(t, gapEnd)
+    let i = queue.findIndex((t) => t.preferredStart !== null && toMin(t.preferredStart) <= cursor && fitsBy(t, limit))
     // A finish-by task that would miss its time if lunch, a break or the next task in order came first goes now.
     if (i < 0) {
-      const nextUp = queue.find((t) => !t.preferredStart && fits(t))
+      const nextUp = queue.find((t) => !holdOf(t) && fits(t))
       const wait = Math.max(LUNCH_MIN, nextUp && !nextUp.endBy ? nextUp.durationMin : 0)
       const urgent = queue
-        .filter((t) => !t.preferredStart && t.endBy && fits(t) && cursor + wait + t.durationMin > toMin(t.endBy))
+        // (Startly's planned time doesn't protect it from that: only a time you set yourself does.)
+        .filter((t) => !t.preferredStart && (!holdOf(t) || toMin(holdOf(t)!) <= cursor + wait) && t.endBy && fitsBy(t, limit) && cursor + wait + t.durationMin > toMin(t.endBy))
         .sort((a, b) => toMin(a.endBy!) - toMin(b.endBy!))[0]
       if (urgent) i = queue.indexOf(urgent)
     }
@@ -190,8 +208,9 @@ export function scheduleDay(input: DayInput): DayResult {
       continue
     }
 
-    // Otherwise the next one in order that fits.
-    if (i < 0) i = queue.findIndex((t) => !t.preferredStart && fits(t))
+    // Then a task Startly planned for now (or earlier), otherwise the next one in order that fits.
+    if (i < 0) i = queue.findIndex((t) => holdOf(t) !== null && toMin(holdOf(t)!) <= cursor && fitsBy(t, limit))
+    if (i < 0) i = queue.findIndex((t) => !holdOf(t) && fits(t))
     if (i >= 0) {
       const t = queue.splice(i, 1)[0]
       placed.push(span(date, cursor, cursor + t.durationMin, 'task', t.id))
@@ -201,8 +220,18 @@ export function scheduleDay(input: DayInput): DayResult {
       continue
     }
 
-    // Nothing fits here: jump to the end of this gap (a held time or the next locked block).
-    const jumpTo = roundUp5(limit)
+    // Free time across lunchtime (the next task is planned later): lunch still gets its place.
+    const lunchAt = roundUp5(Math.max(cursor, LUNCH_FROM))
+    if (lunchFits && !lunchTaken && lunchAt < LUNCH_UNTIL && lunchAt + LUNCH_MIN <= gapEnd) {
+      placed.push(span(date, lunchAt, lunchAt + LUNCH_MIN, 'lunch'))
+      cursor = lunchAt + LUNCH_MIN
+      lunchTaken = true
+      streak = 0
+      continue
+    }
+
+    // Nothing fits here: jump to the end of this gap (a planned or held time, or the next locked block).
+    const jumpTo = roundUp5(gapEnd)
     if (jumpTo - cursor >= BREAK_MIN) streak = 0
     if (jumpTo >= winEnd) break
     cursor = jumpTo
@@ -247,8 +276,8 @@ export function reshuffleToday(plan: Plan, today: string, fromMin: number): Resh
     const start = result.starts[t.id]
     if (start !== undefined) {
       // Once under way, a held time has done its job.
-      const preferredStart = toMin(start) < fromMin ? null : t.preferredStart
-      return { ...t, date: today, start, preferredStart, preplanned: false }
+      const underWay = toMin(start) < fromMin
+      return { ...t, date: today, start, preferredStart: underWay ? null : t.preferredStart, slot: underWay ? null : t.slot, preplanned: false }
     }
     if (unplaced.has(t.id)) return { ...t, date: null, start: null }
     return t

@@ -1,7 +1,7 @@
 import type { AssistantContext, AssistantResponse } from '../../shared/schema'
 import type { ChatMessage, Plan } from '@/types'
 import { toHHMM } from './time'
-import { dayOf } from '@/scheduler/days'
+import { dayOf, plusDays } from '@/scheduler/days'
 import { translate } from '@/i18n'
 import { DEFAULT_BREAKS } from '@/scheduler/schedule'
 import { format, parseISO } from 'date-fns'
@@ -14,7 +14,12 @@ export function buildContext(plan: Plan, messages: ChatMessage[], pending: unkno
     now: `${today}T${toHHMM(nowMin)}`, // past midnight on a late day: "24:30"
     weekday: format(parseISO(today), 'EEEE'),
     today,
-    tasks: plan.tasks.map(({ id, title, kind, date, start, durationMin, status, deadline, priority, partOf }) => ({
+    // What matters for planning: from today to 4 weeks ahead, plus what's waiting (unplaced, or an unfinished task
+    // from the last week). Past appointments are over. A whole year of tasks would only make every answer slower.
+    tasks: plan.tasks.filter((t) =>
+      t.date === null ||
+      (t.date >= today ? t.date <= plusDays(today, 28) : t.kind === 'task' && t.status === 'todo' && t.date >= plusDays(today, -7)),
+    ).map(({ id, title, kind, date, start, durationMin, status, deadline, priority, partOf }) => ({
       id, title: partOf ? `${title} (cont.)` : title, kind, date, start, durationMin, status, deadline, priority,
       onTimetable: date !== null && (start !== null || date > today),
     })),
@@ -28,6 +33,7 @@ export function buildContext(plan: Plan, messages: ChatMessage[], pending: unkno
     }),
     breaks: plan.settings.breaks ?? DEFAULT_BREAKS,
     language: plan.settings.lang,
+    profile: plan.settings.profile ?? null,
     recentMessages: messages.slice(-10).map((m) => ({ role: m.role, text: 'content' in m ? translate(plan.settings.lang, m.content) : m.text })),
   }
 }
@@ -39,7 +45,7 @@ export async function askStartly(message: string, context: AssistantContext): Pr
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, context }),
-      signal: AbortSignal.timeout(30_000),
+      signal: AbortSignal.timeout(55_000), // a first plan can take the AI ~30 s
     })
     if (res.status === 429) return { ok: false, error: 'rate_limited' }
     if (!res.ok) return { ok: false, error: 'unavailable' }

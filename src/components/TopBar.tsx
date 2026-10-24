@@ -17,7 +17,7 @@ export function TopBar({ main, theme }: { main: boolean; theme: 'light' | 'dark'
   const t = useT()
 
   return (
-    <header className="relative z-10 grid h-[60px] flex-none grid-cols-[1fr_auto_1fr] items-center border-b bg-bg px-[22px]">
+    <header className="relative z-30 grid h-[60px] flex-none grid-cols-[1fr_auto_1fr] items-center border-b bg-bg px-[22px]">
       <div className="flex items-center gap-[9px] text-lg font-bold tracking-[-0.02em]">
         <Avatar />
         Startly

@@ -59,8 +59,8 @@ test('List / Grid: the hour grid places blocks by time, with a line at now', asy
   const grid = page.getByRole('list', { name: 'Hour grid' })
   await expect(grid).toBeVisible()
   const top = (name: string) => grid.getByRole('listitem').filter({ hasText: name }).evaluate((e) => (e as HTMLElement).offsetTop)
-  // 64px per hour: Gym starts 15:45, the Call at 17:00 → 75 min apart = 80px
-  expect((await top('Call')) - (await top('Gym'))).toBe(80)
+  // 72px per hour: Gym starts 15:45, the Call at 17:00 → 75 min apart = 90px
+  expect((await top('Call')) - (await top('Gym'))).toBe(90)
   await expect(grid.getByLabel('Now')).toBeVisible()
   await page.getByRole('button', { name: 'list' }).click()
   await expect(page.getByRole('list', { name: "Today's timetable" })).toBeVisible()

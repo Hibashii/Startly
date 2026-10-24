@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { Check, Pin } from 'lucide-react'
+import { Check } from 'lucide-react'
 import confetti from 'canvas-confetti'
 import type { Block, Task } from '@/types'
 import type { NowState } from '@/scheduler/now'
@@ -8,6 +8,8 @@ import { clock, toMin } from '@/lib/time'
 import { cn } from '@/lib/utils'
 import { useT } from '@/i18n/useT'
 import { taskTitle } from './taskTitle'
+import { Tip } from '../ui/tooltip'
+import { FixedTag } from './FixedTag'
 
 interface Props {
   block: Block
@@ -15,11 +17,18 @@ interface Props {
   flash?: boolean
   enterDelay?: number
   now?: NowState // set on the one card that has the Now highlight
+  readOnly?: boolean // a past day: shown as it was, nothing to check or rename
+  checkable?: boolean // only today's tasks can be checked off (a later day: rename yes, check no)
 }
 
-export function TaskCard({ block, task, flash, enterDelay, now }: Props) {
+export function TaskCard({ block, task, flash, enterDelay, now, readOnly, checkable = true }: Props) {
   const toggleDone = useStore((s) => s.toggleDone)
   const quick = useStore((s) => s.quick)
+  // The focus timer is on this task: its panel has the buttons, the card just stays highlighted.
+  const timed = useStore((s) => {
+    const on = s.timer && s.tasks.find((t) => t.id === s.timer!.taskId)
+    return !!on && !!task && (on.partOf ?? on.id) === (task.partOf ?? task.id)
+  })
   const t = useT()
   const rest = block.type === 'lunch' || block.type === 'break'
   const done = task?.status === 'done'
@@ -46,22 +55,28 @@ export function TaskCard({ block, task, flash, enterDelay, now }: Props) {
       {rest || !task ? (
         <span />
       ) : (
-        <button
-          type="button"
-          role="checkbox"
-          aria-checked={done}
-          aria-label={t('doneLabel', { title: name })}
-          onClick={(e) => {
-            if (!done) burst(e.currentTarget)
-            toggleDone(task.id)
-          }}
-          className={cn(
-            'press grid size-[17px] cursor-pointer place-items-center rounded-[5px] border-[1.5px] border-mut transition-colors',
-            done && 'border-acc bg-acc text-accink',
-          )}
-        >
-          {done && <Check className="size-3" strokeWidth={3} />}
-        </button>
+        // (A disabled button gets no hover, so the span carries the "why".)
+        <Tip label={readOnly ? t('dayOver') : !checkable ? t('checkOnTheDay') : null}>
+          <span className="grid">
+            <button
+              type="button"
+              role="checkbox"
+              aria-checked={done}
+              disabled={readOnly || !checkable}
+              aria-label={t('doneLabel', { title: name })}
+              onClick={(e) => {
+                if (!done) burst(e.currentTarget)
+                toggleDone(task.id)
+              }}
+              className={cn(
+                'press grid size-[17px] cursor-pointer place-items-center rounded-[5px] border-[1.5px] border-mut transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+                done && 'border-acc bg-acc text-accink disabled:opacity-100',
+              )}
+            >
+              {done && <Check className="size-3" strokeWidth={3} />}
+            </button>
+          </span>
+        </Tip>
       )}
 
       <time data-part dir="ltr" className={cn('text-start text-sm whitespace-nowrap text-mut tabular-nums', isNow && 'text-tinti/80')}>
@@ -70,18 +85,18 @@ export function TaskCard({ block, task, flash, enterDelay, now }: Props) {
 
       <div className="min-w-0">
         <span className={cn('flex items-center gap-1.5', rest ? 'font-normal' : 'font-medium', done && 'text-mut line-through', isNow && 'text-tinti')}>
-          {task && !rest ? <TaskName task={task} name={name} /> : <span data-part>{name}</span>}
-          {block.type === 'fixed' && <Pin className="size-3.5 shrink-0 text-mut" aria-label={t('fixedAppointment')} />}
+          {task && !rest && !readOnly ? <TaskName task={task} name={name} /> : <span data-part>{name}</span>}
+          {block.type === 'fixed' && <FixedTag className="no-underline" />}
         </span>
         {isNow && (
           <div className="mt-1 flex items-center gap-1.5 text-[11px] font-bold tracking-[0.07em] text-tinti uppercase">
             <span className="size-[7px] rounded-full bg-acc" aria-hidden />
-            {asking ? t('didYouFinish') : t('nowLeft', { left: t.fmt.duration(now.leftMin) })}
+            {asking && !timed ? t('didYouFinish') : asking ? t('timesUp') : t('nowLeft', { left: t.fmt.duration(now.leftMin) })}
           </div>
         )}
       </div>
 
-      {isNow && task && block.type === 'task' ? (
+      {isNow && task && block.type === 'task' && !timed ? (
         // Quick buttons: on hover for the Now task, always shown for "Did you finish…?"
         <div className={cn('flex gap-1.5', !asking && 'hidden group-focus-within:flex group-hover:flex')}>
           {asking ? (

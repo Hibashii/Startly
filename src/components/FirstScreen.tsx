@@ -4,11 +4,14 @@ import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { useT } from '@/i18n/useT'
 import { PlanningPreview } from './PlanningPreview'
+import { ProfileFields, type ProfileValue } from './ProfileForm'
 
 
 export function FirstScreen() {
   const send = useStore((s) => s.send)
   const thinking = useStore((s) => s.thinking)
+  const known = useStore((s) => !!s.settings.profile)
+  const [asking, setAsking] = useState(false)
   const [text, setText] = useState('')
   const t = useT()
   const [error, setError] = useState<'rate_limited' | 'unavailable' | null>(null)
@@ -17,6 +20,8 @@ export function FirstScreen() {
     e?.preventDefault()
     const message = text.trim()
     if (!message || thinking) return
+    // The first time: a few quick questions about how you work, before planning.
+    if (!useStore.getState().settings.profile) return setAsking(true)
     setError(null)
     const res = await send(message)
     if (!res.ok && res.error !== 'busy') setError(res.error === 'rate_limited' ? 'rate_limited' : 'unavailable')
@@ -25,6 +30,8 @@ export function FirstScreen() {
   function onKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) submit(e)
   }
+
+  if (asking && !known && !thinking) return <Questions onDone={() => submit()} />
 
   if (thinking) {
     return (
@@ -76,6 +83,35 @@ export function FirstScreen() {
           {error && t(error === 'rate_limited' ? 'errRateLimited' : 'errUnavailable')}
         </p>
       </form>
+    </main>
+  )
+}
+
+/** Asked once, before the first plan: when you focus best, when your day ends, what happens at fixed times. */
+function Questions({ onDone }: { onDone: () => void }) {
+  const t = useT()
+  const setProfile = useStore((s) => s.setProfile)
+  const endNow = useStore((s) => s.settings.endOfDay)
+  const [value, setValue] = useState<ProfileValue>({ focusBest: null, end: endNow, habits: '' })
+  const finish = (skip: boolean) => {
+    setProfile(skip ? { focusBest: null, habits: '' } : { focusBest: value.focusBest, habits: value.habits.trim() }, skip ? undefined : value.end)
+    onDone()
+  }
+  return (
+    <main className="flex flex-1 flex-col items-center justify-center px-6 pb-[60px]">
+      <div className="planning w-full max-w-[560px]">
+        <h1 className="m-0 text-[28px] font-semibold tracking-[-0.02em]">{t('obTitle')}</h1>
+        <p className="mt-2 mb-7 text-[15px] text-mut">{t('obSub')}</p>
+        <ProfileFields value={value} onChange={setValue} />
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={() => finish(true)} className="press cursor-pointer rounded-full px-5 py-3 text-[15px] font-medium text-mut hover:bg-blk">
+            {t('obSkip')}
+          </button>
+          <Button type="button" onClick={() => finish(false)} className="press h-auto rounded-full px-5 py-3 text-[15.5px] font-semibold">
+            {t('planMyDay')}
+          </Button>
+        </div>
+      </div>
     </main>
   )
 }

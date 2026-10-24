@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { toast } from 'sonner'
-import type { Block, ChatMessage, Plan, Settings, Task, Window } from '@/types'
+import type { Block, ChatMessage, Plan, Profile, Settings, Task, Window } from '@/types'
 import { askStartly, buildContext } from '@/lib/api'
 import { clock, clockOf, dateKey, now, roundUp5, toHHMM, toMin, useNow } from '@/lib/time'
 import { applyActions, type AnyAction, type ApplyResult } from '@/scheduler/applyActions'
@@ -13,6 +13,10 @@ import { detectLang, msg, nameOf, translate, type Lang, type Text } from '@/i18n
 import { diffToday, toastText } from '@/scheduler/diff'
 import { findQuestion, measureAnswer, type QuestionOption } from '@/scheduler/questions'
 import { endOfDayFor, reshuffleToday } from '@/scheduler/schedule'
+import type { Timer } from '@/scheduler/timer'
+
+type Slots = { ref: string; start: string; date?: string | null }[] | null
+export type View = 'list' | 'grid' | 'week'
 
 /** A question Startly asked: the change waits until one of the prepared answers is picked. */
 export interface Pending {
@@ -23,7 +27,7 @@ export interface Pending {
   reaskMorning?: boolean // it interrupted the morning question: ask that again once this is answered
   question: Text
   options: QuestionOption[]
-  base: { actions: AnyAction[]; order: string[] | null } // the change that raised the question
+  base: { actions: AnyAction[]; order: string[] | null; slots?: Slots } // the change that raised the question
 }
 
 interface Persisted {
@@ -35,6 +39,10 @@ interface Persisted {
   chat: { date: string; messages: ChatMessage[] }
   pending: Pending | null
   lastCelebratedDate: string | null
+  /** The focus timer you started (it runs to the end of the task's block). */
+  timer: Timer | null
+  /** The day you last used the timer: breaks get a countdown too. */
+  focusDay: string | null
 }
 
 interface Ui {
@@ -53,8 +61,10 @@ interface Ui {
   celebration: { i: number } | null
   /** The cheer after checking a task: a line that follows your progress through the day. */
   cheer: { id: number; line: Text } | null
-  /** List (default) or an hour grid like a calendar day view. */
-  view: 'list' | 'grid'
+  /** One day as a list (default) or an hour grid, or the whole week as an hour grid. */
+  view: View
+  /** Startly pops up in the middle for a moment (a focus round done). */
+  pop: { id: number; line: Text } | null
 }
 
 interface Actions {
@@ -67,6 +77,20 @@ interface Actions {
   rename: (taskId: string, title: string) => void
   /** The Now card's buttons, handled by code (no AI call). */
   quick: (taskId: string, what: 'more' | 'notStarted' | 'tomorrow') => void
+  /** Start the focus timer on a task; starting late or early moves the rest of the day. */
+  startTimer: (taskId: string) => void
+  stopTimer: () => void
+  /** "Time's up": done, 15 more minutes, or tomorrow. */
+  timerEnd: (what: 'done' | 'more' | 'tomorrow', extraMin?: number) => void
+  pauseTimer: () => void
+  resumeTimer: () => void
+  /** Use the timer on an activity anyway (it becomes focus work), or the other way round. */
+  setFocus: (taskId: string, focus: boolean) => void
+  showPop: (line: Text) => void
+  setTimerMode: (mode: 'normal' | 'pomodoro') => void
+  setTimerSound: (on: boolean) => void
+  /** The first-time questions: how you work (and when your day ends). */
+  setProfile: (profile: Profile, endOfDay?: string) => void
   closeCelebration: () => void
   /** On a new day: a fresh chat with a greeting, the plan kept, and a question about yesterday's unchecked tasks. */
   morningReset: () => void
@@ -79,7 +103,11 @@ interface Actions {
   setLang: (lang: Lang) => void
   setAccent: (accent: Settings['accent']) => void
   setTheme: (theme: 'light' | 'dark') => void
-  setView: (view: 'list' | 'grid') => void
+  setView: (view: View) => void
+  /** The arrows: the same weekday one week earlier (-1) or later (+1). */
+  shiftWeek: (by: -1 | 1) => void
+  /** Back to today (its week and its day). */
+  goToday: () => void
   setChatOpen: (open: boolean) => void
   setWeekOpen: (open: boolean) => void
   selectDate: (date: string) => void
@@ -96,6 +124,8 @@ const fresh = (): Persisted => ({
   chat: { date: dateKey(now()), messages: [] },
   pending: null,
   lastCelebratedDate: null,
+  timer: null,
+  focusDay: null,
 })
 
 let msgId = 0
@@ -131,9 +161,9 @@ export const useStore = create<Store>()(
        * Apply a change, or ask first when it creates a real tradeoff, and add Startly's message to the chat:
        * its reply (the AI's own words, or a code-written one) plus code-written notes or a question.
        */
-      function commit(prev: Plan, actions: AnyAction[], order: string[] | null, replyIn: string | Text) {
+      function commit(prev: Plan, actions: AnyAction[], order: string[] | null, replyIn: string | Text, quiet = false, slots: Slots = null) {
         const { today, nowMin } = clockNow()
-        const run = (extra: AnyAction[] = []): ApplyResult => applyActions(prev, [...actions, ...extra], today, nowMin, order)
+        const run = (extra: AnyAction[] = []): ApplyResult => applyActions(prev, [...actions, ...extra], today, nowMin, order, slots)
         const result = run()
         const changed = result.applied > 0
         // Nothing changed although actions came: Startly says it didn't understand (instead of the AI's reply).
@@ -146,7 +176,8 @@ export const useStore = create<Store>()(
         if (!changed) {
           // An open question stays open ("how late is that?" doesn't answer it).
           if (!misunderstood && actions.length) reply.notes = [msg('answerWithButtons')]
-          set((cur) => ({ chat: { ...cur.chat, messages: [...cur.chat.messages, reply] } }))
+          // (Startly may be asking something, like which days to plan: the chat opens so it's seen.)
+          set((cur) => ({ chatOpen: quiet ? cur.chatOpen : true, chat: { ...cur.chat, messages: [...cur.chat.messages, reply] } }))
           return
         }
         // A real new change replaces an open question: show it as skipped, so its change visibly didn't happen.
@@ -159,7 +190,7 @@ export const useStore = create<Store>()(
         let pending: Pending | null = null
         if (question) {
           // Blocking: nothing changes until an answer is picked. Otherwise the change applies now and the answer acts on top.
-          const base = question.blocking ? { actions, order } : { actions: [], order: null }
+          const base = question.blocking ? { actions, order, slots } : { actions: [], order: null }
           pending = { id: mid(), date: today, question: question.text, options: question.options, base, reaskMorning: morningOpen || open?.reaskMorning }
           if (morningOpen) skipOpen = (messages) => closeQuestion(messages, open!.id, msg('questionLater'))
           reply.question = { pendingId: pending.id, text: question.text, options: question.options.map(({ id, label }) => ({ id, label })) }
@@ -200,14 +231,16 @@ export const useStore = create<Store>()(
         const firstPlan = prev.tasks.length === 0
         const flash = firstPlan ? [] : [...moved.map((m) => m.id), ...diff.addedIds]
         if (!pending && morningOpen) pending = open // still waiting for an answer
+        // Quiet (the timer's buttons): the timetable changes and a toast says so; the chat only hears about what needs reading.
+        const post = !quiet || !!pending || notes.length > 0
         set((cur) => ({
           ...next,
           dayEnds: next.dayEnds ?? {},
           pending,
-          chatOpen: true,
+          chatOpen: post ? true : cur.chatOpen,
           flash,
           justPlanned: firstPlan,
-          chat: { ...cur.chat, messages: [...skipOpen(cur.chat.messages), reply] },
+          chat: { ...cur.chat, messages: post ? [...skipOpen(cur.chat.messages), reply] : cur.chat.messages },
         }))
         const note = firstPlan ? null : toastText(diff)
         if (note) say(note)
@@ -253,6 +286,7 @@ export const useStore = create<Store>()(
         celebration: null,
         cheer: null,
         view: 'list',
+        pop: null,
 
         toggleDone: (taskId) => {
           const { today, nowMin } = clockNow()
@@ -279,7 +313,8 @@ export const useStore = create<Store>()(
           const reshuffled = reshuffleToday({ ...prev, tasks }, today, nowMin).plan
           tasks = reshuffled.tasks
           const moved = diffToday(s.tasks, tasks, today).moved.map((m) => m.id)
-          set({ tasks, blocks: reshuffled.blocks, flash: moved })
+          const timerDone = s.timer && isPart(s.tasks.find((t) => t.id === s.timer!.taskId) ?? task)
+          set({ tasks, blocks: reshuffled.blocks, flash: moved, ...(timerDone && { timer: null }) })
           if (moved.length) setTimeout(() => set({ flash: [] }), 2600)
           // Every time the day becomes complete (again), the finale.
           if (dayComplete(reshuffled.blocks[today] ?? [], tasks)) {
@@ -319,6 +354,61 @@ export const useStore = create<Store>()(
                 : [[{ type: 'move_to_day', id: taskId, date: tomorrow }], msg('movedTo', { title: nameOf(task), date: tomorrow })]
           commit(planOf(get()), actions, null, reply)
         },
+
+        startTimer: (taskId) => {
+          const { today, nowMin } = clockNow()
+          const s = get()
+          const task = s.tasks.find((t) => t.id === taskId)
+          if (!task || task.kind !== 'task' || task.status === 'done' || s.thinking) return
+          const block = (s.blocks[today] ?? []).find((b) => b.taskId === taskId)
+          const start = Math.floor(nowMin / 5) * 5
+          // Starting 5+ minutes off the plan (late, or early on the next task): the day moves to match.
+          if (!block || Math.abs(toMin(block.start) - start) >= 5) {
+            commit(planOf(s), [{ type: 'started_at', id: taskId, start: toHHMM(start), remainingMin: null }], null, msg('startsNow', { title: nameOf(task) }), true)
+          }
+          set({ timer: { taskId, startedAt: Date.now() }, focusDay: today })
+        },
+
+        stopTimer: () => set({ timer: null }),
+        pauseTimer: () => set((s) => (s.timer && !s.timer.pausedAt ? { timer: { ...s.timer, pausedAt: Date.now() } } : {})),
+        resumeTimer: () =>
+          set((s) => {
+            if (!s.timer?.pausedAt) return {}
+            const pausedMs = (s.timer.pausedMs ?? 0) + Date.now() - s.timer.pausedAt
+            return { timer: { ...s.timer, pausedAt: null, pausedMs } }
+          }),
+        setFocus: (taskId, focus) => {
+          const task = get().tasks.find((t) => t.id === taskId)
+          if (!task) return
+          const root = task.partOf ?? task.id
+          set((s) => ({ tasks: s.tasks.map((t) => (t.id === root || t.partOf === root ? { ...t, focus } : t)) }))
+        },
+        showPop: (line) => {
+          const pop = { id: Date.now(), line }
+          set({ pop })
+          setTimeout(() => get().pop?.id === pop.id && set({ pop: null }), 3400)
+        },
+
+        timerEnd: (what, extraMin) => {
+          const s = get()
+          const task = s.timer && s.tasks.find((t) => t.id === s.timer!.taskId)
+          if (!task) return set({ timer: null })
+          if (what === 'done') return get().toggleDone(task.id) // (clears the timer)
+          if (what === 'more') {
+            const min = extraMin ?? 15
+            // The paused time is given back once: the timer starts counting pauses again from zero.
+            set({ timer: { ...s.timer!, pausedAt: null, pausedMs: 0 } })
+            commit(planOf(get()), [{ type: 'extend_task', id: task.id, extraMin: min }], null, msg('addedMore', { title: nameOf(task), min }), true)
+            return
+          }
+          const tomorrow = plusDays(clockNow().today, 1)
+          set({ timer: null })
+          commit(planOf(get()), [{ type: 'move_to_day', id: task.id, date: tomorrow }], null, msg('movedTo', { title: nameOf(task), date: tomorrow }), true)
+        },
+
+        setTimerMode: (timerMode) => set((s) => ({ settings: { ...s.settings, timerMode } })),
+        setTimerSound: (timerSound) => set((s) => ({ settings: { ...s.settings, timerSound } })),
+        setProfile: (profile, endOfDay) => set((s) => ({ settings: { ...s.settings, profile, endOfDay: endOfDay ?? s.settings.endOfDay } })),
 
         closeCelebration: () => set({ celebration: null }),
 
@@ -372,6 +462,12 @@ export const useStore = create<Store>()(
         setAccent: (accent) => set((s) => ({ settings: { ...s.settings, accent } })),
         setTheme: (theme) => set((s) => ({ settings: { ...s.settings, theme } })),
         setView: (view) => set({ view }),
+        shiftWeek: (by) => {
+          const { today } = clockNow()
+          const date = plusDays(get().selectedDate ?? today, by * 7)
+          set({ selectedDate: date === today ? null : date })
+        },
+        goToday: () => set({ selectedDate: null }),
         setChatOpen: (chatOpen) => set({ chatOpen }),
         setWeekOpen: (weekOpen) => set(weekOpen ? { weekOpen } : { weekOpen, selectedDate: null }),
         selectDate: (date) => set({ selectedDate: date === clockNow().today ? null : date }),
@@ -410,7 +506,17 @@ export const useStore = create<Store>()(
           if (resolve && cur.pending && cur.pending.id === s.pending?.id && cur.pending.options.some((o) => o.id === resolve.optionId && o.id !== 'choose')) {
             get().answer(resolve.optionId)
           } else {
-            commit(planOf(cur), res.data.actions.filter((a) => a.type !== 'resolve_pending'), res.data.order ?? null, res.data.reply)
+            commit(planOf(cur), res.data.actions.filter((a) => a.type !== 'resolve_pending'), res.data.order ?? null, res.data.reply, false, res.data.slots ?? null)
+            // Startly asked something: its suggested answers go on its reply, as buttons to tap.
+            const suggestions = (res.data.suggestions ?? []).map((x) => x.trim().slice(0, 80)).filter(Boolean).slice(0, 4)
+            if (suggestions.length) {
+              set((s2) => {
+                const messages = [...s2.chat.messages]
+                const last = messages.length - 1
+                if (last >= 0 && messages[last].role === 'assistant' && !messages[last].question) messages[last] = { ...messages[last], suggestions }
+                return { chat: { ...s2.chat, messages } }
+              })
+            }
           }
           get().morningReset() // in case the day changed during the request
           return { ok: true }
@@ -425,8 +531,8 @@ export const useStore = create<Store>()(
           set((cur) => ({ pending: null, chat: { ...cur.chat, messages: closeQuestion(cur.chat.messages, p.id, option.label) } }))
           const { today, nowMin } = clockNow()
           const prev = planOf(get())
-          const simulate = (extra: AnyAction[]) => applyActions(prev, [...p.base.actions, ...extra], today, nowMin, p.base.order)
-          commit(prev, [...p.base.actions, ...measureAnswer(option.extra, today, simulate)], p.base.order, option.label)
+          const simulate = (extra: AnyAction[]) => applyActions(prev, [...p.base.actions, ...extra], today, nowMin, p.base.order, p.base.slots ?? null)
+          commit(prev, [...p.base.actions, ...measureAnswer(option.extra, today, simulate)], p.base.order, option.label, false, p.base.slots ?? null)
         },
       }
     },
@@ -442,9 +548,11 @@ export const useStore = create<Store>()(
         chat: s.chat,
         pending: s.pending,
         lastCelebratedDate: s.lastCelebratedDate,
+        timer: s.timer,
+        focusDay: s.focusDay,
       }),
       // Older saves may miss newer fields.
-      merge: (saved, current) => ({ ...current, ...(saved as Partial<Persisted>), dayEnds: (saved as Partial<Persisted>)?.dayEnds ?? {} }),
+      merge: (saved, current) => ({ ...current, ...(saved as Partial<Persisted>), dayEnds: (saved as Partial<Persisted>)?.dayEnds ?? {}, timer: (saved as Partial<Persisted>)?.timer ?? null }),
       migrate: (saved, version) => (version === 1 ? fromV1(saved) : fresh()), // anything unknown starts fresh
     },
   ),

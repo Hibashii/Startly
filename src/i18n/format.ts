@@ -13,6 +13,8 @@ export interface BaseFmt {
   list: (items: string[]) => string // "A, B and C" / "A, B et C"
   quote: (s: string) => string // 'A' / « A » / „A“
   duration: (min: number) => string // "1h30" / "1 h 30" / "45 min"
+  monthYear: (date: string) => string // "October 2026"
+  range: (from: string, to: string) => string // "26 Oct – 1 Nov"
 }
 
 // Latin digits everywhere (Arabic included), so times and durations read the same in every language.
@@ -50,6 +52,8 @@ export function fmtFor(lang: Lang): BaseFmt {
   const weekdayShort = new Intl.DateTimeFormat(loc, { weekday: 'short' })
   const dayMonth = new Intl.DateTimeFormat(loc, { weekday: 'long', day: 'numeric', month: 'long' })
   const list = new Intl.ListFormat(loc, { style: 'long', type: 'conjunction' })
+  const monthYear = new Intl.DateTimeFormat(loc, { month: 'long', year: 'numeric' })
+  const dayShort = new Intl.DateTimeFormat(loc, { day: 'numeric', month: 'short' })
   const fmt: BaseFmt = {
     weekday: (d) => weekday.format(at(d)),
     weekdayShort: (d) => weekdayShort.format(at(d)),
@@ -57,6 +61,8 @@ export function fmtFor(lang: Lang): BaseFmt {
     list: (items) => list.format(items),
     quote: QUOTES[lang],
     duration: (min) => DURATION[lang](Math.floor(min / 60), min % 60),
+    monthYear: (d) => monthYear.format(at(d)),
+    range: (a, b) => dayShort.formatRange(at(a), at(b)),
   }
   cache.set(lang, fmt)
   return fmt

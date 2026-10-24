@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { MoreHorizontal } from 'lucide-react'
+import { ChevronRight, ChevronsUpDown, MoreHorizontal } from 'lucide-react'
+import { HowYouWork } from './HowYouWork'
 import type { Accent } from '@/types'
 import { LANGS, type Lang } from '@/i18n'
 import { useT } from '@/i18n/useT'
@@ -18,7 +19,7 @@ export const ACCENTS: { id: Accent; light: string; dark: string }[] = [
   { id: 'ink', light: '#18181b', dark: '#eeeeee' },
 ]
 
-/** ⋯ in the top bar: language, accent color and Light / Dark, all remembered; and Start fresh. */
+/** ⋯ in the top bar: language, accent color and Light / Dark, all remembered; How you work; and Start fresh. */
 export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
   const accent = useStore((s) => s.settings.accent)
   const setAccent = useStore((s) => s.setAccent)
@@ -28,12 +29,13 @@ export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
   const t = useT()
   const [open, setOpen] = useState(false)
   const [confirm, setConfirm] = useState(false)
+  const [work, setWork] = useState(false)
   const root = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
-    // (Not while the "Start fresh?" dialog is open: it lives outside the menu.)
-    const outside = (e: PointerEvent) => !confirm && !root.current?.contains(e.target as Node) && setOpen(false)
+    // (Not while a dialog it opened is showing: those live outside the menu.)
+    const outside = (e: PointerEvent) => !confirm && !work && !root.current?.contains(e.target as Node) && setOpen(false)
     const escape = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
     document.addEventListener('pointerdown', outside)
     document.addEventListener('keydown', escape)
@@ -41,7 +43,7 @@ export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
       document.removeEventListener('pointerdown', outside)
       document.removeEventListener('keydown', escape)
     }
-  }, [open, confirm])
+  }, [open, confirm, work])
 
   const dark = theme === 'dark'
 
@@ -65,18 +67,21 @@ export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
         >
           <label className="flex items-center justify-between gap-3">
             <span className="text-[13px] font-semibold">{t('language')}</span>
-            <select
-              value={t.lang}
-              onChange={(e) => setLang(e.target.value as Lang)}
-              aria-label={t('language')}
-              className="cursor-pointer rounded-lg border bg-card px-2 py-1 text-[13px] text-ink"
-            >
-              {LANGS.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.name}
-                </option>
-              ))}
-            </select>
+            <span className="relative">
+              <select
+                value={t.lang}
+                onChange={(e) => setLang(e.target.value as Lang)}
+                aria-label={t('language')}
+                className="cursor-pointer appearance-none rounded-full bg-blk py-1.5 ps-3 pe-7 text-[13px] font-medium text-ink hover:bg-line/70 focus-visible:outline-2 focus-visible:outline-acc"
+              >
+                {LANGS.map((l) => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}
+                  </option>
+                ))}
+              </select>
+              <ChevronsUpDown className="pointer-events-none absolute end-2.5 top-1/2 size-3.5 -translate-y-1/2 text-mut" aria-hidden />
+            </span>
           </label>
           <h4 className="m-0 mt-3.5 mb-2.5 border-t pt-3 text-[13px] font-semibold">{t('color')}</h4>
           <div className="grid grid-cols-7 gap-1.5" role="radiogroup" aria-label={t('color')}>
@@ -100,16 +105,19 @@ export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
           <p className="mt-2 mb-0 text-xs text-mut">{t('remembers', { name: t('accent', { accent }) })}</p>
           <div className="mt-3.5 flex items-center justify-between border-t pt-3">
             <span className="text-[13px] font-semibold">{t('darkMode')}</span>
+            <Switch on={dark} label={t('darkMode')} onChange={(on) => setTheme(on ? 'dark' : 'light')} />
+          </div>
+          <div className="mt-3 border-t pt-2">
             <button
               type="button"
-              role="switch"
-              aria-checked={dark}
-              aria-label={t('darkMode')}
-              dir="ltr"
-              onClick={() => setTheme(dark ? 'light' : 'dark')}
-              className={cn('relative h-6 w-10 cursor-pointer rounded-full bg-line transition-colors', dark && 'bg-acc')}
+              onClick={() => {
+                setWork(true)
+                setOpen(false)
+              }}
+              className="-mx-2 flex w-[calc(100%+1rem)] cursor-pointer items-center justify-between rounded-lg px-2 py-1.5 text-start text-[13px] font-semibold hover:bg-blk"
             >
-              <span className={cn('absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform', dark && 'translate-x-4')} />
+              {t('howYouWork')}
+              <ChevronRight className="size-4 text-mut rtl:rotate-180" aria-hidden />
             </button>
           </div>
           <div className="mt-3 border-t pt-2">
@@ -123,6 +131,10 @@ export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
           </div>
         </div>
       )}
+      <HowYouWork
+        open={work}
+        onClose={() => setWork(false)}
+      />
       <Dialog open={confirm} onOpenChange={setConfirm}>
         <DialogContent showCloseButton={false} className="max-w-[380px] rounded-[20px] border bg-card p-6 text-ink">
           <DialogTitle className="text-start text-[18px] font-bold">{t('startFreshTitle')}</DialogTitle>
@@ -146,5 +158,21 @@ export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
         </DialogContent>
       </Dialog>
     </div>
+  )
+}
+
+function Switch({ on, label, onChange }: { on: boolean; label: string; onChange: (on: boolean) => void }) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={label}
+      dir="ltr"
+      onClick={() => onChange(!on)}
+      className={cn('relative h-6 w-10 cursor-pointer rounded-full bg-line transition-colors', on && 'bg-acc')}
+    >
+      <span className={cn('absolute top-0.5 left-0.5 size-5 rounded-full bg-white shadow transition-transform', on && 'translate-x-4')} />
+    </button>
   )
 }

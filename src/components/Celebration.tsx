@@ -1,50 +1,66 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import confetti from 'canvas-confetti'
 import { useStore } from '@/state/store'
-import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
-import { Avatar } from './Avatar'
+import { DancingAvatar } from './Avatar'
 import { useT } from '@/i18n/useT'
 
-/** Every task of the day checked: confetti falls, and a warm message with a discipline quote. */
+/**
+ * Every task of the day checked, the biggest moment: the page blurs, Startly jumps up and dances,
+ * confetti bursts from behind him in waves, and a card with a warm message and a quote (no numbers: finishing your day is the win).
+ */
 export function Celebration() {
   const celebration = useStore((s) => s.celebration)
+  if (!celebration) return null
+  return <Finale i={celebration.i} />
+}
+
+function Finale({ i }: { i: number }) {
   const close = useStore((s) => s.closeCelebration)
   const t = useT()
+  const canvas = useRef<HTMLCanvasElement>(null)
+  const button = useRef<HTMLButtonElement>(null)
 
   useEffect(() => {
-    if (!celebration || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    button.current?.focus()
+    const escape = (e: KeyboardEvent) => e.key === 'Escape' && close()
+    document.addEventListener('keydown', escape)
+    if (!canvas.current || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return () => document.removeEventListener('keydown', escape)
+    const fire = confetti.create(canvas.current, { resize: true })
     const accent = getComputedStyle(document.documentElement).getPropertyValue('--acc').trim() || '#5b5bd6'
     const colors = [accent, '#f9a8d4', '#fcd34d', '#86efac', '#93c5fd']
-    // A real finale: a burst in the middle, then both sides keep firing for a moment.
-    confetti({ particleCount: 160, spread: 90, startVelocity: 45, origin: { y: 0.35 }, colors, disableForReducedMotion: true })
-    const end = Date.now() + 1600
-    let frame = 0
-    const sides = () => {
-      confetti({ particleCount: 4, angle: 60, spread: 60, origin: { x: 0, y: 0.7 }, colors, disableForReducedMotion: true })
-      confetti({ particleCount: 4, angle: 120, spread: 60, origin: { x: 1, y: 0.7 }, colors, disableForReducedMotion: true })
-      if (Date.now() < end) frame = requestAnimationFrame(sides)
+    // Wave 1: a big burst from behind Startly as he lands. Wave 2: both sides. Wave 3: a last shower from the top.
+    const timers = [
+      setTimeout(() => fire({ particleCount: 140, spread: 110, startVelocity: 48, origin: { x: 0.5, y: 0.42 }, colors }), 450),
+      setTimeout(() => {
+        fire({ particleCount: 70, angle: 60, spread: 65, startVelocity: 55, origin: { x: 0, y: 0.75 }, colors })
+        fire({ particleCount: 70, angle: 120, spread: 65, startVelocity: 55, origin: { x: 1, y: 0.75 }, colors })
+      }, 1100),
+      setTimeout(() => fire({ particleCount: 90, spread: 160, startVelocity: 25, gravity: 0.6, origin: { x: 0.5, y: 0 }, colors, scalar: 0.9 }), 2000),
+    ]
+    return () => {
+      timers.forEach(clearTimeout)
+      fire.reset()
+      document.removeEventListener('keydown', escape)
     }
-    frame = requestAnimationFrame(sides)
-    return () => cancelAnimationFrame(frame)
-  }, [celebration])
+  }, [close])
 
   return (
-    <Dialog open={!!celebration} onOpenChange={(open) => !open && close()}>
-      <DialogContent showCloseButton={false} className="max-w-[420px] rounded-[24px] border bg-card p-8 text-center text-ink">
-        <Avatar className="mx-auto size-14" />
-        <DialogTitle className="mt-2 text-center text-[22px] font-bold tracking-[-0.02em]">{t('dayCompleteTitle')}</DialogTitle>
-        <DialogDescription className="text-center text-[15.5px] leading-relaxed text-ink">
-          {celebration && t('celebrationMessage', { i: celebration.i })}
-        </DialogDescription>
-        <blockquote className="m-0 mt-1 text-[14px] text-mut italic">“{celebration && t('celebrationQuote', { i: celebration.i })}”</blockquote>
-        <button
-          type="button"
-          onClick={close}
-          className="press mx-auto mt-4 cursor-pointer rounded-full bg-acc px-6 py-2.5 text-[15px] font-semibold text-accink"
-        >
-          {t('restWell')}
-        </button>
-      </DialogContent>
-    </Dialog>
+    <div className="party-in fixed inset-0 z-50 grid place-items-center overflow-y-auto bg-bg/55 p-4 backdrop-blur-lg" role="dialog" aria-modal="true" aria-labelledby="finale-title">
+      <canvas ref={canvas} className="pointer-events-none fixed inset-0 size-full" />
+      <div className="relative flex w-full max-w-[420px] flex-col items-center">
+        {/* Startly stands on the card's top edge, so the card itself sits in the middle of the screen */}
+        <div className="finale-jump -mb-9">
+          <DancingAvatar className="size-36" />
+        </div>
+        <div className="finale-card w-full rounded-[28px] border bg-card px-7 pt-12 pb-7 text-center shadow-soft">
+          <h2 id="finale-title" className="m-0 text-[30px] font-bold tracking-[-0.03em]">{t('dayCompleteTitle')}</h2>
+          <p className="mt-4 mb-0 text-[16px] leading-relaxed">{t('celebrationMessage', { i })}</p>
+          <blockquote className="m-0 mt-3 text-[14px] leading-relaxed text-mut italic">“{t('celebrationQuote', { i })}”</blockquote>
+          <button ref={button} type="button" onClick={close} className="press mt-6 cursor-pointer rounded-full bg-acc px-7 py-2.5 text-[15px] font-semibold text-accink">
+            {t('restWell')}
+          </button>
+        </div>
+      </div>
+    </div>
   )
 }

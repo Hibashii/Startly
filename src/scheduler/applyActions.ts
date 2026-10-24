@@ -41,7 +41,14 @@ const isDate = (s: string | null) => {
 }
 
 /** AI actions → task changes → scheduler. Invalid actions are skipped, valid ones applied. */
-export function applyActions(plan: Plan, actions: AnyAction[], today: string, nowMin: number, order: string[] | null = null): ApplyResult {
+export function applyActions(
+  plan: Plan,
+  actions: AnyAction[],
+  today: string,
+  nowMin: number,
+  order: string[] | null = null,
+  slots: { ref: string; start: string; date?: string | null }[] | null = null,
+): ApplyResult {
   // A day laid out in advance is redone when it arrives: those times were a plan, not work under way.
   // (Done first, so nothing below mistakes them for tasks already started.)
   if (plan.tasks.some((t) => t.date === today && t.preplanned)) {
@@ -94,6 +101,13 @@ export function applyActions(plan: Plan, actions: AnyAction[], today: string, no
           skipped.push(a)
           break
         }
+        // Never a second copy of a task you already have on that day ("you didn't add the groceries!" when it's there).
+        const day = a.date && a.date > today ? a.date : null
+        const same = (t: Task) => before.has(t.id) && t.status === 'todo' && t.title.trim().toLowerCase() === a.title.trim().toLowerCase()
+        if (tasks.some((t) => same(t) && (day ? t.date === day : t.date === null || t.date === today))) {
+          skipped.push(a)
+          break
+        }
         const task: Task = {
           id: `t${nextId++}`,
           title: a.title.trim(),
@@ -107,6 +121,7 @@ export function applyActions(plan: Plan, actions: AnyAction[], today: string, no
           start: null,
           status: 'todo',
           order: nextOrder++,
+          ...(a.focus === false && { focus: false }),
         }
         tasks.push(task)
         applied++
@@ -311,6 +326,12 @@ export function applyActions(plan: Plan, actions: AnyAction[], today: string, no
         applied++
         break
       }
+      case 'update_profile': {
+        const old = plan.settings.profile ?? { focusBest: null, habits: '' }
+        plan = { ...plan, settings: { ...plan.settings, profile: { focusBest: a.focusBest ?? old.focusBest, habits: a.habits?.trim() ?? old.habits } } }
+        applied++
+        break
+      }
       default:
         // resolve_pending is handled by the store (it picks one of the prepared answers).
         skipped.push(a)
@@ -336,6 +357,60 @@ export function applyActions(plan: Plan, actions: AnyAction[], today: string, no
         return justStarted(t) && rank.has(t.id) ? { ...moved, date: null, start: null } : moved
       })
       applied++
+    }
+  }
+
+  // Where Startly planned each task today: a soft hold the scheduler keeps, so the day reads like a timetable.
+  if (slots?.length) {
+    const added = tasks.filter((t) => !before.has(t.id))
+    const at = new Map<string, string>()
+    // A task added now is named by its title. The same title can come back on several days
+    // ("Spanish" Mon to Sat): each slot takes the one on its day, and no task is used twice.
+    const used = new Set<string>()
+    // Only the copy on the slot's own day (a later date, or today = no date yet): never another day's.
+    const byTitle = (ref: string, date: string | null) => {
+      const day = date && date > today ? date : null
+      return added.find((t) => !used.has(t.id) && t.title.toLowerCase() === ref.trim().toLowerCase() && t.date === day)?.id
+    }
+    const GRACE = 15
+    const justStarted = (t: Task) => !!t.start && t.date === today && toMin(t.start) < nowMin && toMin(t.start) >= nowMin - GRACE
+    // A task already under way stays where it is (unless it "started" only minutes ago, e.g. right after planning).
+    const underWay = (t: Task) => t.date === today && !!t.start && toMin(t.start) < nowMin && !justStarted(t)
+    for (const s of slots) {
+      if (!isTime(s.start) || !isDate(s.date ?? null) || (s.date && s.date < today)) continue
+      const id = find(s.ref)?.id ?? byTitle(s.ref, s.date ?? null)
+      if (!id) continue
+      used.add(id)
+      if (s.date && s.date > today) {
+        // A later day: the task goes there at that time, and that day is laid out hour by hour (below).
+        // Only a task added now or already on a later day: one on today moves away only through move_to_day
+        // (what you asked, or "Move it"), so a day never loses a task without you knowing.
+        const t = find(id)
+        if (t?.kind !== 'task' || t.status !== 'todo' || t.partOf || underWay(t)) continue
+        if (before.has(t.id) && (t.date === null || t.date <= today)) continue
+        if (t.date === s.date && t.slot === s.start) continue // already there: nothing changes
+        replace({ ...t, date: s.date, start: null, slot: s.start, preplanned: false })
+        planDays.add(s.date)
+        applied++
+        continue
+      }
+      at.set(id, s.start)
+    }
+    if (at.size) {
+      let changed = 0
+      tasks = tasks.map((t) => {
+        const s = at.get(t.id)
+        const movable = t.kind === 'task' && t.status === 'todo' && (t.date === today || t.date === null) && !underWay(t)
+        if (s === undefined || !movable) return t
+        // The same time again: nothing changes (even if the scheduler had to place it elsewhere, e.g. a past slot).
+        if (t.slot === s && !justStarted(t)) return t
+        const moves = justStarted(t) || (!!t.start && t.start !== s)
+        changed++
+        // A slot that is already past (planned this morning, it's now 14:00) just means "as soon as possible".
+        return { ...t, slot: s, ...(moves ? { date: null, start: null } : {}) }
+      })
+      // (Only a real change counts: the same times sent again must not close an open question.)
+      if (changed) applied++
     }
   }
 

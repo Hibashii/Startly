@@ -13,7 +13,7 @@ const TODAY = '2026-10-17' // a Saturday
 const SUN = '2026-10-18'
 const MON = '2026-10-19'
 const add = (title: string, durationMin: number, deadline: string | null = null): Action => ({
-  type: 'add_task', title, durationMin, priority: 'medium', deadline, preferredStart: null, endBy: null, date: null,
+  type: 'add_task', title, durationMin, priority: 'medium', deadline, preferredStart: null, endBy: null, date: null, focus: true,
 })
 const empty = (): Plan => ({ tasks: [], blocks: {}, availability: {}, settings: { lang: 'en', accent: 'iris', theme: null, endOfDay: '23:00' } })
 /** A task by name; "X (cont.)" finds the rest of a split task X (same name, marked as a part). */

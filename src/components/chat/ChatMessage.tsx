@@ -80,7 +80,7 @@ function QuestionButtons({ q }: { q: NonNullable<Msg['question']> }) {
 export function UserBubble({ children, faded }: { children: ReactNode; faded?: boolean }) {
   return (
     <div
-      className="max-w-[82%] self-end rounded-[20px_20px_6px_20px] bg-tint px-[15px] py-[9px] whitespace-pre-wrap text-tinti data-[faded=true]:opacity-60 rtl:rounded-[20px_20px_20px_6px]"
+      className="max-w-[82%] self-end rounded-[20px_20px_6px_20px] bg-tint px-[15px] py-[9px] whitespace-pre-wrap text-ink data-[faded=true]:opacity-60 rtl:rounded-[20px_20px_20px_6px]"
       dir="auto"
       data-faded={faded}
     >
@@ -98,9 +98,9 @@ export function StartlyLine({ children }: { children: ReactNode }) {
   )
 }
 
-export function ChatMessage({ message }: { message: Msg }) {
+export function ChatMessage({ message, last }: { message: Msg; last?: boolean }) {
   if (message.role === 'user') return <UserBubble>{'text' in message ? message.text : null}</UserBubble>
-  return <StartlyMessage message={message} />
+  return <StartlyMessage message={message} last={last} />
 }
 
 /** How an answered question reads afterwards: the answer you picked, or why it closed. */
@@ -109,8 +109,10 @@ function answeredLine(answered: Text, t: ReturnType<typeof useT>) {
   return closed.includes(answered.k) ? t.text(answered) : t('youChose', { answer: t.text(answered) })
 }
 
-function StartlyMessage({ message }: { message: Msg }) {
+function StartlyMessage({ message, last }: { message: Msg; last?: boolean }) {
   const t = useT()
+  const send = useStore((s) => s.send)
+  const thinking = useStore((s) => s.thinking)
   // Where a task went: a time ("16:15"), a later day ("Sun"), or not today.
   const target = (to: string | null) => (to === null ? t('notToday') : to.includes(':') ? clock(to) : t.fmt.weekdayShort(to))
   return (
@@ -137,6 +139,23 @@ function StartlyMessage({ message }: { message: Msg }) {
         <p key={i} className="mt-2 mb-0">{t.text(n)}</p>
       ))}
       {message.question && <QuestionButtons q={message.question} />}
+      {/* Answers to tap, only while it's the latest thing Startly said */}
+      {last && message.suggestions && (
+        <div className="mt-2 flex flex-wrap gap-2">
+          {message.suggestions.map((s) => (
+            <button
+              key={s}
+              type="button"
+              disabled={thinking}
+              onClick={() => send(s)}
+              dir="auto"
+              className="press cursor-pointer rounded-full border bg-card px-3.5 py-1.5 text-[13.5px] font-medium hover:bg-blk disabled:cursor-default disabled:opacity-40"
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      )}
     </StartlyLine>
   )
 }

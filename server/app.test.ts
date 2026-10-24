@@ -6,7 +6,7 @@ const context = {
   now: '2026-10-17T12:30', weekday: 'Saturday', today: '2026-10-17', tasks: [], availability: {},
   endOfDay: '23:00', pending: null, recentMessages: [], timetable: [], breaks: { afterMin: 60, lengthMin: 15 }, language: 'en',
 }
-const good = { reply: 'Done.', order: null, actions: [{ type: 'add_fixed', title: 'Interview', date: '2026-10-21', start: '11:30', end: '12:00' }] }
+const good = { reply: 'Done.', order: null, slots: null, suggestions: null, actions: [{ type: 'add_fixed', title: 'Interview', date: '2026-10-21', start: '11:30', end: '12:00' }] }
 
 describe('POST /api/assistant', () => {
   it('returns the reply and actions for a valid body', async () => {
@@ -39,7 +39,7 @@ describe('POST /api/assistant', () => {
   })
 
   it('returns 502 when OpenAI returns something outside the schema', async () => {
-    const call = vi.fn().mockResolvedValue({ reply: 'x', order: null, actions: [{ type: 'teleport' }] })
+    const call = vi.fn().mockResolvedValue({ reply: 'x', order: null, slots: null, suggestions: null, actions: [{ type: 'teleport' }] })
     const res = await request(createApp(call)).post('/api/assistant').send({ message: 'hi', context })
     expect(res.status).toBe(502)
   })

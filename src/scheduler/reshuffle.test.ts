@@ -11,7 +11,7 @@ const words = (x: Text | null | undefined) => (x ? translate('en', x) : x)
 
 const TODAY = '2026-10-17'
 const add = (title: string, durationMin: number): Action => ({
-  type: 'add_task', title, durationMin, priority: 'medium', deadline: null, preferredStart: null, endBy: null, date: null,
+  type: 'add_task', title, durationMin, priority: 'medium', deadline: null, preferredStart: null, endBy: null, date: null, focus: true,
 })
 const empty = (): Plan => ({ tasks: [], blocks: {}, availability: {}, settings: { lang: 'en', accent: 'iris', theme: null, endOfDay: '23:00' } })
 /** A task by name; "X (cont.)" finds the rest of a split task X (same name, marked as a part). */
@@ -114,7 +114,7 @@ describe('review fixes (slice 2)', () => {
   it('a preferred time is held: a long task does not run over it', () => {
     const { plan } = applyActions(empty(), [
       add('Long', 180),
-      { type: 'add_task', title: 'Gym', durationMin: 60, priority: 'medium', deadline: null, preferredStart: '17:00', endBy: null, date: null },
+      { type: 'add_task', title: 'Gym', durationMin: 60, priority: 'medium', deadline: null, preferredStart: '17:00', endBy: null, date: null, focus: true },
     ], TODAY, toMin('15:00'))
     expect(byTitle(plan, 'Gym').start).toBe('17:00')
     expect(toMin(byTitle(plan, 'Long').start!)).toBeGreaterThanOrEqual(toMin('18:00'))
@@ -172,7 +172,7 @@ describe('review fixes (slice 2)', () => {
   it('a held time beats lunch', () => {
     const { plan } = applyActions(empty(), [
       add('Short', 30),
-      { type: 'add_task', title: 'X', durationMin: 60, priority: 'medium', deadline: null, preferredStart: '13:00', endBy: null, date: null },
+      { type: 'add_task', title: 'X', durationMin: 60, priority: 'medium', deadline: null, preferredStart: '13:00', endBy: null, date: null, focus: true },
     ], TODAY, toMin('11:00'))
     expect(byTitle(plan, 'X').start).toBe('13:00')
     noOverlap(plan.blocks[TODAY])
@@ -255,7 +255,7 @@ describe('review fixes (slice 2)', () => {
   it('"groceries before 20:00" ends by 20:00 even when other tasks come first in order', () => {
     const { plan } = applyActions(empty(), [
       add('Interview prep', 90), add('Hackathon', 120),
-      { type: 'add_task', title: 'Groceries', durationMin: 45, priority: 'low', deadline: null, preferredStart: null, endBy: '20:00', date: null },
+      { type: 'add_task', title: 'Groceries', durationMin: 45, priority: 'low', deadline: null, preferredStart: null, endBy: '20:00', date: null, focus: true },
     ], TODAY, toMin('17:45'))
     const g = byTitle(plan, 'Groceries')
     expect(toMin(g.start!) + g.durationMin).toBeLessThanOrEqual(toMin('20:00'))
@@ -264,7 +264,7 @@ describe('review fixes (slice 2)', () => {
 
   it('a finish-by time that can no longer be met → not placed (never silently late)', () => {
     const { unplaced, plan } = applyActions(empty(), [
-      { type: 'add_task', title: 'Groceries', durationMin: 45, priority: 'low', deadline: null, preferredStart: null, endBy: '20:00', date: null },
+      { type: 'add_task', title: 'Groceries', durationMin: 45, priority: 'low', deadline: null, preferredStart: null, endBy: '20:00', date: null, focus: true },
     ], TODAY, toMin('19:30'))
     expect(unplaced).toEqual([byTitle(plan, 'Groceries').id])
   })
@@ -302,7 +302,7 @@ describe("Startly's suggested order", () => {
   it('a finish-by time still wins over the suggested order', () => {
     const { plan } = applyActions(empty(), [
       add('Hackathon', 120),
-      { type: 'add_task', title: 'Groceries', durationMin: 45, priority: 'low', deadline: null, preferredStart: null, endBy: '20:00', date: null },
+      { type: 'add_task', title: 'Groceries', durationMin: 45, priority: 'low', deadline: null, preferredStart: null, endBy: '20:00', date: null, focus: true },
     ], TODAY, toMin('18:30'), ['Hackathon', 'Groceries'])
     const g = byTitle(plan, 'Groceries')
     expect(toMin(g.start!) + g.durationMin).toBeLessThanOrEqual(toMin('20:00'))
@@ -340,7 +340,7 @@ describe('review fixes (slice 4)', () => {
   it('an old preferred time ("gym in the morning") does not remove a running break', () => {
     const { plan: before } = applyActions(empty(), [
       add('A', 90), add('C', 30),
-      { type: 'add_task', title: 'Gym', durationMin: 60, priority: 'medium', deadline: null, preferredStart: '08:00', endBy: null, date: null },
+      { type: 'add_task', title: 'Gym', durationMin: 60, priority: 'medium', deadline: null, preferredStart: '08:00', endBy: null, date: null, focus: true },
     ], TODAY, toMin('14:00'))
     const brk = before.blocks[TODAY].find((x) => x.type === 'break')!
     const { plan } = applyActions(before, [add('Mail', 15)], TODAY, toMin(brk.start) + 5)
