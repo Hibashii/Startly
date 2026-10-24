@@ -110,6 +110,19 @@ export function Timetable() {
   const free = windowsFor(plan, date)
   const dayMinutes = dayTasks.reduce((sum, t) => sum + t.durationMin, 0)
   const checked = dayTasks.filter((t) => t.status === 'done').length
+  const stamp = (top?: number) =>
+    isPast && checked > 0 && (
+      <div
+        className={cn(
+          'stamp pointer-events-none absolute end-6 top-6 z-[5] rounded-xl border-[3px] border-current px-4 py-1 text-[34px] font-black tracking-[0.12em] whitespace-nowrap uppercase tabular-nums',
+          'max-sm:end-2 max-sm:-top-2 max-sm:rounded-lg max-sm:border-2 max-sm:px-2.5 max-sm:py-0.5 max-sm:text-[20px]', // (a phone: smaller, so the names stay readable)
+          checked === dayTasks.length ? 'text-acc/70' : 'text-mut/70',
+        )}
+        style={top === undefined ? undefined : { top }}
+      >
+        {checked === dayTasks.length ? `${t('doneStamp')} ✓` : t('doneCount', { done: checked, total: dayTasks.length })}
+      </div>
+    )
 
   // The Week view: Monday to Sunday of the day you're on.
   const week = weekOf(mondayOf(date))
@@ -218,20 +231,11 @@ export function Timetable() {
       {isToday && <FocusTimer />}
 
       <div key={date} className={cn('relative', daySlide)}>
-        {/* A day that's over: a tilted stamp says how it went (nothing checked: no stamp). You can still read everything, just not change it. */}
-        {isPast && checked > 0 && (
-          <div
-            className={cn(
-              'stamp pointer-events-none absolute end-6 top-6 z-[5] rounded-xl border-[3px] border-current px-4 py-1 text-[34px] font-black tracking-[0.12em] whitespace-nowrap uppercase tabular-nums',
-              'max-sm:end-2 max-sm:-top-2 max-sm:rounded-lg max-sm:border-2 max-sm:px-2.5 max-sm:py-0.5 max-sm:text-[20px]', // (a phone: smaller, so the names stay readable)
-              checked === dayTasks.length ? 'text-acc/70' : 'text-mut/70',
-            )}
-          >
-            {checked === dayTasks.length ? `${t('doneStamp')} ✓` : t('doneCount', { done: checked, total: dayTasks.length })}
-          </div>
-        )}
+        {/* A day that's over: a tilted stamp says how it went (nothing checked: no stamp). You can still read everything, just not change it.
+            On the hour grid it sits on the first task, not up in the empty early hours. */}
+        {!(laidOut && view === 'grid') && stamp()}
         {laidOut && view === 'grid' ? (
-          <GridView blocks={blocks} tasks={tasks} nowMin={isToday ? nowMin : null} now={now} />
+          <GridView blocks={blocks} tasks={tasks} nowMin={isToday ? nowMin : null} now={now} stamp={stamp} />
         ) : laidOut ? (
           <ol
             className="m-0 list-none p-0"

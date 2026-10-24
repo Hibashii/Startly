@@ -11,8 +11,8 @@ import { FixedTag } from './FixedTag'
 import { useMedia } from '@/lib/useMedia'
 
 const HOUR = 48 // px per hour
-const DAY_START = 7 // like the day grid: 7:00…
-const DAY_END = 26 // …to 2:00 at night, wider if something sits outside
+const DAY_START = 2 // like the day grid, all 24 hours: 2:00…
+const DAY_END = 26 // …to 2:00 the next night (a late night stays with its day), wider if something sits outside
 
 /**
  * The whole week as an hour grid, Monday to Sunday. A day laid out hour by hour shows its blocks;
@@ -54,7 +54,8 @@ export function WeekView({ days, today, nowMin }: { days: string[]; today: strin
     .flatMap(blocksOf)
     .filter((b) => b.date !== today || toMin(b.end) > nowMin)
   const firstMin = Math.min(...(ahead.length ? ahead : all).map((b) => toMin(b.start)))
-  const anchorMin = showsToday ? Math.min(nowMin, firstMin) : firstMin
+  // Past midnight, before the grid's first hour: now is down at the night end of the grid (1:30 → 25:30).
+  const anchorMin = showsToday && nowMin < startH * 60 ? nowMin + 24 * 60 : showsToday ? Math.min(nowMin, firstMin) : firstMin
   const anchorY = Number.isFinite(anchorMin) ? top(anchorMin) : top(9 * 60)
   const monday = days[0]
   useEffect(() => {

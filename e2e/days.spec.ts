@@ -180,6 +180,14 @@ test('a day with everything checked is stamped Done ✓ in the accent color', as
   await expect(page.locator('.stamp')).toHaveClass(/text-acc/)
 })
 
+test('on the Day grid the stamp sits on the first task, not up in the empty early hours', async ({ page }) => {
+  await yesterday(page, ['Gym', 'Read'])
+  await page.getByRole('button', { name: 'Day', exact: true }).click()
+  const stamp = await page.locator('.stamp').boundingBox()
+  const first = await page.getByRole('listitem').filter({ hasText: 'Gym' }).boundingBox()
+  expect(Math.abs(stamp!.y - first!.y)).toBeLessThan(100) // (the stamp drops in tilted; the empty early hours above are 500px+)
+})
+
 test('a day with nothing checked gets no stamp', async ({ page }) => {
   await yesterday(page, [])
   await expect(page.getByRole('checkbox', { name: 'Done: Gym' })).toBeDisabled() // still read-only

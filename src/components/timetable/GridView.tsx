@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
 import type { Block, Task } from '@/types'
 import type { NowState } from '@/scheduler/now'
 import { clock, toMin } from '@/lib/time'
@@ -8,11 +8,17 @@ import { taskTitle } from './taskTitle'
 import { FixedTag } from './FixedTag'
 
 const HOUR = 72 // px per hour
-const DAY_START = 7 // the grid always shows the whole day: 7:00…
-const DAY_END = 26 // …to 2:00 at night, wider if a task sits outside
+const DAY_START = 2 // the grid always shows all 24 hours: 2:00…
+const DAY_END = 26 // …to 2:00 the next night (a late night stays with its day), wider if a task sits outside
 
 /** The day as an hour grid, like a calendar day view, with a line at the current time. */
-export function GridView({ blocks, tasks, nowMin, now }: { blocks: Block[]; tasks: Task[]; nowMin: number | null; now: NowState }) {
+export function GridView({ blocks, tasks, nowMin, now, stamp }: {
+  blocks: Block[]
+  tasks: Task[]
+  nowMin: number | null
+  now: NowState
+  stamp?: (top: number) => ReactNode // a past day's stamp, put on the first task
+}) {
   const t = useT()
   const anchor = useRef<HTMLDivElement>(null)
   // Opening the grid lands on now (or the first task), not on an empty morning.
@@ -88,6 +94,7 @@ export function GridView({ blocks, tasks, nowMin, now }: { blocks: Block[]; task
         )
       })}
 
+      {stamp?.(layout[0].y + 8)}
       <div ref={anchor} className="pointer-events-none absolute scroll-mt-[190px]" style={{ top: nowY ?? layout[0].y }} aria-hidden />
 
       {nowY !== null && (
