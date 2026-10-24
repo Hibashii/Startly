@@ -52,3 +52,27 @@ test('How you work can be changed in the ⋯ menu', async ({ page }) => {
   expect(ctx.profile).toEqual({ focusBest: 'evening', habits: 'gym every day 7:00' })
   expect(ctx.endOfDay).toBe('25:00')
 })
+
+test('Not sure and an early end can be picked, and the remembered day start is kept', async ({ page }) => {
+  await freshApp(page, '08:30')
+  await page.evaluate(() => {
+    const saved = JSON.parse(localStorage.getItem('startly-v1')!)
+    saved.state.settings.profile = { focusBest: 'morning', habits: '', dayStart: '06:00' }
+    localStorage.setItem('startly-v1', JSON.stringify(saved))
+  })
+  await page.reload()
+  const sent = await mockAssistant(page, { body: { reply: 'ok', order: null, slots: null, actions: [task('Read', 30)] } })
+  await page.getByRole('button', { name: 'Settings' }).click()
+  await page.getByRole('button', { name: 'How you work' }).click()
+  const win = page.getByRole('dialog', { name: 'How you work' })
+  await win.getByRole('radio', { name: 'Not sure' }).click()
+  await expect(win.getByRole('radio', { name: 'Morning' })).not.toBeChecked()
+  await win.getByRole('radio', { name: '20:00' }).click()
+  await win.getByRole('button', { name: 'Save' }).click()
+  await page.getByLabel('What do you need to get done today or this week?').fill('read')
+  await page.keyboard.press('Enter')
+  await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
+  const ctx = (sent[0] as { context: { profile: unknown; endOfDay: string } }).context
+  expect(ctx.profile).toEqual({ focusBest: null, habits: '', dayStart: '06:00' })
+  expect(ctx.endOfDay).toBe('20:00')
+})

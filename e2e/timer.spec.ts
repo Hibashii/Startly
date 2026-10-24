@@ -67,6 +67,18 @@ test('an activity gets no Start button, but can use the timer anyway', async ({ 
   await expect(panel.getByRole('timer')).toBeVisible()
 })
 
+test('an activity that is next up can use the timer too, and the first time asks how to focus', async ({ page }) => {
+  await freshApp(page, '14:00', { chooseTimer: true })
+  await mockAssistant(page, { body: { reply: 'ok', order: null, slots: [{ ref: 'Gym', date: null, start: '15:00' }], actions: [task('Gym', 60, false)] } })
+  await page.getByLabel('What do you need to get done today or this week?').fill('x')
+  await page.keyboard.press('Enter')
+  const panel = page.getByRole('region', { name: 'Focus timer' })
+  await expect(panel).toContainText('Next · 15:00')
+  await panel.getByRole('button', { name: 'Use the timer' }).click()
+  await page.getByRole('dialog', { name: 'How do you want to focus?' }).getByRole('button', { name: /One countdown/ }).click()
+  await expect(panel.getByRole('timer')).toBeVisible()
+})
+
 test('the first Start asks how you want to focus, once, and the mute button turns the sound off', async ({ page }) => {
   await planned(page, undefined, { chooseTimer: true })
   const panel = page.getByRole('region', { name: 'Focus timer' })
@@ -84,7 +96,7 @@ test('the first Start asks how you want to focus, once, and the mute button turn
   await expect(panel.getByRole('timer')).toBeVisible()
 })
 
-test('notifications: asked on the first Start, sent only when you are elsewhere, a click says welcome back', async ({ page }) => {
+test('notifications: asked on the first Start, Pomodoro breaks always, the rest only when you are elsewhere, a click says welcome back', async ({ page }) => {
   // A stand-in for the browser's notifications that records what Startly sends; "elsewhere" = the window isn't focused.
   await page.addInitScript(() => {
     const w = window as unknown as { __notes: object[]; __asked: number; __focused: boolean; __last: { onclick?: () => void } }
@@ -116,17 +128,17 @@ test('notifications: asked on the first Start, sent only when you are elsewhere,
   await panel.getByRole('button', { name: /Countdown/ }).click()
   await page.getByRole('menuitemradio', { name: /Pomodoro/ }).click()
 
-  // Looking at Startly: the round ends with Startly's own pop, no notification.
+  // A Pomodoro break and its end always notify, even while Startly seems to be in front.
   await page.clock.fastForward('26:00')
   await expect(panel).toContainText('Short break')
-  expect(await notes()).toEqual([])
-
-  // In another app: the break's end arrives as a notification, silent, with Startly's picture.
-  await page.evaluate(() => ((window as unknown as { __focused: boolean }).__focused = false))
+  await expect.poll(async () => (await notes()).map((n) => n.title)).toEqual([expect.stringMatching(/^Break time ☕ · Back to it at \d\d:\d\d\.$/)])
   await page.clock.fastForward('05:00')
-  await expect.poll(notes).toEqual([{ title: 'Back to work', body: '“Hackathon”', icon: '/notification-icon.png', renotify: true, silent: true }])
+  await expect.poll(async () => (await notes()).at(-1)).toEqual({ title: 'Back to work · “Hackathon”', body: undefined, icon: '/notification-icon.png', renotify: true, silent: true })
+
+  // In another app from here on.
+  await page.evaluate(() => ((window as unknown as { __focused: boolean }).__focused = false))
   await page.clock.fastForward('25:00')
-  await expect.poll(async () => (await notes()).at(-1)).toMatchObject({ title: 'Break time ☕', body: expect.stringMatching(/^Back to it at \d\d:\d\d\.$/) })
+  await expect.poll(async () => (await notes()).at(-1)).toMatchObject({ title: expect.stringMatching(/^Break time ☕ · Back to it at \d\d:\d\d\.$/) })
 
   // Clicking it brings you back, and Startly says hello.
   await page.evaluate(() => (window as unknown as { __last: { onclick: () => void } }).__last.onclick())

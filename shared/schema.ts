@@ -61,6 +61,7 @@ export const Action = z.discriminatedUnion('type', [
     type: z.literal('update_profile'),
     focusBest: z.enum(['morning', 'afternoon', 'evening']).nullable().describe('null = unchanged'),
     habits: z.string().nullable().describe("the user's fixed habits and routines in their words, the whole updated text; null = unchanged"),
+    dayStart: hhmm.nullable().describe('when their day usually starts, e.g. "06:00"; null = unchanged'),
   }),
   z.object({ type: z.literal('resolve_pending'), optionId: z.string() }),
   z.object({ type: z.literal('undo') }),
@@ -119,10 +120,10 @@ export const AssistantContext = z.object({
   spoken: z.boolean().optional().describe('true = the user said this message out loud (voice typing): it is a raw transcript'),
   canUndo: z.boolean().optional().describe('true = there is a change of Startly\'s that the undo action can take back'),
   profile: z
-    .object({ focusBest: z.string().nullable(), habits: z.string() })
+    .object({ focusBest: z.string().nullable(), habits: z.string(), dayStart: z.string().nullable().optional() })
     .nullable()
     .optional()
-    .describe('what Startly knows about how the user works: when they focus best, and their fixed habits'),
+    .describe('what Startly knows about how the user works: when they focus best, their fixed habits, and when their day usually starts'),
 })
 export type AssistantContext = z.infer<typeof AssistantContext>
 

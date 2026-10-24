@@ -40,6 +40,7 @@ export const fr: Dict = {
   obMorning: 'Le matin',
   obAfternoon: 'L’après-midi',
   obEvening: 'Le soir',
+  obNotSure: 'Je ne sais pas',
   obEnd: 'À quelle heure finit ta journée, d’habitude ?',
   obHabits: 'Quelque chose à heure fixe ?',
   obHabitsHint: 'ex. salle lun/mer/ven 18:00, travail 9–17 en semaine',

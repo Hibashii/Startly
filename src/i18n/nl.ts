@@ -39,6 +39,7 @@ export const nl: Dict = {
   obMorning: '’s Ochtends',
   obAfternoon: '’s Middags',
   obEvening: '’s Avonds',
+  obNotSure: 'Weet ik niet',
   obEnd: 'Hoe laat eindigt je dag meestal?',
   obHabits: 'Iets op een vast tijdstip?',
   obHabitsHint: 'bv. sportschool ma/wo/vr 18:00, werk 9–17 doordeweeks',

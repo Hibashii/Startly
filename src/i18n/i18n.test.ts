@@ -7,7 +7,7 @@ type Samples = { [K in Key]: ParamsOf<K> extends never ? null : ParamsOf<K> }
 const D = '2026-10-18'
 const SAMPLES: Samples = {
   hookQuestion: null, hookAnswer: null, hookSub: null, step1: null, step2: null, step3: null, stepArrow: null, dumpLabel: null, dumpExample: null,
-  planMyDay: null, obTitle: null, obSub: null, obFocus: null, obMorning: null, obAfternoon: null, obEvening: null, obEnd: null,
+  planMyDay: null, obTitle: null, obSub: null, obFocus: null, obMorning: null, obAfternoon: null, obEvening: null, obNotSure: null, obEnd: null,
   obHabits: null, obHabitsHint: null, obSkip: null, planning1: null, planning2: null, planning3: null, planning4: null, planning5: null,
   askStartly: null, weekToggle: { date: D, open: true }, settings: null, color: null, accent: { accent: 'coral' },
   remembers: { name: 'Coral' }, darkMode: null, timerPomodoro: null, howYouWork: null, language: null, startFresh: null, startFreshTitle: null, startFreshBody: null,

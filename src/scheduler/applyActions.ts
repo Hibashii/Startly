@@ -1,5 +1,5 @@
 import type { Action } from '../../shared/schema'
-import type { Plan, Task, Window } from '@/types'
+import type { Plan, Profile, Task, Window } from '@/types'
 import { dateKey, roundUp5, toHHMM, toMin } from '@/lib/time'
 import { reshuffleToday } from './schedule'
 import { WEEKDAYS, overflowLater, planDay, weekdayKey } from './days'
@@ -327,8 +327,9 @@ export function applyActions(
         break
       }
       case 'update_profile': {
-        const old = plan.settings.profile ?? { focusBest: null, habits: '' }
-        plan = { ...plan, settings: { ...plan.settings, profile: { focusBest: a.focusBest ?? old.focusBest, habits: a.habits?.trim() ?? old.habits } } }
+        const old: Profile = plan.settings.profile ?? { focusBest: null, habits: '' }
+        const dayStart = a.dayStart && isTime(a.dayStart) ? a.dayStart : old.dayStart
+        plan = { ...plan, settings: { ...plan.settings, profile: { focusBest: a.focusBest ?? old.focusBest, habits: a.habits?.trim() ?? old.habits, ...(dayStart && { dayStart }) } } }
         applied++
         break
       }

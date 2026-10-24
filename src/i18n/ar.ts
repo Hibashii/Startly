@@ -42,6 +42,7 @@ export const ar: Dict = {
   obMorning: 'صباحًا',
   obAfternoon: 'بعد الظهر',
   obEvening: 'مساءً',
+  obNotSure: 'لست متأكدًا',
   obEnd: 'متى ينتهي يومك عادةً؟',
   obHabits: 'هل هناك شيء في وقت ثابت؟',
   obHabitsHint: 'مثلًا: النادي الاثنين/الأربعاء/الجمعة 18:00، العمل 9–17 أيام الأسبوع',

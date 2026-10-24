@@ -39,6 +39,7 @@ export const de: Dict = {
   obMorning: 'Morgens',
   obAfternoon: 'Nachmittags',
   obEvening: 'Abends',
+  obNotSure: 'Weiß nicht',
   obEnd: 'Wann endet dein Tag normalerweise?',
   obHabits: 'Etwas zu einer festen Zeit?',
   obHabitsHint: 'z. B. Gym Mo/Mi/Fr 18:00, Arbeit 9–17 unter der Woche',

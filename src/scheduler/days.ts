@@ -14,10 +14,13 @@ export const mondayOf = (date: string) => plusDays(date, -((parseISO(date).getDa
 /** The 7 dates of the week that starts on `monday`. */
 export const weekOf = (monday: string) => Array.from({ length: 7 }, (_, i) => plusDays(monday, i))
 
-/** Your free time on a date: set for that date, else for that weekday, else unknown (null). */
+/** Your free time on a date: set for that date, else for that weekday, else your usual day (start → end), else unknown (null). */
 export function windowsFor(plan: Plan, date: string): Window[] | null {
   const w = plan.availability[date] ?? plan.availability[weekdayKey(date)]
-  return w && w.length ? [...w].sort((a, b) => toMin(a.start) - toMin(b.start)) : null
+  if (w && w.length) return [...w].sort((a, b) => toMin(a.start) - toMin(b.start))
+  const start = plan.settings.profile?.dayStart
+  const end = endOfDayFor(plan, date)
+  return start && toMin(start) < toMin(end) ? [{ start, end }] : null
 }
 
 const freeMinutes = (w: Window[]) => w.reduce((sum, x) => sum + toMin(x.end) - toMin(x.start), 0)

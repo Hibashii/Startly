@@ -70,6 +70,7 @@ export interface Settings {
 export interface Profile {
   focusBest: 'morning' | 'afternoon' | 'evening' | null
   habits: string // fixed habits in your words: "gym Mon/Wed/Fri 18:00, work 9–17 on weekdays"
+  dayStart?: string | null // when their day usually starts ("06:00"), once they've said it
 }
 
 export interface Plan {

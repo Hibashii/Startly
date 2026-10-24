@@ -46,6 +46,7 @@ export const en = {
   obMorning: 'Morning',
   obAfternoon: 'Afternoon',
   obEvening: 'Evening',
+  obNotSure: 'Not sure',
   obEnd: 'When does your day usually end?',
   obHabits: 'Anything at a fixed time?',
   obHabitsHint: 'e.g. gym Mon/Wed/Fri 18:00, work 9–17 on weekdays',

@@ -88,6 +88,13 @@ describe('plan_days', () => {
     expect(r.unknownDays).toEqual([SUN])
     expect(r.plan.blocks[SUN]).toBeUndefined()
   })
+
+  it('no free time set, but their day usually starts at 04:00 → from 04:00 to the end of the day', () => {
+    const plan = { ...empty(), settings: { ...empty().settings, profile: { focusBest: null, habits: '', dayStart: '04:00' } } }
+    const r = applyActions(plan, [{ ...add('A', 60), date: SUN } as Action, { type: 'plan_days', dates: [SUN] }], TODAY, toMin('10:00'))
+    expect(r.unknownDays).toEqual([])
+    expect(byTitle(r.plan, 'A').start).toBe('04:00')
+  })
 })
 
 describe('Startly asks instead of guessing', () => {

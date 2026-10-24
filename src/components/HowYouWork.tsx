@@ -20,7 +20,7 @@ export function HowYouWork({ open, onClose }: { open: boolean; onClose: () => vo
   }, [open])
 
   const save = () => {
-    setProfile({ focusBest: value.focusBest, habits: value.habits.trim() }, value.end)
+    setProfile({ ...profile, focusBest: value.focusBest, habits: value.habits.trim() }, value.end)
     toast(t.text(msg('toastSaved')))
     onClose()
   }

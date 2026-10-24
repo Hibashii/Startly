@@ -83,9 +83,9 @@ export function TimerBell() {
 
     // The same moment as a notification, for when you're in another tab or app.
     const name = task ? taskTitle(task, t) : ''
-    if (view?.kind === 'pomoBreak') notify(t('notifBreakTitle'), t('notifBreakBody', { time: clockAt(view.backAtMs) }))
+    if (view?.kind === 'pomoBreak') notify(t('notifBreakTitle'), t('notifBreakBody', { time: clockAt(view.backAtMs) }), true)
     else if (key.startsWith('e:')) notify(t('notifUpTitle'), t('notifUpBody', { title: name }))
-    else if (before.startsWith('b:') && name) notify(t('notifBackTitle'), t('notifTask', { title: name }))
+    else if (before.startsWith('b:') && name) notify(t('notifBackTitle'), t('notifTask', { title: name }), true)
     else if (before.startsWith('r:') && name) notify(t('notifNextTitle', { title: name }), t('notifNextBody'))
   }, [key, sound, showPop])
 
@@ -287,7 +287,7 @@ export function FocusTimer() {
             {choosing && <ChooseMode onPick={pick} onCancel={() => setChoosing(null)} />}
           </div>
         ) : (
-          view.kind === 'idle' && (
+          <div className="relative">
             <button
               type="button"
               onClick={() =>
@@ -300,7 +300,8 @@ export function FocusTimer() {
             >
               {t('useTimer')}
             </button>
-          )
+            {choosing && <ChooseMode onPick={pick} onCancel={() => setChoosing(null)} />}
+          </div>
         )}
       </div>
     </Panel>

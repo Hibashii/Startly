@@ -4,7 +4,7 @@ import { useT } from '@/i18n/useT'
 import { cn } from '@/lib/utils'
 
 /** When your day ends: shown as a clock time, stored like the scheduler counts ("01:00" tonight = "25:00"). */
-const END_TIMES = [['22:00', '22:00'], ['23:00', '23:00'], ['00:00', '24:00'], ['01:00', '25:00']] as const
+const END_TIMES = [['20:00', '20:00'], ['21:00', '21:00'], ['22:00', '22:00'], ['23:00', '23:00'], ['00:00', '24:00'], ['01:00', '25:00']] as const
 
 export interface ProfileValue {
   focusBest: Profile['focusBest']
@@ -24,10 +24,13 @@ export function ProfileFields({ value, onChange }: { value: ProfileValue; onChan
             {t(f === 'morning' ? 'obMorning' : f === 'afternoon' ? 'obAfternoon' : 'obEvening')}
           </Chip>
         ))}
+        <Chip on={value.focusBest === null} onClick={() => set({ focusBest: null })}>
+          {t('obNotSure')}
+        </Chip>
       </Question>
       <Question label={t('obEnd')}>
         {END_TIMES.map(([shown, stored]) => (
-          <Chip key={stored} on={value.end === stored} onClick={() => set({ end: stored })}>
+          <Chip key={stored} on={value.end === stored} onClick={() => set({ end: stored })} narrow>
             <span dir="ltr" className="tabular-nums">{shown}</span>
           </Chip>
         ))}
@@ -55,14 +58,14 @@ function Question({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-function Chip({ on, onClick, children }: { on: boolean; onClick: () => void; children: ReactNode }) {
+function Chip({ on, onClick, narrow, children }: { on: boolean; onClick: () => void; narrow?: boolean; children: ReactNode }) {
   return (
     <button
       type="button"
       role="radio"
       aria-checked={on}
       onClick={onClick}
-      className={cn('press cursor-pointer rounded-full border px-4 py-2 text-[14.5px] hover:bg-blk', on && 'border-ink bg-ink font-medium text-bg hover:bg-ink')}
+      className={cn('press cursor-pointer rounded-full border py-2 text-[14.5px] hover:bg-blk', narrow ? 'px-3' : 'px-4', on && 'border-ink bg-ink font-medium text-bg hover:bg-ink')}
     >
       {children}
     </button>

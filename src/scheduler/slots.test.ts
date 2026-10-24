@@ -89,10 +89,17 @@ describe("Startly's times (slots)", () => {
   })
 
   it('remembers what the user tells it about how they work', () => {
-    const p = applyActions(empty(), [{ type: 'update_profile', focusBest: 'evening', habits: 'gym Mon/Wed/Fri 18:00' }], TODAY, toMin('09:00')).plan
+    const p = applyActions(empty(), [{ type: 'update_profile', focusBest: 'evening', habits: 'gym Mon/Wed/Fri 18:00', dayStart: null }], TODAY, toMin('09:00')).plan
     expect(p.settings.profile).toEqual({ focusBest: 'evening', habits: 'gym Mon/Wed/Fri 18:00' })
-    const q = applyActions(p, [{ type: 'update_profile', focusBest: null, habits: null }], TODAY, toMin('09:00')).plan
+    const q = applyActions(p, [{ type: 'update_profile', focusBest: null, habits: null, dayStart: null }], TODAY, toMin('09:00')).plan
     expect(q.settings.profile).toEqual({ focusBest: 'evening', habits: 'gym Mon/Wed/Fri 18:00' })
+  })
+
+  it('remembers when their day usually starts, and keeps it', () => {
+    const p = applyActions(empty(), [{ type: 'update_profile', focusBest: null, habits: null, dayStart: '04:00' }], TODAY, toMin('09:00')).plan
+    expect(p.settings.profile?.dayStart).toBe('04:00')
+    const q = applyActions(p, [{ type: 'update_profile', focusBest: 'morning', habits: null, dayStart: null }], TODAY, toMin('09:00')).plan
+    expect(q.settings.profile).toEqual({ focusBest: 'morning', habits: '', dayStart: '04:00' })
   })
 })
 
