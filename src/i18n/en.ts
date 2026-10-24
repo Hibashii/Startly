@@ -92,7 +92,7 @@ export const en = {
   planned: (p: { planned: string }) => `${p.planned} planned`,
   view: 'View',
   viewList: 'List',
-  viewGrid: 'Grid',
+  viewGrid: 'Day',
   prevWeek: 'Previous week',
   nextWeek: 'Next week',
   prevDay: 'Previous day',

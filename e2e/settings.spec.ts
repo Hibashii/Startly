@@ -53,9 +53,9 @@ test('the first visit follows the computer\'s mode', async ({ page }) => {
   await expect.poll(() => bgOf(page)).toBe('rgb(22, 21, 18)')
 })
 
-test('List / Grid: the hour grid places blocks by time, with a line at now', async ({ page }) => {
+test('List / Day: the hour grid places blocks by time, with a line at now', async ({ page }) => {
   await planned(page)
-  await page.getByRole('button', { name: 'grid' }).click()
+  await page.getByRole('button', { name: 'Day', exact: true }).click()
   const grid = page.getByRole('list', { name: 'Hour grid' })
   await expect(grid).toBeVisible()
   const top = (name: string) => grid.getByRole('listitem').filter({ hasText: name }).evaluate((e) => (e as HTMLElement).offsetTop)
@@ -96,7 +96,7 @@ test('grid: a 5-minute block is still readable and never overlaps the next one',
   await page.getByLabel('What do you need to get done today or this week?').fill('x')
   await page.keyboard.press('Enter')
   await expect(page.getByRole('heading', { name: 'Today' })).toBeVisible()
-  await page.getByRole('button', { name: 'grid' }).click()
+  await page.getByRole('button', { name: 'Day', exact: true }).click()
   const items = page.getByRole('list', { name: 'Hour grid' }).getByRole('listitem')
   const boxes = await items.evaluateAll((els) => els.map((e) => { const r = e.getBoundingClientRect(); return { top: r.top, bottom: r.bottom, h: r.height } }))
   for (const b of boxes) expect(b.h).toBeGreaterThanOrEqual(20)

@@ -117,7 +117,7 @@ test('Week view: 7 columns of hours, a click on a day opens it, the chat stays o
   await expect(grid).toContainText('Interview')
   await grid.getByRole('button', { name: /Wed\s*21/ }).click()
   await expect(page.getByRole('heading', { name: 'Wednesday 21 October' })).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Grid', exact: true })).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('button', { name: 'Day', exact: true })).toHaveAttribute('aria-pressed', 'true')
 })
 
 test('a reply that does not answer keeps the question open; a question from yesterday expires', async ({ page }) => {

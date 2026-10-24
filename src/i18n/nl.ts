@@ -80,7 +80,7 @@ export const nl: Dict = {
   planned: (p) => `${p.planned} gepland`,
   view: 'Weergave',
   viewList: 'Lijst',
-  viewGrid: 'Raster',
+  viewGrid: 'Dag',
   prevWeek: 'Vorige week',
   nextWeek: 'Volgende week',
   prevDay: 'Vorige dag',

@@ -83,7 +83,7 @@ export const ar: Dict = {
   planned: (p) => `${p.planned} مخطط`,
   view: 'العرض',
   viewList: 'قائمة',
-  viewGrid: 'شبكة',
+  viewGrid: 'يوم',
   prevWeek: 'الأسبوع السابق',
   nextWeek: 'الأسبوع التالي',
   prevDay: 'اليوم السابق',

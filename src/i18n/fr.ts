@@ -81,7 +81,7 @@ export const fr: Dict = {
   planned: (p) => `${p.planned} prévus`,
   view: 'Affichage',
   viewList: 'Liste',
-  viewGrid: 'Grille',
+  viewGrid: 'Jour',
   prevWeek: 'Semaine précédente',
   nextWeek: 'Semaine suivante',
   prevDay: 'Jour précédent',
