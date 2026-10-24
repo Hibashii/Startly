@@ -4,7 +4,7 @@ import { AssistantResponse, type AssistantContext } from '../shared/schema.js'
 import { SYSTEM_PROMPT, formatInput } from './prompt.js'
 
 let client: OpenAI | null = null
-function getClient() {
+export function getClient() {
   client ??= new OpenAI({ timeout: 50_000, maxRetries: 0 }) // under the browser's 55 s limit
   return client
 }

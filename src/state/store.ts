@@ -60,7 +60,7 @@ interface Ui {
   chatOpen: boolean
   thinking: boolean
   /** The last message that couldn't reach Startly (shown with Retry, not saved). */
-  failed: { text: string; error: 'rate_limited' | 'unavailable' } | null
+  failed: { text: string; spoken?: boolean; error: 'rate_limited' | 'unavailable' } | null
   /** Task ids that just moved or arrived: their cards glow briefly, then fade. */
   flash: string[]
   /** The first plan just arrived: its cards rise in one by one. */
@@ -80,7 +80,8 @@ interface Ui {
 
 interface Actions {
   /** Send a message to Startly; returns false if the assistant couldn't be reached. */
-  send: (text: string) => Promise<{ ok: boolean; error?: string }>
+  /** spoken: the words come from the mic (a raw transcript, "uh" and all). */
+  send: (text: string, spoken?: boolean) => Promise<{ ok: boolean; error?: string }>
   /** Take back Startly's last change (the Undo button, or "undo" in the chat). */
   undo: () => void
   /** Answer Startly's question with one of its buttons. */
@@ -497,7 +498,7 @@ export const useStore = create<Store>()(
         setWeekOpen: (weekOpen) => set(weekOpen ? { weekOpen } : { weekOpen, selectedDate: null }),
         selectDate: (date) => set({ selectedDate: date === clockNow().today ? null : date }),
 
-        send: async (text) => {
+        send: async (text, spoken) => {
           get().morningReset()
           expireOldQuestion()
           const s = get()
@@ -517,12 +518,13 @@ export const useStore = create<Store>()(
             get().undo()
             return { ok: true }
           }
-          const res = await askStartly(text, buildContext(planOf(s), s.chat.messages, pendingForAi, at, s.undoStack.length > 0))
+          const context = buildContext(planOf(s), s.chat.messages, pendingForAi, at, s.undoStack.length > 0)
+          const res = await askStartly(text, spoken ? { ...context, spoken } : context)
           if (!res.ok) {
             // Leave the plan untouched; take the message back out so it can be retried.
             set((cur) => ({
               thinking: false,
-              failed: { text, error: res.error },
+              failed: { text, spoken, error: res.error },
               chat: { ...cur.chat, messages: cur.chat.messages.filter((m) => m.id !== userMsg.id) },
             }))
             return { ok: false, error: res.error }

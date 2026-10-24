@@ -43,7 +43,7 @@ export function ChatThread({ className }: { className?: string }) {
             <p className="m-0">{t(failed.error === 'rate_limited' ? 'errRateLimited' : 'errUnavailable')}</p>
             <button
               type="button"
-              onClick={() => send(failed.text)}
+              onClick={() => send(failed.text, failed.spoken)}
               className="mt-2 cursor-pointer rounded-full border px-3 py-1 text-[13px] font-medium hover:bg-blk"
             >
               {t('retry')}

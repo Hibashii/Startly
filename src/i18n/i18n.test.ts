@@ -23,7 +23,7 @@ const SAMPLES: Samples = {
   save: null, howYouWorkSub: null, chooseFocus: null, oneCountdown: null, oneCountdownSub: null, pomodoroSub: null, switchHint: null,
   countdown: null, mute: null, unmute: null, modeOn: { mode: 'pomodoro' },
   chatWithStartly: null, clearChat: null, clearChatHint: null, doneStamp: null, doneCount: { done: 3, total: 5 }, checkOnTheDay: null, dayOver: null, closeChat: null, thinking: null, messageLabel: null,
-  messagePlaceholder: null, send: null, retry: null, whatMoved: null, notToday: null, onDay: { date: D, at: null }, errRateLimited: null, errUnavailable: null,
+  messagePlaceholder: null, send: null, voiceStart: null, voiceStop: null, voiceCancel: null, voiceWorking: null, voiceNoMic: null, voiceFailed: null, voiceEmpty: null, retry: null, whatMoved: null, notToday: null, onDay: { date: D, at: null }, errRateLimited: null, errUnavailable: null,
   didntGet: null, answerWithButtons: null, youChose: { answer: 'Keep it' }, questionExpired: null, questionSkipped: null,
   questionLater: null, nAdded: { n: 2 }, chooseLegend: null, addSelected: null, backToEarlier: null,
   noteRemoved: { items: ['Gym', { cont: 'Groceries' }] }, notePutOn: { title: 'Report', date: D, due: '2026-10-19' },

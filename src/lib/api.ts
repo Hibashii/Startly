@@ -65,3 +65,22 @@ export async function askStartly(message: string, context: AssistantContext): Pr
     return { ok: false, error: 'unavailable' }
   }
 }
+
+export type TranscribeResult = { ok: true; text: string } | { ok: false; error: 'rate_limited' | 'unavailable' }
+
+/** A voice recording → the words in it. */
+export async function transcribe(audio: Blob): Promise<TranscribeResult> {
+  try {
+    const res = await fetch('/api/transcribe', {
+      method: 'POST',
+      headers: { 'Content-Type': audio.type || 'audio/webm' },
+      body: audio,
+      signal: AbortSignal.timeout(30_000),
+    })
+    if (res.status === 429) return { ok: false, error: 'rate_limited' }
+    if (!res.ok) return { ok: false, error: 'unavailable' }
+    return { ok: true, text: ((await res.json()) as { text: string }).text }
+  } catch {
+    return { ok: false, error: 'unavailable' }
+  }
+}

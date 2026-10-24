@@ -5,6 +5,7 @@ import { TopBar } from '@/components/TopBar'
 import { FirstScreen } from '@/components/FirstScreen'
 import { MainScreen } from '@/components/MainScreen'
 import { TipProvider } from '@/components/ui/tooltip'
+import { Toaster } from 'sonner'
 
 const darkQuery = window.matchMedia('(prefers-color-scheme: dark)')
 const subscribe = (cb: () => void) => {
@@ -64,6 +65,17 @@ export default function App() {
       <div className="flex h-full flex-col">
         <TopBar main={started} theme={theme} />
         {started ? <MainScreen arriving={firstRun.current} /> : <FirstScreen />}
+        {/* The toast is a dark pill: ink background, page-colored text */}
+        <Toaster
+          position="bottom-center"
+          duration={2600}
+          toastOptions={{
+            unstyled: true,
+            classNames: {
+              toast: 'mx-auto w-fit rounded-full bg-ink px-[18px] py-[9px] text-[13.5px] font-medium max-w-[calc(100vw-32px)] text-center text-balance text-bg shadow-[0_8px_24px_rgba(0,0,0,0.2)]',
+            },
+          }}
+        />
       </div>
     </TipProvider>
   )

@@ -1,5 +1,7 @@
-import { useState, type FormEvent, type KeyboardEvent } from 'react'
+import { useRef, useState, type FormEvent, type KeyboardEvent } from 'react'
+import { LoaderCircle } from 'lucide-react'
 import { useStore } from '@/state/store'
+import type { VoiceEnd } from '@/lib/useVoice'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { useT } from '@/i18n/useT'
@@ -7,6 +9,7 @@ import { PlanningPreview } from './PlanningPreview'
 import { ProfileFields, type ProfileValue } from './ProfileForm'
 import { ChatThread } from './chat/ChatThread'
 import { ChatInput } from './chat/ChatInput'
+import { CancelVoice, MicButton, StopVoice, Waveform, appendHeard, useVoiceInput } from './chat/VoiceButton'
 
 
 export function FirstScreen() {
@@ -18,17 +21,28 @@ export function FirstScreen() {
   const talking = useStore((s) => s.chat.messages.some((m) => m.role === 'assistant'))
   const [asking, setAsking] = useState(false)
   const [text, setText] = useState('')
+  const field = useRef<HTMLTextAreaElement>(null)
+  const spoken = useRef(false) // some of the words in the box came from the mic
   const t = useT()
   const [error, setError] = useState<'rate_limited' | 'unavailable' | null>(null)
 
-  async function submit(e?: FormEvent) {
+  const voice = useVoiceInput(heard)
+  function heard(words: string, end: VoiceEnd) {
+    const all = appendHeard(text, words)
+    spoken.current = true
+    setText(all)
+    if (end === 'send') submit(undefined, all)
+    else requestAnimationFrame(() => field.current?.focus())
+  }
+
+  async function submit(e?: FormEvent, said?: string) {
     e?.preventDefault()
-    const message = text.trim()
+    const message = (said ?? text).trim()
     if (!message || thinking) return
     // The first time: a few quick questions about how you work, before planning.
     if (!useStore.getState().settings.profile) return setAsking(true)
     setError(null)
-    const res = await send(message)
+    const res = await send(message, spoken.current)
     if (!res.ok && res.error !== 'busy') setError(res.error === 'rate_limited' ? 'rate_limited' : 'unavailable')
   }
 
@@ -75,25 +89,54 @@ export function FirstScreen() {
       </ol>
       <form onSubmit={submit} className="mt-2.5 w-full max-w-[720px]">
         <div className="rounded-[28px] border bg-card pt-[18px] pe-4 pb-3.5 ps-[22px] text-start shadow-soft">
-          <Textarea
-            autoFocus
-            maxLength={4000}
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            onKeyDown={onKeyDown}
-            aria-label={t('dumpLabel')}
-            placeholder={t('dumpExample')}
-            className="max-h-[40vh] min-h-[84px] resize-none border-0 bg-transparent p-1 text-[17px] text-ink shadow-none placeholder:text-mut focus-visible:ring-0 md:text-[17px] dark:bg-transparent"
-          />
-          <div className="mt-1 flex justify-end">
-            <Button
-              type="submit"
-              disabled={!text.trim()}
-              className="press h-auto rounded-full px-5 py-3 text-[15.5px] font-semibold"
-            >
-              {t('planMyDay')}
-            </Button>
-          </div>
+          {voice.state === 'idle' ? (
+            <>
+              <Textarea
+                ref={field}
+                autoFocus
+                maxLength={4000}
+                value={text}
+                onChange={(e) => {
+                  setText(e.target.value)
+                  if (!e.target.value.trim()) spoken.current = false
+                }}
+                onKeyDown={onKeyDown}
+                aria-label={t('dumpLabel')}
+                placeholder={t('dumpExample')}
+                className="max-h-[40vh] min-h-[84px] resize-none border-0 bg-transparent p-1 text-[17px] text-ink shadow-none placeholder:text-mut focus-visible:ring-0 md:text-[17px] dark:bg-transparent"
+              />
+              <div className="mt-1 flex items-center justify-end gap-2">
+                <MicButton voice={voice} className="size-11" />
+                <Button
+                  type="submit"
+                  disabled={!text.trim()}
+                  className="press h-auto rounded-full px-5 py-3 text-[15.5px] font-semibold"
+                >
+                  {t('planMyDay')}
+                </Button>
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Same height as the text box, so the card doesn't jump */}
+              <div className="flex min-h-[84px] items-center">
+                <Waveform voice={voice} className="h-12" />
+              </div>
+              <div className="mt-1 flex items-center gap-2">
+                <CancelVoice voice={voice} className="size-11" />
+                <StopVoice voice={voice} className="ms-auto size-11" />
+                <Button
+                  type="button"
+                  onClick={voice.send}
+                  disabled={voice.state !== 'recording'}
+                  className="press h-auto rounded-full px-5 py-3 text-[15.5px] font-semibold disabled:opacity-100"
+                >
+                  {voice.ending === 'send' ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                  {t('planMyDay')}
+                </Button>
+              </div>
+            </>
+          )}
         </div>
         <p role="alert" className="mt-3 min-h-[1.5em] text-sm text-mut">
           {error && t(error === 'rate_limited' ? 'errRateLimited' : 'errUnavailable')}

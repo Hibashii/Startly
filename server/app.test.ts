@@ -56,3 +56,36 @@ describe('POST /api/assistant', () => {
     expect(third.body).toEqual({ error: 'rate_limited' })
   })
 })
+
+describe('POST /api/transcribe', () => {
+  const audio = Buffer.from('fake-webm-bytes')
+
+  it('returns the text of the recording', async () => {
+    const transcribe = vi.fn().mockResolvedValue('gym at 6')
+    const res = await request(createApp(vi.fn(), transcribe)).post('/api/transcribe').set('Content-Type', 'audio/webm;codecs=opus').send(audio)
+    expect(res.status).toBe(200)
+    expect(res.body).toEqual({ text: 'gym at 6' })
+    expect(transcribe).toHaveBeenCalledWith(audio, 'audio/webm;codecs=opus')
+  })
+
+  it('rejects an empty or non-audio body with 400 without calling OpenAI', async () => {
+    const transcribe = vi.fn()
+    const app = createApp(vi.fn(), transcribe)
+    expect((await request(app).post('/api/transcribe').set('Content-Type', 'audio/webm').send(Buffer.alloc(0))).status).toBe(400)
+    expect((await request(app).post('/api/transcribe').send({ text: 'hi' })).status).toBe(400)
+    expect(transcribe).not.toHaveBeenCalled()
+  })
+
+  it('answers a recording over 4 MB with a JSON 413', async () => {
+    const res = await request(createApp(vi.fn(), vi.fn())).post('/api/transcribe').set('Content-Type', 'audio/webm').send(Buffer.alloc(5 * 1024 * 1024))
+    expect(res.status).toBe(413)
+    expect(res.body).toEqual({ error: 'bad_request' })
+  })
+
+  it('returns 502 when OpenAI fails', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const res = await request(createApp(vi.fn(), vi.fn().mockRejectedValue(new Error('timeout')))).post('/api/transcribe').set('Content-Type', 'audio/webm').send(audio)
+    expect(res.status).toBe(502)
+    expect(res.body).toEqual({ error: 'transcribe_unavailable' })
+  })
+})
