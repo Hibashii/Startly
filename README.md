@@ -10,7 +10,7 @@ Requires Node 20+.
 
 ```bash
 npm install
-cp .env.example .env   # then set OPENAI_API_KEY
+cp .env.example .env   # then set OPENAI_API_KEY (used for planning and voice input)
 npm run dev            # http://localhost:5173 (API on :3001)
 ```
 
