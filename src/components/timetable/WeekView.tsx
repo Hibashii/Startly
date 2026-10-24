@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, type CSSProperties } from 'react'
 import type { Block, Task } from '@/types'
 import { useStore } from '@/state/store'
 import { clock, toHHMM, toMin } from '@/lib/time'
@@ -8,6 +8,7 @@ import { taskTitle } from './taskTitle'
 import { layoutBlocks } from './GridView'
 import { Tip } from '../ui/tooltip'
 import { FixedTag } from './FixedTag'
+import { useMedia } from '@/lib/useMedia'
 
 const HOUR = 48 // px per hour
 const DAY_START = 7 // like the day grid: 7:00…
@@ -24,6 +25,7 @@ export function WeekView({ days, today, nowMin }: { days: string[]; today: strin
   const select = useStore((s) => s.selectDate)
   const setView = useStore((s) => s.setView)
   const anchor = useRef<HTMLDivElement>(null)
+  const phone = useMedia('(max-width: 639px)')
 
   const byId = new Map(tasks.map((x) => [x.id, x]))
   // A day laid out hour by hour shows its blocks. A day that isn't yet still shows what has a time
@@ -67,8 +69,9 @@ export function WeekView({ days, today, nowMin }: { days: string[]; today: strin
   return (
     <div role="region" aria-label={t('weekGrid')}>
       {/* Stuck under the title bar, above the now line. The ::before fills any gap up to the title bar
-          (its height changes with the language and zoom), so nothing scrolls through between them. */}
-      <div className="sticky top-[50px] z-[15] grid grid-cols-[48px_repeat(7,minmax(0,1fr))] gap-x-1.5 border-b bg-bg pb-2 before:absolute before:inset-x-0 before:bottom-full before:h-6 before:bg-bg">
+          (its height changes with the language and zoom), so nothing scrolls through between them.
+          A phone: the title bar has two rows, and each column is narrow (the day name over its number, smaller words). */}
+      <div className="sticky top-[var(--week-bar,86px)] z-[15] sm:top-[50px] grid grid-cols-[32px_repeat(7,minmax(0,1fr))] gap-x-0.5 sm:grid-cols-[48px_repeat(7,minmax(0,1fr))] sm:gap-x-1.5 border-b bg-bg pb-2 before:absolute before:inset-x-0 before:bottom-full before:h-6 before:bg-bg">
 
         <span />
         {days.map((d) => (
@@ -78,23 +81,26 @@ export function WeekView({ days, today, nowMin }: { days: string[]; today: strin
             onClick={() => open(d)}
             aria-current={d === today ? 'date' : undefined}
             className={cn(
-              'press flex cursor-pointer items-baseline justify-center gap-1.5 rounded-lg py-1.5 hover:bg-blk',
+              'press flex cursor-pointer flex-col items-center justify-center rounded-lg py-1.5 hover:bg-blk sm:flex-row sm:items-baseline sm:gap-1.5',
               d < today && 'text-mut/60',
               d === today && 'bg-tint text-tinti hover:bg-tint',
             )}
           >
-            <span className={cn('text-[12px] font-medium uppercase', d >= today && d !== today && 'text-mut')}>{t.fmt.weekdayShort(d)}</span>
+            <span className={cn('text-[11px] font-medium uppercase sm:text-[12px]', d >= today && d !== today && 'text-mut')}>
+              {/* (A phone: one letter, like a calendar app.) */}
+              {phone ? t.fmt.weekdayNarrow(d) : t.fmt.weekdayShort(d)}
+            </span>
             <span className="text-[16px] font-semibold tabular-nums">{Number(d.slice(8))}</span>
           </button>
         ))}
         {days.some((d) => untimed(d).length > 0) && (
           <>
-            <span className="self-center text-end text-[10.5px] leading-tight text-mut">{t('noTimeYet')}</span>
+            <span className="self-center text-end text-[9.5px] leading-tight text-mut sm:text-[10.5px]">{t('noTimeYet')}</span>
             {days.map((d) => (
               <ul key={d} className="m-0 flex list-none flex-col gap-1 p-0 pt-1.5">
                 {untimed(d).map((x) => (
                   <Tip key={x.id} label={taskTitle(x, t)}>
-                    <li className="truncate rounded-md bg-blk px-2 py-0.5 text-[12px] font-medium">{taskTitle(x, t)}</li>
+                    <li className="truncate rounded-md bg-blk px-1 py-0.5 text-[10px] font-medium sm:px-2 sm:text-[12px]">{taskTitle(x, t)}</li>
                   </Tip>
                 ))}
               </ul>
@@ -103,11 +109,11 @@ export function WeekView({ days, today, nowMin }: { days: string[]; today: strin
         )}
       </div>
 
-      <div className="relative mt-2 grid grid-cols-[48px_repeat(7,minmax(0,1fr))] gap-x-1.5" style={{ height }}>
+      <div className="relative mt-2 grid grid-cols-[32px_repeat(7,minmax(0,1fr))] gap-x-0.5 sm:grid-cols-[48px_repeat(7,minmax(0,1fr))] sm:gap-x-1.5" style={{ height }}>
         <div ref={anchor} className="pointer-events-none absolute scroll-mt-[190px]" style={{ top: anchorY }} aria-hidden />
         <div className="relative">
           {hours.map((h) => (
-            <span key={h} className="absolute end-1.5 -translate-y-1/2 text-[11px] text-mut tabular-nums" style={{ top: top(h * 60) }}>
+            <span key={h} className="absolute end-1 -translate-y-1/2 text-[10px] text-mut tabular-nums sm:end-1.5 sm:text-[11px]" style={{ top: top(h * 60) }}>
               {clock(`${String(h).padStart(2, '0')}:00`)}
             </span>
           ))}
@@ -139,19 +145,21 @@ export function WeekView({ days, today, nowMin }: { days: string[]; today: strin
                     role="listitem"
                     data-type={b.type}
                     className={cn(
-                      'absolute inset-x-0.5 z-[1] overflow-hidden rounded-md px-1.5 py-1 text-[11.5px] leading-tight',
+                      'absolute inset-x-px z-[1] overflow-hidden rounded-md px-1 py-1 text-[10px] leading-[1.15] sm:inset-x-0.5 sm:px-1.5 sm:text-[11.5px] sm:leading-tight',
                       rest ? 'border border-dashed text-mut' : 'bg-blk',
                       b.type === 'fixed' && 'border bg-card',
                       task?.status === 'done' && 'text-mut line-through',
                     )}
-                    style={{ top: y, height: h }}
+                    // (A narrow screen: as many lines of the name as the block holds, at each text size.)
+                    style={{ top: y, height: h, '--lines': Math.max(1, Math.floor((h - 8) / 11.5)), '--lines-sm': Math.max(1, Math.floor((h - 8) / 14.375)) } as CSSProperties}
                   >
-                    <div className="flex items-center gap-1 truncate font-semibold">
+                    {/* (A phone's or small tablet's column fits a few letters: the name wraps instead of being cut, and the time is left out.) */}
+                    <div className="flex items-center gap-1 truncate font-semibold max-md:whitespace-normal max-md:[overflow-wrap:anywhere] max-sm:line-clamp-(--lines) sm:max-md:line-clamp-(--lines-sm)">
                       {rest ? t('lunch') : task && taskTitle(task, t)}
                     </div>
                     {h > 30 && (
                       // The column is narrow: a fixed appointment shows its start and the tag (the full range is in the hover label).
-                      <div className="flex items-center gap-1 text-[10.5px] text-mut tabular-nums">
+                      <div className="flex items-center gap-1 text-[10.5px] text-mut tabular-nums max-md:hidden">
                         <span dir="ltr">{b.type === 'fixed' ? clock(b.start) : `${clock(b.start)}–${clock(b.end)}`}</span>
                         {b.type === 'fixed' && <FixedTag className="px-1 text-[9.5px] leading-[13px]" />}
                       </div>

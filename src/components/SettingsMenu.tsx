@@ -63,7 +63,8 @@ export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
         <div
           role="dialog"
           aria-label={t('settings')}
-          className="menu-in absolute top-[46px] end-0 z-30 w-[260px] origin-top-right rounded-2xl border bg-card p-3.5 shadow-soft rtl:origin-top-left"
+          // (A phone: held to the screen's edge, the button sits too far in for the menu to fit under it.)
+          className="menu-in absolute top-[46px] end-0 z-30 w-[260px] origin-top-right max-sm:fixed max-sm:end-4 max-sm:top-[60px] rounded-2xl border bg-card p-3.5 shadow-soft rtl:origin-top-left"
         >
           <label className="flex items-center justify-between gap-3">
             <span className="text-[13px] font-semibold">{t('language')}</span>
@@ -72,7 +73,7 @@ export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
                 value={t.lang}
                 onChange={(e) => setLang(e.target.value as Lang)}
                 aria-label={t('language')}
-                className="cursor-pointer appearance-none rounded-full bg-blk py-1.5 ps-3 pe-7 text-[13px] font-medium text-ink hover:bg-line/70 focus-visible:outline-2 focus-visible:outline-acc"
+                className="cursor-pointer appearance-none rounded-full bg-blk py-1.5 ps-3 pe-7 text-base font-medium sm:text-[13px] text-ink hover:bg-line/70 focus-visible:outline-2 focus-visible:outline-acc"
               >
                 {LANGS.map((l) => (
                   <option key={l.id} value={l.id}>
@@ -136,7 +137,7 @@ export function SettingsMenu({ theme }: { theme: 'light' | 'dark' }) {
         onClose={() => setWork(false)}
       />
       <Dialog open={confirm} onOpenChange={setConfirm}>
-        <DialogContent showCloseButton={false} className="max-w-[380px] rounded-[20px] border bg-card p-6 text-ink">
+        <DialogContent showCloseButton={false} className="max-w-[min(380px,calc(100%-2rem))] rounded-[20px] border bg-card p-6 text-ink">
           <DialogTitle className="text-start text-[18px] font-bold">{t('startFreshTitle')}</DialogTitle>
           <DialogDescription className="text-start text-[14.5px] text-mut">{t('startFreshBody')}</DialogDescription>
           <div className="mt-2 flex justify-end gap-2">

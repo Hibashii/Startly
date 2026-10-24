@@ -27,7 +27,7 @@ export function HowYouWork({ open, onClose }: { open: boolean; onClose: () => vo
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-[520px] rounded-[24px] border bg-card p-7 text-ink">
+      <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-[min(520px,calc(100%-2rem))] overflow-y-auto rounded-[24px] border bg-card p-5 text-ink sm:p-7">
         <DialogTitle className="text-start text-[22px] font-semibold tracking-[-0.02em]">{t('howYouWork')}</DialogTitle>
         <DialogDescription className="-mt-1 mb-3 text-start text-[14.5px] text-mut">{t('howYouWorkSub')}</DialogDescription>
         <ProfileFields value={value} onChange={setValue} />

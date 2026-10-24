@@ -5,17 +5,18 @@ import { useDay, useStore } from '@/state/store'
 import { mondayOf, weekOf } from '@/scheduler/days'
 import { cn } from '@/lib/utils'
 import { useSlide } from '@/lib/useSlide'
+import { useMedia } from '@/lib/useMedia'
 import { FixedTag } from './timetable/FixedTag'
 
 /** ‹ › a week at a time, and Today to come back. Shared by the week strip and the Week view. */
-export function WeekNav({ children }: { children?: ReactNode }) {
+export function WeekNav({ children, className }: { children?: ReactNode; className?: string }) {
   const t = useT()
   const shiftWeek = useStore((s) => s.shiftWeek)
   const goToday = useStore((s) => s.goToday)
   const away = useStore((s) => s.selectedDate !== null)
   const arrow = 'press grid size-7 cursor-pointer place-items-center rounded-full border bg-card text-ink hover:bg-blk'
   return (
-    <div className="flex items-center gap-2">
+    <div className={cn('flex items-center gap-2', className)}>
       <div className="flex items-center gap-1.5">
         <button type="button" aria-label={t('prevWeek')} onClick={() => shiftWeek(-1)} className={arrow}>
           <ChevronLeft className="size-3.5 rtl:rotate-180" />
@@ -46,14 +47,15 @@ export function WeekStrip() {
   const select = useStore((s) => s.selectDate)
   const days = weekOf(mondayOf(selected))
   const slide = useSlide(days[0])
+  const phone = useMedia('(max-width: 639px)')
 
   return (
-    <nav aria-label={t('thisWeek')} className="week-in flex-none border-b bg-bg px-9 py-3">
+    <nav aria-label={t('thisWeek')} className="week-in flex-none border-b bg-bg px-4 py-3 sm:px-9">
       <div className="mx-auto max-w-[760px]">
         <WeekNav>
           <span className="ms-1 text-[15px] font-semibold">{t.fmt.monthYear(selected)}</span>
         </WeekNav>
-        <ol key={days[0]} className={cn('m-0 mt-2.5 grid list-none grid-cols-7 gap-2 p-0', slide)}>
+        <ol key={days[0]} className={cn('m-0 mt-2.5 grid list-none grid-cols-7 gap-1 p-0 sm:gap-2', slide)}>
           {days.map((d) => {
             const past = d < today
             const onDay = past ? [] : tasks.filter((x) => x.date === d && x.status === 'todo')
@@ -75,11 +77,12 @@ export function WeekStrip() {
                   )}
                 >
                   <span className={cn('text-[12px] font-medium uppercase', !isSel && !past && 'text-mut')}>
-                    {d === today ? t('today') : t.fmt.weekdayShort(d)}
+                    {/* (A phone: one letter, like a calendar app; today is the tinted one, or the one with the accent number.) */}
+                    {phone ? t.fmt.weekdayNarrow(d) : d === today ? t('today') : t.fmt.weekdayShort(d)}
                   </span>
-                  <span className="text-[17px] font-semibold tabular-nums">{Number(d.slice(8))}</span>
+                  <span className={cn('text-[17px] font-semibold tabular-nums', d === today && !isSel && 'max-sm:text-acc')}>{Number(d.slice(8))}</span>
                   <span className={cn('flex h-4 items-center gap-1 text-[12px] tabular-nums', !isSel && 'text-mut')}>
-                    {pinned && <FixedTag />}
+                    {pinned && <FixedTag className="max-sm:hidden" />}
                     <span dir="ltr">{minutes ? t.fmt.duration(minutes) : ''}</span>
                   </span>
                 </button>

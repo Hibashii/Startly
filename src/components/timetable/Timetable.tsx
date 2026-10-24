@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useDay, useStore } from '@/state/store'
 import { clock, toMin } from '@/lib/time'
@@ -16,6 +16,7 @@ import { WeekView } from './WeekView'
 import { WeekNav } from '../WeekStrip'
 import { cn } from '@/lib/utils'
 import { useSlide } from '@/lib/useSlide'
+import { useSwipe } from '@/lib/useSwipe'
 import { dayComplete, nowState } from '@/scheduler/now'
 
 export function Timetable() {
@@ -36,6 +37,7 @@ export function Timetable() {
   const stripOpen = useStore((s) => s.weekOpen)
   const selectDate = useStore((s) => s.selectDate)
   const goToday = useStore((s) => s.goToday)
+  const shiftWeek = useStore((s) => s.shiftWeek)
   const byId = new Map(tasks.map((t) => [t.id, t]))
 
   // A day at a time: the arrows by the title (when the week strip is closed), and ← → on the keyboard.
@@ -52,10 +54,42 @@ export function Timetable() {
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [view, today, selectDate])
+  // A phone: swipe sideways for the next or previous day (a week, on the Week view), like a calendar app.
+  const page = useRef<HTMLElement>(null)
+  useSwipe(page, (by) => (view === 'week' ? shiftWeek(by) : selectDate(plusDays(useStore.getState().selectedDate ?? today, by))), view)
+  // The week's day names stick right under its title bar, whose height changes on a phone (a second row, or not).
+  const weekBar = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    const bar = weekBar.current
+    if (!bar) return
+    const fit = () => page.current?.style.setProperty('--week-bar', `${bar.offsetHeight - 26}px`) // (minus the padding above it)
+    fit()
+    const watch = new ResizeObserver(fit)
+    watch.observe(bar)
+    return () => watch.disconnect()
+  }, [view])
 
   const dayArrow = 'press grid size-8 cursor-pointer place-items-center rounded-full text-mut hover:bg-blk hover:text-ink'
+  // A phone: ‹ › at the end of the second row, beside Today, like the week strip's (a swipe works too).
+  const phoneArrows = (back: string, on: string, by: (n: -1 | 1) => void) => (
+    <div className="flex shrink-0 items-center gap-1.5 sm:hidden">
+      {([[-1, back, ChevronLeft], [1, on, ChevronRight]] as const).map(([n, label, Icon]) => (
+        <button key={n} type="button" aria-label={label} onClick={() => by(n)} className="press grid size-7 cursor-pointer place-items-center rounded-full border bg-card text-ink hover:bg-blk">
+          <Icon className="size-3.5 rtl:rotate-180" />
+        </button>
+      ))}
+    </div>
+  )
   const upper = (x: string) => x.replace(/^./, (c) => c.toUpperCase())
   const title = isToday ? t('today') : date === plusDays(today, 1) ? t('tomorrow') : upper(t.fmt.dayMonth(date))
+  // Just the day ("Saturday"): the date is already in the top bar. A screen reader still hears all of it.
+  // (Smaller on a phone, so the view switch fits beside it.)
+  const named = isToday || date === plusDays(today, 1)
+  const heading = (
+    <h2 className="m-0 text-[22px] font-bold tracking-[-0.03em] whitespace-nowrap sm:text-[28px]">
+      {named ? title : <><span aria-hidden>{upper(t.fmt.weekday(date))}</span><span className="sr-only">{title}</span></>}
+    </h2>
+  )
   const work = blocks.filter((b) => b.type === 'task' || b.type === 'fixed')
   const planned = work.reduce((sum, b) => sum + toMin(b.end) - toMin(b.start), 0)
   const until = blocks.reduce((max, b) => (b.end > max ? b.end : max), '')
@@ -82,15 +116,15 @@ export function Timetable() {
   const weekSlide = useSlide(week[0])
   const daySlide = useSlide(date)
   const weekMinutes = tasks.filter((t) => t.date !== null && week.includes(t.date)).reduce((sum, t) => sum + t.durationMin, 0)
-  const toggle = tasks.length > 0 && (
-    <div className="ms-auto inline-flex self-center rounded-full border p-0.5 text-[13px]" role="group" aria-label={t('view')}>
+  const toggle = (className?: string) => tasks.length > 0 && (
+    <div className={cn('ms-auto inline-flex shrink-0 self-center rounded-full border p-0.5 text-[13px]', className)} role="group" aria-label={t('view')}>
       {(['list', 'grid', 'week'] as const).map((v) => (
         <button
           key={v}
           type="button"
           aria-pressed={view === v}
           onClick={() => setView(v)}
-          className={cn('cursor-pointer rounded-full px-3 py-1 text-mut', view === v && 'bg-ink font-medium text-bg')}
+          className={cn('cursor-pointer rounded-full px-3 py-1 text-mut max-sm:px-2 max-sm:text-[12.5px]', view === v && 'bg-ink font-medium text-bg')}
         >
           {t(v === 'list' ? 'viewList' : v === 'grid' ? 'viewGrid' : 'viewWeek')}
         </button>
@@ -100,13 +134,24 @@ export function Timetable() {
 
   if (view === 'week') {
     return (
-      <section className="mx-auto max-w-[1240px]">
-        <div className="sticky -top-[26px] z-20 -mt-[26px] mb-2 flex items-center gap-3 bg-bg pt-[26px] pb-2">
-          <WeekNav>
-            <h2 className="m-0 ms-1 text-[26px] font-bold tracking-[-0.03em]">{t.fmt.range(week[0], week[6])}</h2>
+      <section ref={page} className="mx-auto max-w-[1240px]">
+        <div ref={weekBar} className="sticky -top-[26px] z-20 -mt-[26px] mb-2 flex flex-wrap items-center gap-x-3 gap-y-1 bg-bg pt-[26px] pb-2">
+          <WeekNav className="max-sm:hidden">
+            <h2 className="m-0 ms-1 text-[26px] font-bold tracking-[-0.03em] whitespace-nowrap">{t.fmt.range(week[0], week[6])}</h2>
             {weekMinutes > 0 && <p className="m-0 text-sm text-mut">{t('planned', { planned: t.fmt.duration(weekMinutes) })}</p>}
           </WeekNav>
-          {toggle}
+          {/* A phone, like a day: the dates and the view switch, then the hours and Today under them (a swipe changes the week). */}
+          <h2 className="m-0 text-[22px] font-bold tracking-[-0.03em] whitespace-nowrap sm:hidden">{t.fmt.range(week[0], week[6])}</h2>
+          {toggle()}
+          <div className="flex basis-full items-center gap-3 sm:hidden">
+            <p className="m-0 min-w-0 flex-1 truncate text-sm text-mut">{weekMinutes > 0 && t('planned', { planned: t.fmt.duration(weekMinutes) })}</p>
+            {selected !== null && (
+              <button type="button" onClick={goToday} className="press cursor-pointer rounded-full border px-3 py-1 text-[13px] font-medium whitespace-nowrap hover:bg-blk">
+                {t('today')}
+              </button>
+            )}
+            {phoneArrows(t('prevWeek'), t('nextWeek'), shiftWeek)}
+          </div>
         </div>
         <div key={week[0]} className={weekSlide}>
           <WeekView days={week} today={today} nowMin={nowMin} />
@@ -116,23 +161,26 @@ export function Timetable() {
   }
 
   return (
-    <section className="mx-auto max-w-[700px]">
-      <div className={cn('sticky -top-[26px] z-20 -mt-[26px] mb-3.5 flex flex-wrap gap-x-3 gap-y-1 bg-bg pt-[26px] pb-2', stripOpen ? 'items-baseline' : 'items-center')}>
+    <section ref={page} className="mx-auto max-w-[700px]">
+      <div className={cn('sticky -top-[26px] z-20 -mt-[26px] mb-3.5 flex flex-wrap gap-x-3 gap-y-1 bg-bg pt-[26px] pb-2 max-sm:gap-x-2', stripOpen ? 'items-baseline' : 'items-center')}>
         {stripOpen ? (
-          <h2 className="m-0 text-[28px] font-bold tracking-[-0.03em] whitespace-nowrap">{title}</h2>
+          heading
         ) : (
           // The week strip is closed: ‹ › by the title move a day (with the strip open, it does that job).
           // The ‹ sits in the page margin, so the title still lines up with the cards below.
-          <div className="-ms-9 flex items-center gap-1">
-            <button type="button" aria-label={t('prevDay')} onClick={() => shiftDay(-1)} className={dayArrow}>
+          // (A phone: they sit at the end of the next row instead, and a swipe does it too, like a calendar app.)
+          <div className="flex items-center gap-1 sm:-ms-9">
+            <button type="button" aria-label={t('prevDay')} onClick={() => shiftDay(-1)} className={cn(dayArrow, 'max-sm:hidden')}>
               <ChevronLeft className="size-5 rtl:rotate-180" />
             </button>
-            <h2 className="m-0 text-[28px] font-bold tracking-[-0.03em] whitespace-nowrap">{title}</h2>
-            <button type="button" aria-label={t('nextDay')} onClick={() => shiftDay(1)} className={dayArrow}>
+            {heading}
+            <button type="button" aria-label={t('nextDay')} onClick={() => shiftDay(1)} className={cn(dayArrow, 'max-sm:hidden')}>
               <ChevronRight className="size-5 rtl:rotate-180" />
             </button>
           </div>
         )}
+        {/* A phone: the view switch sits beside the title; the line and Today go under them. */}
+        {toggle('sm:hidden')}
         {/* The line, Today and the view switch move together: short on room (a long day name, the chat open),
             they drop under the title as one row instead of squeezing into a narrow column. */}
         <div className={cn('flex min-w-[min(100%,27rem)] flex-1 gap-3', stripOpen ? 'items-baseline' : 'items-center')}>
@@ -162,7 +210,8 @@ export function Timetable() {
               {t('today')}
             </button>
           )}
-          {toggle}
+          {!stripOpen && phoneArrows(t('prevDay'), t('nextDay'), shiftDay)}
+          {toggle('max-sm:hidden')}
         </div>
       </div>
 
@@ -174,6 +223,7 @@ export function Timetable() {
           <div
             className={cn(
               'stamp pointer-events-none absolute end-6 top-6 z-[5] rounded-xl border-[3px] border-current px-4 py-1 text-[34px] font-black tracking-[0.12em] whitespace-nowrap uppercase tabular-nums',
+              'max-sm:end-2 max-sm:-top-2 max-sm:rounded-lg max-sm:border-2 max-sm:px-2.5 max-sm:py-0.5 max-sm:text-[20px]', // (a phone: smaller, so the names stay readable)
               checked === dayTasks.length ? 'text-acc/70' : 'text-mut/70',
             )}
           >

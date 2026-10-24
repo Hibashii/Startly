@@ -207,22 +207,25 @@ test('a day at a time: arrows by the title, Today to come back, ← → keys; wi
   await dump(page, '10:00', { body: { reply: 'ok', order: null, actions: [task('Gym', 60)] } })
   const heading = page.getByRole('heading', { level: 2 })
   await expect(page.getByRole('button', { name: 'Today', exact: true })).toHaveCount(0) // already on today
+  const top = page.locator('header > button[aria-expanded]')
+  await expect(top).toHaveText(/^Saturday 17 October\s*10:00$/)
   await page.getByRole('button', { name: 'Next day' }).click()
-  await expect(heading).toHaveText('Tomorrow')
+  await expect(heading).toHaveAccessibleName('Tomorrow')
+  await expect(top).toHaveText('Sunday 18 October') // the top bar follows the day you're on; the clock is only on today
   await page.getByRole('button', { name: 'Next day' }).click()
-  await expect(heading).toHaveText('Monday 19 October')
+  await expect(heading).toHaveAccessibleName('Monday 19 October')
   await page.getByRole('button', { name: 'Today', exact: true }).click()
-  await expect(heading).toHaveText('Today')
+  await expect(heading).toHaveAccessibleName('Today')
   await page.getByRole('button', { name: 'Previous day' }).click()
-  await expect(heading).toHaveText('Friday 16 October')
+  await expect(heading).toHaveAccessibleName('Friday 16 October')
 
   // The keyboard, but not while typing in the chat.
   await page.locator('main').click({ position: { x: 5, y: 5 } })
   await page.keyboard.press('ArrowRight')
-  await expect(heading).toHaveText('Today')
+  await expect(heading).toHaveAccessibleName('Today')
   await page.getByLabel('Message Startly').fill('hello')
   await page.getByLabel('Message Startly').press('ArrowLeft')
-  await expect(heading).toHaveText('Today')
+  await expect(heading).toHaveAccessibleName('Today')
 
   // The week strip open: its own arrows and days, no second set by the title.
   await page.getByRole('button', { name: /show the week/ }).click()

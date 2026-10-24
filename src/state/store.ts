@@ -58,6 +58,8 @@ interface Persisted {
 
 interface Ui {
   chatOpen: boolean
+  /** A phone: Startly replied while the chat was shut (a dot on its button until it's opened). */
+  unread: boolean
   thinking: boolean
   /** The last message that couldn't reach Startly (shown with Retry, not saved). */
   failed: { text: string; spoken?: boolean; error: 'rate_limited' | 'unavailable' } | null
@@ -145,6 +147,8 @@ const fresh = (): Persisted => ({
 
 let msgId = 0
 const mid = () => `m${Date.now().toString(36)}${msgId++}`
+/** A phone or small tablet, where the chat is a sheet that covers the timetable. */
+const smallScreen = () => typeof window !== 'undefined' && !!window.matchMedia?.('(max-width: 767px)').matches
 
 const snapshot = (p: Plan): Undo['before'] => ({
   tasks: p.tasks,
@@ -255,11 +259,15 @@ export const useStore = create<Store>()(
         if (!pending && morningOpen) pending = open // still waiting for an answer
         // Quiet (the timer's buttons): the timetable changes and a toast says so; the chat only hears about what needs reading.
         const post = !quiet || !!pending || notes.length > 0
+        // The chat opens with the reply. On a phone it would cover the change, so it only opens for a new question or a note
+        // (not again for a morning question still waiting); otherwise a dot on Ask Startly says there's a reply.
+        const show = smallScreen() ? (!!pending && pending !== open) || notes.length > 0 : post
         set((cur) => ({
           ...next,
           dayEnds: next.dayEnds ?? {},
           pending,
-          chatOpen: post ? true : cur.chatOpen,
+          chatOpen: show ? true : cur.chatOpen,
+          unread: cur.unread || (post && !show && !cur.chatOpen),
           flash,
           justPlanned: firstPlan,
           chat: { ...cur.chat, messages: post ? [...skipOpen(cur.chat.messages), reply] : cur.chat.messages },
@@ -301,6 +309,7 @@ export const useStore = create<Store>()(
       return {
         ...fresh(),
         chatOpen: false,
+        unread: false,
         thinking: false,
         failed: null,
         flash: [],
@@ -493,7 +502,7 @@ export const useStore = create<Store>()(
           set({ selectedDate: date === today ? null : date })
         },
         goToday: () => set({ selectedDate: null }),
-        setChatOpen: (chatOpen) => set({ chatOpen }),
+        setChatOpen: (chatOpen) => set(chatOpen ? { chatOpen, unread: false } : { chatOpen }),
         setWeekOpen: (weekOpen) => set(weekOpen ? { weekOpen } : { weekOpen, selectedDate: null }),
         selectDate: (date) => set({ selectedDate: date === clockNow().today ? null : date }),
 

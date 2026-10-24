@@ -85,7 +85,7 @@ export function ChatInput({ className, autoFocus }: { className?: string; autoFo
             aria-label={t('messageLabel')}
             placeholder={t('messagePlaceholder')}
             dir="auto"
-            className="field-sizing-content max-h-40 min-h-[34px] flex-1 resize-none bg-transparent py-[7px] text-[14.5px] text-ink outline-none placeholder:text-mut"
+            className="field-sizing-content max-h-40 min-h-[34px] flex-1 resize-none bg-transparent py-[7px] text-base text-ink sm:text-[14.5px] outline-none placeholder:text-mut"
           />
           <MicButton voice={voice} />
           <button

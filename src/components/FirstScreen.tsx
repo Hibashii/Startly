@@ -162,7 +162,8 @@ function Questions({ onDone }: { onDone: () => void }) {
         <h1 className="m-0 text-[28px] font-semibold tracking-[-0.02em]">{t('obTitle')}</h1>
         <p className="mt-2 mb-7 text-[15px] text-mut">{t('obSub')}</p>
         <ProfileFields value={value} onChange={setValue} />
-        <div className="flex justify-end gap-2">
+        {/* (A phone: the main button full width, Skip under it: the two don't fit side by side in every language.) */}
+        <div className="flex justify-end gap-2 max-sm:flex-col-reverse max-sm:gap-1">
           <button type="button" onClick={() => finish(true)} className="press cursor-pointer rounded-full px-5 py-3 text-[15px] font-medium text-mut hover:bg-blk">
             {t('obSkip')}
           </button>

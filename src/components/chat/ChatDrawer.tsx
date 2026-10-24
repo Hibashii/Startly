@@ -20,9 +20,12 @@ export function ChatDrawer({ arriving }: { arriving?: boolean }) {
       aria-label={t('chatWithStartly')}
       aria-hidden={!open}
       inert={!open}
+      // A wide screen: a panel beside the timetable. A phone or small tablet: a sheet over it, under the top bar
+      // (and its menus), sliding in from the side.
       className={cn(
-        'flex w-[40%] max-w-[440px] flex-none flex-col overflow-hidden border-s bg-panel transition-[width,max-width,visibility] duration-300 ease-out',
-        !open && 'invisible w-0 max-w-0 border-0',
+        'fixed inset-x-0 top-[60px] bottom-0 z-[25] flex flex-col overflow-hidden bg-panel transition-[translate,visibility] duration-300 ease-out',
+        'md:static md:z-auto md:w-[40%] md:max-w-[440px] md:flex-none md:border-s md:transition-[width,max-width,visibility]',
+        !open && 'invisible translate-x-full rtl:-translate-x-full md:w-0 md:max-w-0 md:translate-x-0 md:border-0',
         arriving && open && 'chat-arrive', // from the middle of the first screen to its place
       )}
     >

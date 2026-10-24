@@ -41,8 +41,10 @@ export function TaskCard({ block, task, flash, enterDelay, now, readOnly, checka
       data-type={block.type}
       data-now={isNow ? now.kind : undefined}
       data-flash={flash || undefined}
+      // A wide screen: ☐ time name duration, in columns. A phone: ☐ and the name, with the time under it
+      // (a break keeps one line, its time at the end), and the Now card's buttons on a row of their own.
       className={cn(
-        'group my-1.5 grid min-h-11 grid-cols-[18px_112px_1fr_auto] items-center gap-3.5 rounded-xl bg-blk px-4 py-[11px]',
+        'group my-1.5 grid min-h-11 grid-cols-[18px_1fr_auto] items-center gap-x-3 rounded-xl bg-blk px-4 py-[11px] sm:grid-cols-[18px_112px_1fr_auto] sm:gap-x-3.5',
         rest && 'min-h-9 border border-dashed bg-transparent py-[7px] text-mut',
         done && 'opacity-60',
         // The Now bar sits on the starting edge (left, or right in Arabic).
@@ -53,11 +55,11 @@ export function TaskCard({ block, task, flash, enterDelay, now, readOnly, checka
       style={enterDelay !== undefined ? { animationDelay: `${enterDelay}ms` } : undefined}
     >
       {rest || !task ? (
-        <span />
+        <span className="col-start-1 row-span-3 row-start-1" />
       ) : (
         // (A disabled button gets no hover, so the span carries the "why".)
         <Tip label={readOnly ? t('dayOver') : !checkable ? t('checkOnTheDay') : null}>
-          <span className="grid">
+          <span className="col-start-1 row-span-3 row-start-1 grid sm:row-span-2">
             <button
               type="button"
               role="checkbox"
@@ -69,7 +71,8 @@ export function TaskCard({ block, task, flash, enterDelay, now, readOnly, checka
                 toggleDone(task.id)
               }}
               className={cn(
-                'press grid size-[17px] cursor-pointer place-items-center rounded-[5px] border-[1.5px] border-mut transition-colors disabled:cursor-not-allowed disabled:opacity-40',
+                // (The ::after makes the box easy to hit with a finger: 41 px around a 17 px square.)
+                'press relative grid size-[17px] cursor-pointer place-items-center rounded-[5px] border-[1.5px] border-mut transition-colors after:absolute after:-inset-3 after:content-[""] disabled:cursor-not-allowed disabled:opacity-40',
                 done && 'border-acc bg-acc text-accink disabled:opacity-100',
               )}
             >
@@ -79,26 +82,45 @@ export function TaskCard({ block, task, flash, enterDelay, now, readOnly, checka
         </Tip>
       )}
 
-      <time data-part dir="ltr" className={cn('text-start text-sm whitespace-nowrap text-mut tabular-nums', isNow && 'text-tinti/80')}>
+      <time
+        data-part
+        dir="ltr"
+        className={cn(
+          'text-start text-[13px] whitespace-nowrap text-mut tabular-nums sm:col-start-2 sm:row-span-2 sm:row-start-1 sm:text-sm',
+          rest ? 'col-start-3 row-start-1' : 'col-start-2 row-start-3 mt-0.5 sm:mt-0',
+          isNow && 'text-tinti/80',
+        )}
+      >
         {clock(block.start)}–{clock(block.end)}
       </time>
 
-      <div className="min-w-0">
-        <span className={cn('flex items-center gap-1.5', rest ? 'font-normal' : 'font-medium', done && 'text-mut line-through', isNow && 'text-tinti')}>
-          {task && !rest && !readOnly ? <TaskName task={task} name={name} /> : <span data-part>{name}</span>}
-          {block.type === 'fixed' && <FixedTag className="no-underline" />}
-        </span>
-        {isNow && (
-          <div className="mt-1 flex items-center gap-1.5 text-[11px] font-bold tracking-[0.07em] text-tinti uppercase">
-            <span className="size-[7px] rounded-full bg-acc" aria-hidden />
-            {asking && !timed ? t('didYouFinish') : asking ? t('timesUp') : t('nowLeft', { left: t.fmt.duration(now.leftMin) })}
-          </div>
+      <span
+        className={cn(
+          'col-start-2 row-start-1 flex min-w-0 items-center gap-1.5 sm:col-start-3',
+          rest ? 'font-normal' : 'font-medium',
+          done && 'text-mut line-through',
+          isNow && 'text-tinti',
         )}
-      </div>
+      >
+        {task && !rest && !readOnly ? <TaskName task={task} name={name} /> : <span data-part dir="auto">{name}</span>}
+        {block.type === 'fixed' && <FixedTag className="no-underline" />}
+      </span>
+      {isNow && (
+        <div className="col-start-2 row-start-2 mt-1 flex items-center gap-1.5 text-[11px] font-bold tracking-[0.07em] text-tinti uppercase sm:col-start-3">
+          <span className="size-[7px] rounded-full bg-acc" aria-hidden />
+          {asking && !timed ? t('didYouFinish') : asking ? t('timesUp') : t('nowLeft', { left: t.fmt.duration(now.leftMin) })}
+        </div>
+      )}
 
       {isNow && task && block.type === 'task' && !timed ? (
-        // Quick buttons: on hover for the Now task, always shown for "Did you finish…?"
-        <div className={cn('flex gap-1.5', !asking && 'hidden group-focus-within:flex group-hover:flex')}>
+        // Quick buttons: on hover for the Now task, always shown for "Did you finish…?".
+        // A phone or a touch screen (no hover there): always shown, on a row of their own under the card's text.
+        <div
+          className={cn(
+            'col-span-full row-start-4 mt-2.5 flex flex-wrap gap-1.5 sm:pointer-fine:col-span-1 sm:pointer-fine:col-start-4 sm:pointer-fine:row-span-2 sm:pointer-fine:row-start-1 sm:pointer-fine:mt-0',
+            !asking && 'sm:pointer-fine:hidden sm:pointer-fine:group-focus-within:flex sm:pointer-fine:group-hover:flex',
+          )}
+        >
           {asking ? (
             <>
               <Pill onClick={() => toggleDone(task.id)} strong>{t('btnDone')}</Pill>
@@ -114,7 +136,9 @@ export function TaskCard({ block, task, flash, enterDelay, now, readOnly, checka
           )}
         </div>
       ) : (
-        <span data-part className="text-[13px] text-mut">{rest ? '' : t.fmt.duration(toMin(block.end) - toMin(block.start))}</span>
+        <span data-part className={cn('col-start-3 row-span-3 row-start-1 text-[13px] text-mut sm:col-start-4 sm:row-span-2', rest && 'max-sm:hidden')}>
+          {rest ? '' : t.fmt.duration(toMin(block.end) - toMin(block.start))}
+        </span>
       )}
     </li>
   )
@@ -144,7 +168,7 @@ function Pill({ children, onClick, strong }: { children: ReactNode; onClick: () 
       type="button"
       onClick={onClick}
       className={cn(
-        'press cursor-pointer rounded-full border border-tinti/45 px-[11px] py-1 text-[12.5px] whitespace-nowrap text-tinti hover:bg-tinti/10',
+        'press cursor-pointer rounded-full border border-tinti/45 px-[11px] py-1 text-[12.5px] whitespace-nowrap text-tinti hover:bg-tinti/10 max-sm:px-2.5 max-sm:text-[12px]',
         strong && 'border-acc bg-acc font-semibold text-accink hover:bg-acc',
       )}
     >
@@ -170,6 +194,7 @@ function TaskName({ task, name }: { task: Task; name: string }) {
           setEditing(true)
         }}
         title={t('clickToRename')}
+        dir="auto" // (an English name in Arabic is cut at its own end: "Finish the…", not "…for my project")
         className="cursor-text truncate rounded text-start hover:underline hover:decoration-mut/40 hover:underline-offset-4"
       >
         {name}
@@ -192,7 +217,7 @@ function TaskName({ task, name }: { task: Task; name: string }) {
         if (e.key === 'Escape') setEditing(false)
       }}
       onBlur={() => editing && save()}
-      className="w-full rounded-md border border-acc bg-card px-1.5 py-0.5 font-medium text-ink outline-none"
+      className="w-full rounded-md border border-acc bg-card px-1.5 py-0.5 text-base font-medium text-ink outline-none sm:text-[15px]"
     />
   )
 }

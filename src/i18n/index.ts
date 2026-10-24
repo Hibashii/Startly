@@ -9,7 +9,6 @@ import type { Lang } from './langs'
 
 export type { Lang } from './langs'
 export { LANGS, detectLang, dirOf, isLang } from './langs'
-export { longDate } from './format'
 export { nameOf, type Name } from './shared'
 
 /** Every language has exactly the keys and parameters of English. */

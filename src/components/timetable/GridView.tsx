@@ -72,7 +72,8 @@ export function GridView({ blocks, tasks, nowMin, now }: { blocks: Block[]; task
             style={{ top: y, height }}
           >
             <div className={cn('flex min-w-0 items-center gap-1.5 truncate', !rest && 'font-medium', task?.status === 'done' && 'line-through')}>
-              {rest ? t(b.type === 'lunch' ? 'lunch' : 'break') : task && taskTitle(task, t)}
+              {/* (In its own span, so a long name ends in "…" instead of being cut off at the edge.) */}
+              <span className="truncate">{rest ? t(b.type === 'lunch' ? 'lunch' : 'break') : task && taskTitle(task, t)}</span>
               {b.type === 'fixed' && <FixedTag />}
             </div>
             {short ? (

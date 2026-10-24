@@ -42,7 +42,7 @@ export function ProfileFields({ value, onChange }: { value: ProfileValue; onChan
           onChange={(e) => set({ habits: e.target.value })}
           maxLength={300}
           placeholder={t('obHabitsHint')}
-          className="w-full rounded-xl border bg-card px-4 py-3 text-[15px] text-ink placeholder:text-mut focus-visible:outline-2 focus-visible:outline-acc"
+          className="w-full rounded-xl border bg-card px-4 py-3 text-base text-ink sm:text-[15px] placeholder:text-mut focus-visible:outline-2 focus-visible:outline-acc"
         />
       </label>
     </>

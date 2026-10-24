@@ -6,6 +6,7 @@ import { FirstScreen } from '@/components/FirstScreen'
 import { MainScreen } from '@/components/MainScreen'
 import { TipProvider } from '@/components/ui/tooltip'
 import { Toaster } from 'sonner'
+import { useMedia } from '@/lib/useMedia'
 
 const darkQuery = window.matchMedia('(prefers-color-scheme: dark)')
 const subscribe = (cb: () => void) => {
@@ -23,6 +24,10 @@ export default function App() {
   // First visit follows the computer's mode until the user picks one.
   const systemDark = useSyncExternalStore(subscribe, () => darkQuery.matches)
   const theme = settings.theme ?? (systemDark ? 'dark' : 'light')
+  // With the chat sheet open, toasts sit above its message field instead of on it.
+  const small = useMedia('(max-width: 767px)') // a phone or small tablet, where the chat is a sheet over the page
+  const overSheet = useStore((s) => s.chatOpen) && small && started
+  const toastBottom = overSheet ? 88 : undefined
 
   // A new day: fresh chat + greeting, on load, when the tab comes back, and when midnight passes.
   const morningReset = useStore((s) => s.morningReset)
@@ -69,10 +74,13 @@ export default function App() {
         <Toaster
           position="bottom-center"
           duration={2600}
+          visibleToasts={1} // (one pill at a time: a stack of pills of different widths peeks out behind the newest)
+          offset={toastBottom && { bottom: toastBottom }}
+          mobileOffset={toastBottom && { bottom: toastBottom }}
           toastOptions={{
             unstyled: true,
             classNames: {
-              toast: 'mx-auto w-fit rounded-full bg-ink px-[18px] py-[9px] text-[13.5px] font-medium max-w-[calc(100vw-32px)] text-center text-balance text-bg shadow-[0_8px_24px_rgba(0,0,0,0.2)]',
+              toast: 'mx-auto w-fit! rounded-full bg-ink px-[18px] py-[9px] text-[13.5px] font-medium max-w-[calc(100vw-32px)] text-center text-balance text-bg shadow-[0_8px_24px_rgba(0,0,0,0.2)]',
             },
           }}
         />

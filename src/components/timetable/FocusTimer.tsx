@@ -185,8 +185,9 @@ export function FocusTimer() {
     const done = 1 - view.leftMs / view.totalMs
     return (
       <Panel>
-        <div className="flex items-center gap-3">
-          <div className="min-w-0 flex-1">
+        {/* A phone: the countdown on top, its buttons on a row under it. */}
+        <div className="flex flex-wrap items-center gap-3 max-sm:gap-2">
+          <div className="min-w-0 flex-1 max-sm:basis-full">
             <div className="flex min-w-0 items-center gap-2">
               <Label>
                 {paused
@@ -216,9 +217,9 @@ export function FocusTimer() {
             </div>
           </div>
           {paused ? (
-            <Button onClick={clicked(resumeTimer, playStart)} strong icon={<Play className="size-3.5 fill-current" />}>{t('resumeTimer')}</Button>
+            <Button onClick={clicked(resumeTimer, playStart)} strong iconOnPhone icon={<Play className="size-3.5 fill-current" />}>{t('resumeTimer')}</Button>
           ) : (
-            <Button onClick={clicked(pauseTimer, playPause)} icon={<Pause className="size-3.5 fill-current" />}>{t('pauseTimer')}</Button>
+            <Button onClick={clicked(pauseTimer, playPause)} iconOnPhone icon={<Pause className="size-3.5 fill-current" />}>{t('pauseTimer')}</Button>
           )}
           <Button onClick={clicked(() => timerEnd('done'))} strong={!paused} icon={<Check className="size-4" strokeWidth={2.5} />}>{doneLabel}</Button>
           <IconButton onClick={() => setTimerSound(!sound)} label={t(sound ? 'mute' : 'unmute')} pressed={!sound}>
@@ -241,9 +242,9 @@ export function FocusTimer() {
     return (
       <Panel ringing>
         <div className="flex flex-wrap items-center gap-2.5">
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 max-sm:basis-full">
             <Label>⏰ {t('timesUp')}</Label>
-            <div className="truncate text-[17px] font-semibold">{name}</div>
+            <div className="truncate text-[17px] font-semibold" dir="auto">{name}</div>
           </div>
           <Button onClick={clicked(() => timerEnd('done'))} strong icon={<Check className="size-4" strokeWidth={2.5} />}>{doneLabel}</Button>
           <Button onClick={clicked(() => timerEnd('more', back || 15))} disabled={thinking} title={back ? t('yourPause') : undefined}>
@@ -263,7 +264,7 @@ export function FocusTimer() {
     <Panel>
       <div className="flex items-center gap-4">
         <div className="min-w-0 flex-1">
-          <Label>
+          <Label wrap>
             {view.kind === 'idle'
               ? `${t('now')} · ${t('untilTime', { time: clock(view.block.end) })}`
               : rest
@@ -276,18 +277,18 @@ export function FocusTimer() {
                 {countdown(rest.leftMs)}
               </span>
             )}
-            <span className={cn('truncate', rest ? 'text-[15px] font-medium text-mut' : 'text-[17px] font-semibold')}>{name}</span>
+            <span className={cn('truncate', rest ? 'text-[15px] font-medium text-mut' : 'text-[17px] font-semibold')} dir="auto">{name}</span>
           </div>
         </div>
         {focusWork ? (
-          <div className="relative">
+          <div className="sm:relative">
             <Button onClick={() => begin(() => startTimer(task.id))} strong={!rest} disabled={thinking} icon={<Play className="size-3.5 fill-current" />}>
               {t(view.kind === 'idle' ? 'startTimer' : 'startNow')}
             </Button>
             {choosing && <ChooseMode onPick={pick} onCancel={() => setChoosing(null)} />}
           </div>
         ) : (
-          <div className="relative">
+          <div className="sm:relative">
             <button
               type="button"
               onClick={() =>
@@ -316,14 +317,16 @@ const clockAt = (ms: number) => {
 function Panel({ children, ringing }: { children: ReactNode; ringing?: boolean }) {
   const t = useT()
   return (
-    <section aria-label={t('focusTimer')} className={cn('mb-5 rounded-2xl border bg-card px-5 py-4 shadow-soft', ringing && 'border-acc')}>
+    // (relative: on a phone the "how do you want to focus?" menu takes the panel's width.)
+    <section aria-label={t('focusTimer')} className={cn('relative mb-5 rounded-2xl border bg-card px-4 py-4 shadow-soft sm:px-5', ringing && 'border-acc')}>
       {children}
     </section>
   )
 }
 
-function Label({ children }: { children: ReactNode }) {
-  return <div className="mb-0.5 min-w-0 truncate text-[11.5px] font-bold tracking-[0.07em] text-mut uppercase">{children}</div>
+/** `wrap`: on a phone the line may take two rows rather than lose its end ("Now · until 15:00" beside the Start button). */
+function Label({ children, wrap }: { children: ReactNode; wrap?: boolean }) {
+  return <div className={cn('mb-0.5 min-w-0 truncate text-[11.5px] font-bold tracking-[0.07em] text-mut uppercase', wrap && 'max-sm:whitespace-normal')}>{children}</div>
 }
 
 function IconButton({ children, onClick, label, pressed }: { children: ReactNode; onClick: () => void; label: string; pressed?: boolean }) {
@@ -342,7 +345,8 @@ function IconButton({ children, onClick, label, pressed }: { children: ReactNode
   )
 }
 
-function Button({ children, onClick, strong, disabled, icon, title }: { children: ReactNode; onClick: () => void; strong?: boolean; disabled?: boolean; icon?: ReactNode; title?: string }) {
+/** `iconOnPhone`: just the icon on a phone (Pause, Resume: ⏸ ▶ say it), so the timer's buttons fit on one row. */
+function Button({ children, onClick, strong, disabled, icon, title, iconOnPhone }: { children: ReactNode; onClick: () => void; strong?: boolean; disabled?: boolean; icon?: ReactNode; title?: string; iconOnPhone?: boolean }) {
   return (
     <Tip label={title}>
       <button
@@ -350,12 +354,13 @@ function Button({ children, onClick, strong, disabled, icon, title }: { children
         onClick={onClick}
         disabled={disabled}
         className={cn(
-          'press inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium whitespace-nowrap hover:bg-blk disabled:cursor-default disabled:opacity-40',
+          'press inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium whitespace-nowrap hover:bg-blk disabled:cursor-default disabled:opacity-40 max-sm:px-3.5',
           strong && 'border-acc bg-acc font-semibold text-accink hover:bg-acc',
+          iconOnPhone && 'max-sm:size-9 max-sm:justify-center max-sm:px-0',
         )}
       >
         {icon}
-        {children}
+        {iconOnPhone ? <span className="max-sm:sr-only">{children}</span> : children}
       </button>
     </Tip>
   )
@@ -395,7 +400,7 @@ function ChooseMode({ onPick, onCancel }: { onPick: (m: 'normal' | 'pomodoro') =
       ref={ref}
       role="dialog"
       aria-label={t('chooseFocus')}
-      className="menu-in absolute end-0 top-[calc(100%+8px)] z-30 w-[290px] origin-top-right rounded-2xl border bg-card p-2 shadow-soft rtl:origin-top-left"
+      className="menu-in absolute end-0 top-[calc(100%+8px)] z-30 w-[290px] origin-top-right rounded-2xl border bg-card p-2 shadow-soft rtl:origin-top-left max-sm:inset-x-0 max-sm:w-auto"
     >
       <p className="m-0 px-3 pt-2 pb-1.5 text-[14px] font-semibold">{t('chooseFocus')}</p>
       {option('normal', '⏱', t('oneCountdown'), t('oneCountdownSub'))}
@@ -412,7 +417,8 @@ function ModeChip({ mode, onChange }: { mode: 'normal' | 'pomodoro'; onChange: (
   const ref = useDismiss(() => setOpen(false))
   const label = (m: 'normal' | 'pomodoro') => (m === 'normal' ? `⏱ ${t('countdown')}` : `🍅 ${t('timerPomodoro')}`)
   return (
-    <div ref={ref} className="relative mb-0.5 shrink-0">
+    // (A phone: the menu hangs from the panel, under the chip's row, so a long label can't push it off the screen.)
+    <div ref={ref} className="mb-0.5 shrink-0 sm:relative">
       <button
         type="button"
         aria-haspopup="menu"
@@ -424,7 +430,7 @@ function ModeChip({ mode, onChange }: { mode: 'normal' | 'pomodoro'; onChange: (
         <ChevronDown className="size-3" aria-hidden />
       </button>
       {open && (
-        <div role="menu" className="menu-in absolute start-0 top-[calc(100%+6px)] z-30 w-[230px] origin-top-left rounded-xl border bg-card p-1 shadow-soft rtl:origin-top-right">
+        <div role="menu" className="menu-in absolute start-0 top-[calc(100%+6px)] z-30 w-[230px] origin-top-left rounded-xl border bg-card p-1 shadow-soft rtl:origin-top-right max-sm:start-auto max-sm:end-4 max-sm:top-11">
           {(['normal', 'pomodoro'] as const).map((m) => (
             <button
               key={m}

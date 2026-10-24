@@ -9,7 +9,9 @@ export interface Fmt extends BaseFmt {
 export interface BaseFmt {
   weekday: (date: string) => string // "Sunday" / "dimanche" / "الأحد"
   weekdayShort: (date: string) => string // "Sun"
+  weekdayNarrow: (date: string) => string // "S" (a phone's week, like a calendar app)
   dayMonth: (date: string) => string // "Saturday 17 October"
+  dayMonthShort: (date: string) => string // "Sat 17 Oct" (a phone's title)
   list: (items: string[]) => string // "A, B and C" / "A, B et C"
   quote: (s: string) => string // 'A' / « A » / „A“
   duration: (min: number) => string // "1h30" / "1 h 30" / "45 min"
@@ -50,6 +52,8 @@ export function fmtFor(lang: Lang): BaseFmt {
   const loc = locale(lang)
   const weekday = new Intl.DateTimeFormat(loc, { weekday: 'long' })
   const weekdayShort = new Intl.DateTimeFormat(loc, { weekday: 'short' })
+  const weekdayNarrow = new Intl.DateTimeFormat(loc, { weekday: 'narrow' })
+  const dayMonthShort = new Intl.DateTimeFormat(loc, { weekday: 'short', day: 'numeric', month: 'short' })
   const dayMonth = new Intl.DateTimeFormat(loc, { weekday: 'long', day: 'numeric', month: 'long' })
   const list = new Intl.ListFormat(loc, { style: 'long', type: 'conjunction' })
   const monthYear = new Intl.DateTimeFormat(loc, { month: 'long', year: 'numeric' })
@@ -57,6 +61,8 @@ export function fmtFor(lang: Lang): BaseFmt {
   const fmt: BaseFmt = {
     weekday: (d) => weekday.format(at(d)),
     weekdayShort: (d) => weekdayShort.format(at(d)),
+    weekdayNarrow: (d) => weekdayNarrow.format(at(d)),
+    dayMonthShort: (d) => dayMonthShort.format(at(d)),
     dayMonth: (d) => dayMonth.format(at(d)),
     list: (items) => list.format(items),
     quote: QUOTES[lang],
@@ -67,7 +73,3 @@ export function fmtFor(lang: Lang): BaseFmt {
   cache.set(lang, fmt)
   return fmt
 }
-
-/** "Saturday, 17 October" for the top bar, from a real Date. */
-export const longDate = (lang: Lang, d: Date) =>
-  new Intl.DateTimeFormat(locale(lang), { weekday: 'long', day: 'numeric', month: 'long' }).format(d)
