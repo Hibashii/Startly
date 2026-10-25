@@ -48,7 +48,7 @@ PRD ref: `prd.md > The Core Journey`.
 
 Rationale (your choices):
 - **Vite + React + TypeScript + Express:** you already use Vite and React at work. Next.js would mean learning a new framework in the middle of the hackathon. Accepted tradeoff: two processes instead of one, started with a single `npm run dev`.
-- **OpenAI with your own API key:** Claude's API isn't an option (the company account). The ChatGPT subscription doesn't cover the API, so it's a separate prepaid balance (about $5, auto-recharge off).
+- **OpenAI with your own API key**, kept on the server.
 - **localStorage, no database:** one person, one browser, no accounts. A database comes later, once there are accounts.
 - **The AI translates, the code schedules** (option B): reliable, testable times. Accepted tradeoff: more code to write (the scheduler).
 
@@ -302,7 +302,7 @@ devpost-hackathon/
 ### OpenAI API
 - **Call:** `client.responses.parse({ model: process.env.OPENAI_MODEL, instructions: SYSTEM_PROMPT, input: [{ role: 'user', content: JSON.stringify({ context, message }) }], text: { format: zodTextFormat(AssistantResponse, 'startly') } })` → `response.output_parsed` is `{ reply, actions }`.
 - **Auth:** `OPENAI_API_KEY` in `.env`, read only by the server.
-- **Cost:** $20 prepaid, auto-recharge off. One message is roughly 3k tokens in and 300 out ≈ **$0.0005 with Luna** (≈ $0.004 with GPT-5.4 mini). A whole hackathon of testing costs cents.
+- **Cost:** one message is roughly 3k tokens in and 300 out ≈ **$0.0005 with Luna** (≈ $0.004 with GPT-5.4 mini). A whole hackathon of testing costs cents.
 - **Docs:** https://platform.openai.com/docs/guides/structured-outputs · https://platform.openai.com/docs/api-reference/responses · https://github.com/openai/openai-node
 - **Rate limits:** the default tier is far above one person's chat use.
 
@@ -333,7 +333,7 @@ Free Hobby plan. Static `dist/` + one function (`api/index.ts`) wrapping the Exp
 
 ### Decisions (yours)
 - **Stack:** React + Vite + TypeScript + Express. You use Vite and React already, and Next.js is new to you. You asked me to recommend and accepted it.
-- **AI provider:** the OpenAI API with your own prepaid key (Claude's API isn't available to you outside work). The key lives in `.env`, which is gitignored, and agents never read it.
+- **AI provider:** the OpenAI API with your own prepaid key. The key lives in `.env`, which is gitignored, and agents never read it.
 - **"The AI translates, the code schedules"** (option B). You agreed: the AI says *what* to schedule, and the code places and reshuffles.
 - **The AI suggests the order of the day** (changed during the build, your call): "that's why we added the AI." With each reply it returns `order` (today's tasks first to last), guessing sensible limits itself (shops closing, gym hours) and saying what it assumed. The code still places every block and enforces the hard limits: fixed times, finish-by times, holds, end of day, no overlaps. You correct it in plain words.
 - **Storage:** localStorage for the PoC, with a database later once the full app works.
