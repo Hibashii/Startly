@@ -17,6 +17,7 @@ playwright-report/
 # Planning exploration pages (kept locally; startly-design.html is the build's visual reference)
 /devpost/*.html
 !/devpost/startly-design.html
+!/devpost/app-map.html
 
 # Build output and dependencies
 node_modules/

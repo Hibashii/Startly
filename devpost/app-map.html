@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Startly App Map</title>
+<style>
+  :root {
+    --bg: #ffffff; --fg: #1a1a1a; --muted: #6b6b6b; --line: #e6e6e6; --soft: #f7f7f7; --acc: #5b5bd6;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #161616; --fg: #ececec; --muted: #9a9a9a; --line: #2e2e2e; --soft: #1f1f1f; --acc: #8b8bf0; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+  main { max-width: 760px; margin: 0 auto; padding: 40px 16px 64px; }
+  h1 { font-size: 28px; margin: 0 0 4px; }
+  h2 { font-size: 19px; margin: 40px 0 8px; }
+  p { margin: 8px 0; }
+  .sub { color: var(--muted); margin: 0 0 24px; }
+  code { font: 14px ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--soft); padding: 1px 5px; border-radius: 4px; overflow-wrap: anywhere; }
+  pre { background: var(--soft); padding: 12px 14px; border-radius: 8px; overflow-x: auto; }
+  pre code { padding: 0; background: none; }
+  ol, ul { padding-left: 22px; }
+  li { margin: 6px 0; }
+  .stop { border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin: 12px 0; }
+  .stop h3 { font-size: 16px; margin: 0 0 4px; }
+  details { border-top: 1px solid var(--line); padding: 10px 0; }
+  summary { cursor: pointer; font-weight: 600; }
+  summary:focus-visible { outline: 2px solid var(--acc); outline-offset: 2px; }
+  svg { width: 100%; height: auto; display: block; margin: 12px 0; }
+  svg text { fill: var(--fg); font: 13px -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  svg .small { fill: var(--muted); font-size: 11px; }
+  svg rect { fill: var(--bg); stroke: var(--line); }
+  svg .ai { stroke: var(--acc); }
+  svg line, svg path { stroke: var(--muted); fill: none; }
+  .foot { color: var(--muted); font-size: 14px; margin-top: 40px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Startly App Map</h1>
+  <p class="sub">A take-home guide to where things live. Snapshot of commit <code>b97def8</code> (2026-10-25); the code may have moved since.</p>
+
+  <h2>What Startly is, in one breath</h2>
+  <p>You tell Startly about your day (or week) in plain words. It turns that into a real timetable, keeps it on time when the day goes off track, and cheers you on as you check things off. There are four main pieces:</p>
+  <ul>
+    <li><strong>The screen</strong> (<code>src/components/</code>): the timetable, week view, chat, and timer.</li>
+    <li><strong>The store</strong> (<code>src/state/store.ts</code>): everything you see, saved in your browser (localStorage). There's no database and no account.</li>
+    <li><strong>The assistant</strong> (<code>server/</code>): one small route that asks the OpenAI model what you meant and gets back structured <em>actions</em>.</li>
+    <li><strong>The scheduler</strong> (<code>src/scheduler/</code>): plain code that turns those actions into times, with lunch, breaks, fixed events and your end of day.</li>
+  </ul>
+
+  <h2>One action, end to end: “dump your day”</h2>
+  <svg viewBox="0 0 720 200" role="img" aria-labelledby="dtitle">
+    <title id="dtitle">You type your day, the store sends it with context to the server, the AI returns actions, the scheduler places them, and the timetable shows the result.</title>
+    <rect x="4" y="20" width="128" height="58" rx="8"/><text x="68" y="45" text-anchor="middle">You type</text><text x="68" y="63" text-anchor="middle" class="small">ChatInput / FirstScreen</text>
+    <rect x="164" y="20" width="128" height="58" rx="8"/><text x="228" y="45" text-anchor="middle">store.send</text><text x="228" y="63" text-anchor="middle" class="small">+ buildContext</text>
+    <rect x="324" y="20" width="128" height="58" rx="8" class="ai"/><text x="388" y="45" text-anchor="middle">/api/assistant</text><text x="388" y="63" text-anchor="middle" class="small">prompt → OpenAI</text>
+    <rect x="484" y="20" width="128" height="58" rx="8"/><text x="548" y="45" text-anchor="middle">applyActions</text><text x="548" y="63" text-anchor="middle" class="small">→ scheduler</text>
+    <rect x="484" y="122" width="128" height="58" rx="8"/><text x="548" y="147" text-anchor="middle">Timetable</text><text x="548" y="165" text-anchor="middle" class="small">what you see</text>
+    <rect x="164" y="122" width="128" height="58" rx="8"/><text x="228" y="147" text-anchor="middle">localStorage</text><text x="228" y="165" text-anchor="middle" class="small">saved plan + chat</text>
+    <line x1="132" y1="49" x2="160" y2="49"/><line x1="292" y1="49" x2="320" y2="49"/><line x1="452" y1="49" x2="480" y2="49"/>
+    <line x1="548" y1="78" x2="548" y2="118"/>
+    <path d="M484 151 H296"/>
+    <text x="388" y="143" text-anchor="middle" class="small">store keeps the new plan</text>
+  </svg>
+
+  <h2>A reference route (3 stops)</h2>
+  <p>Open these in your editor and search for the anchor in bold.</p>
+
+  <div class="stop">
+    <h3>1. Your message leaves the screen</h3>
+    <p><code>src/state/store.ts</code>, search <strong><code>send: async</code></strong>. It adds your message to the chat, catches a typed “undo” in code, then builds what the AI is allowed to see with <code>buildContext</code> in <code>src/lib/api.ts</code> (today's timetable, tasks, settings, recent chat) and calls <code>askStartly</code>.</p>
+  </div>
+  <div class="stop">
+    <h3>2. The AI says what you meant, not when things happen</h3>
+    <p><code>server/app.ts</code>, search <strong><code>app.post('/api/assistant'</code></strong>, which calls <code>callAssistant</code> in <code>server/assistant.ts</code>. The rules Startly follows live in <code>server/prompt.ts</code>. The answer must match the shapes in <code>shared/schema.ts</code> (a reply, optional questions, and a list of actions like add task, move to day, or set end of day). Both the browser and the server use that file, so they can't disagree.</p>
+  </div>
+  <div class="stop">
+    <h3>3. Code places it on the timetable</h3>
+    <p><code>src/scheduler/applyActions.ts</code>, search <strong><code>export function applyActions</code></strong>. Invalid actions are skipped. Today is laid out by <code>reshuffleToday</code> in <code>src/scheduler/schedule.ts</code> and later days by <code>planDay</code> in <code>src/scheduler/days.ts</code>. The hard limits are enforced here: fixed events don't move, there's lunch and breaks, and nothing goes past your end of day. <code>src/components/timetable/Timetable.tsx</code> shows the result.</p>
+  </div>
+
+  <h2>To change this, start here</h2>
+  <ul>
+    <li><strong>How Startly thinks or talks to the AI</strong>: <code>server/prompt.ts</code>. Then run <code>npx tsx scripts/real-check.ts</code> more than once.</li>
+    <li><strong>A new thing the AI can do</strong>: add the action to <code>shared/schema.ts</code>, then handle it in <code>src/scheduler/applyActions.ts</code>.</li>
+    <li><strong>Lunch, breaks, end-of-day rules</strong>: <code>src/scheduler/schedule.ts</code> (tests in <code>schedule.test.ts</code>).</li>
+    <li><strong>Any words on screen, in all 6 languages</strong>: <code>src/i18n/en.ts</code> and its siblings (<code>fr</code>, <code>ar</code>, <code>es</code>, <code>de</code>, <code>nl</code>). Which cheer or greeting is chosen: <code>src/lib/messages.ts</code>.</li>
+    <li><strong>Accent colors and dark mode</strong>: <code>src/index.css</code>, search <code>data-accent</code>.</li>
+    <li><strong>Phone layout</strong>: <code>src/components/MainScreen.tsx</code> and <code>TopBar.tsx</code>; covered by <code>e2e/mobile.spec.ts</code>.</li>
+  </ul>
+
+  <h2>A practice to reuse</h2>
+  <p><strong>Turn a real conversation that went wrong into a check you can replay against the real model.</strong></p>
+  <p>Mocked tests (<code>npm test</code>, <code>npm run e2e</code>) prove the code does what it should with a given AI answer. They can't prove the AI gives a good answer. On Startly, the bugs that mattered showed up in real use. For example, planning a messy week asked 10+ questions and then forgot the tasks from the first message.</p>
+  <details>
+    <summary>How that one was found, fixed, and locked in</summary>
+    <ol>
+      <li><strong>Cause:</strong> the AI only saw the last 10 messages, so after enough questions the original request had scrolled out of view.</li>
+      <li><strong>Fix in code, not just the prompt:</strong> <code>conversation()</code> in <code>src/lib/api.ts</code> now sends everything since the request while Startly is still asking, plus a <code>questionsAsked</code> count. The rule in <code>server/prompt.ts</code> says to stop asking at 2.</li>
+      <li><strong>Evidence:</strong> the scenario “Planning a vacation week” in <code>scripts/real-check.ts</code> replays that conversation against the real model and checks the fixed events, Sunday off, the start time, and no duplicates. Run it with <code>npx tsx scripts/real-check.ts week</code>.</li>
+      <li><strong>Why more than once:</strong> the model's answers vary between runs, so one green run proves little. A few green runs in a row is real evidence.</li>
+    </ol>
+  </details>
+  <p>On your next AI feature, write down the exact thing a user typed and the result you expected before you fix it. Then make it a replayable scenario. It becomes your proof that the fix works, and your alarm if a prompt change breaks it later.</p>
+
+  <h2>Run it again</h2>
+<pre><code>npm install
+cp .env.example .env   # then set OPENAI_API_KEY
+npm run dev            # http://localhost:5173 (API on :3001)
+
+npm test               # scheduler + API route tests (AI mocked)
+npm run e2e            # browser tests (AI mocked)
+npm run check:real     # real-model conversations (costs a few cents)</code></pre>
+  <p>Live version: <a href="https://startlynow.vercel.app">startlynow.vercel.app</a></p>
+
+  <p class="foot">Generated from the code at commit b97def8. Open this file directly in a browser; it needs no network.</p>
+</main>
+</body>
+</html>

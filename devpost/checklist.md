@@ -71,8 +71,8 @@ Build mode: fast — the learner asked to be shown each checkpoint only after te
 
 ## Hands-on Checkpoints
 
-- [ ] Early usable behavior explored — after slice 2: dump your real day, then tell Startly it went off track. This is where feedback on the AI's understanding and the timetable look can still shape slices 3–6.
-- [ ] Final kick-the-tires exploration and feedback completed
+- [x] Early usable behavior explored — after slice 2: dump your real day, then tell Startly it went off track. This is where feedback on the AI's understanding and the timetable look can still shape slices 3–6. Done: the learner's own day led to the "Doesn't fit" list, finish-by times, an end of day past midnight, moved-card glow, and the AI choosing the order (see Revisions).
+- [x] Final kick-the-tires exploration and feedback completed — the learner tested the live app after the last push (b97def8): "everything works well"
 
 ## Final Review
 
@@ -86,19 +86,25 @@ Build mode: fast — the learner asked to be shown each checkpoint only after te
 - [x] Things that don't fit: one question about all of them with "Stay until 01:35 / Sunday / Drop them"; Start fresh keeps preferences (end of day, breaks) — it had reset her 1 am end to 23:00
 - [x] Languages (French, Arabic with right-to-left, Spanish, German, Dutch): typed dictionaries, language-free messages in the logic, Intl formatting, a store migration v1 → v2; reviewed for architecture
 - [x] Pink accent added (7 colors, named in all 6 languages); the browser tab shows Startly's avatar (Iris, the brand color)
-- [ ] Final review complete — feedback resolved and learner confirms ready to ship
+- [x] Undo: the last 5 Startly changes, an Undo button on the newest change reply, typed "undo" handled by code
+- [x] Main screen works on phones (Google Calendar style), the top bar follows the selected day
+- [x] Planning with everyday judgment (from an outside AI review): free time given for today is kept, tonight-only bedtimes, long study blocks never split, clearer questions
+- [x] A messy week is planned after at most two short questions, and the tasks from the first message are never forgotten
+- [x] Final review complete — feedback resolved and learner confirms ready to ship (2026-10-25: build, 156 unit and 80 browser tests pass, live app checked by the learner)
+
+Later, after submission (learner's choice, out of the PoC): drag and drop, a "Day off" label, phases 2–3 of the outside AI review (meals, fixed-event collisions, rate limits on Vercel, prompt cleanup), and the French-app-language reply flake.
 
 ## Code Tour and App Map
 
-- [ ] Learning activity complete — guided route, focused alternative, prior practice connected, or brief recap
-- [ ] Optional edit and transfer reflection addressed — offered/declined/already covered/not applicable as appropriate
-- [ ] `devpost/app-map.html` generated from finished code, checked, and shown, including a project-grounded practice to reuse
+- [x] Learning activity complete — guided route, focused alternative, prior practice connected, or brief recap
+- [x] Optional edit and transfer reflection addressed — offered/declined/already covered/not applicable as appropriate
+- [x] `devpost/app-map.html` generated from finished code, checked, and shown, including a project-grounded practice to reuse
 
-Activity and evidence: 
-Route and stops: 
-Edit outcome: 
-Reflection: 
-Activity mode: 
+Activity and evidence: prior practice connected (recap). The learner found the week-planning bug in real use (10+ questions, tasks forgotten); the cause (only the last 10 messages sent) was fixed in code (`conversation()` in `src/lib/api.ts`) and locked in as a real-model replay (`npx tsx scripts/real-check.ts week`).
+Route and stops: reference route in the map, not toured: `store.send` → `/api/assistant` → `applyActions`.
+Edit outcome: not applicable (no optional edit offered; recap mode).
+Reflection: offered and answered (kept in the learner profile).
+Activity mode: focused alternative, as a recap of practice already done.
 
 ## Revisions
 - Vitest 3 instead of the latest Vitest — the latest needs Node 22, and this laptop runs Node 20.17. Same API for our tests.
