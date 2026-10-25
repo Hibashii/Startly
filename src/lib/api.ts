@@ -18,8 +18,30 @@ function asText(m: ChatMessage, lang: Plan['settings']['lang']): string {
   return [words, ...moved, ...notes, ...question].join('\n')
 }
 
+/** Startly asked something and changed nothing (no moves, no notes): still asking. */
+const asking = (m: ChatMessage, lang: Plan['settings']['lang']) =>
+  m.role === 'assistant' && !m.moved?.length && !m.notes?.length && !m.question && asText(m, lang).includes('?')
+
+/**
+ * The conversation the AI reads: the last 10 messages, or, while Startly is still asking questions before planning,
+ * everything since the request (so "organize my week: exam, gym…" is never forgotten after a few answers).
+ */
+function conversation(messages: ChatMessage[], lang: Plan['settings']['lang']) {
+  let start = messages.length
+  let questionsAsked = 0
+  for (let i = messages.length - 1; i >= 0; i--) {
+    const m = messages[i]
+    if (m.role === 'assistant' && !asking(m, lang)) break
+    if (m.role === 'assistant') questionsAsked++
+    start = i
+  }
+  const from = Math.max(0, Math.min(messages.length - 10, start), messages.length - 30) // (at most 30)
+  return { recent: messages.slice(from), questionsAsked }
+}
+
 export function buildContext(plan: Plan, messages: ChatMessage[], pending: unknown, at: Date, canUndo = false): AssistantContext {
   const { today, nowMin } = dayOf(at, plan)
+  const talk = conversation(messages, plan.settings.lang)
   return {
     now: `${today}T${toHHMM(nowMin)}`, // past midnight on a late day: "24:30"
     weekday: format(parseISO(today), 'EEEE'),
@@ -45,7 +67,8 @@ export function buildContext(plan: Plan, messages: ChatMessage[], pending: unkno
     breaks: plan.settings.breaks ?? DEFAULT_BREAKS,
     language: plan.settings.lang,
     profile: plan.settings.profile ?? null,
-    recentMessages: messages.slice(-10).map((m) => ({ role: m.role, text: asText(m, plan.settings.lang) })),
+    recentMessages: talk.recent.map((m) => ({ role: m.role, text: asText(m, plan.settings.lang) })),
+    questionsAsked: talk.questionsAsked,
     canUndo,
   }
 }
@@ -57,7 +80,7 @@ export async function askStartly(message: string, context: AssistantContext): Pr
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, context }),
-      signal: AbortSignal.timeout(55_000), // a first plan can take the AI ~30 s
+      signal: AbortSignal.timeout(115_000), // a whole week can take the AI 40–60 s
     })
     if (res.status === 429) return { ok: false, error: 'rate_limited' }
     if (!res.ok) return { ok: false, error: 'unavailable' }

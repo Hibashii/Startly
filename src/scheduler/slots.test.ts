@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Action } from '../../shared/schema'
-import type { Plan } from '@/types'
+import type { ChatMessage, Plan } from '@/types'
 import { toMin } from '@/lib/time'
 import { applyActions } from './applyActions'
 
@@ -167,6 +167,22 @@ describe('what Startly reads', () => {
     const plan = { ...empty(), tasks: [task('soon', '2026-10-20'), task('far', '2026-12-20'), task('old', '2026-10-01', 'done'), task('left', '2026-10-16'), task('waiting', null)] }
     const ctx = buildContext(plan, [], null, new Date(`${TODAY}T09:00:00`))
     expect(ctx.tasks.map((t) => t.id)).toEqual(['soon', 'left', 'waiting'])
+  })
+
+  it('while Startly keeps asking, the request stays in what it reads (even after 10 messages)', async () => {
+    const { buildContext } = await import('@/lib/api')
+    const say = (role: 'user' | 'assistant', text: string, i: number) => ({ id: String(i), role, text }) as ChatMessage
+    const earlier = [say('user', 'gym at 18:00', 0), { ...say('assistant', 'Done.', 1), notes: [] }, say('assistant', 'Got it.', 2)]
+    const asking = [say('user', 'organize my week: exam, gym twice, groceries', 3)]
+    for (let i = 0; i < 6; i++) asking.push(say('assistant', `Question ${i}?`, 10 + 2 * i), say('user', `answer ${i}`, 11 + 2 * i))
+    const ctx = buildContext(empty(), [...earlier, ...asking], null, new Date(`${TODAY}T09:00:00`))
+    expect(ctx.recentMessages[0].text).toBe('organize my week: exam, gym twice, groceries')
+    expect(ctx.recentMessages).toHaveLength(13)
+    expect(ctx.questionsAsked).toBe(6)
+    // After a reply that isn't a question, the count starts again and the usual last 10 are enough.
+    const after = buildContext(empty(), [...asking, say('assistant', 'Here is your week.', 99)], null, new Date(`${TODAY}T09:00:00`))
+    expect(after.questionsAsked).toBe(0)
+    expect(after.recentMessages).toHaveLength(10)
   })
 })
 

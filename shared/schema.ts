@@ -123,6 +123,7 @@ export const AssistantContext = z.object({
   language: z.string().describe("the app's language (en, fr, es, de, nl, ar): reply in the language the user writes in; if unclear, in this one"),
   recentMessages: z.array(z.object({ role: z.enum(['user', 'assistant']), text: z.string() })).describe("Startly's messages include the app's notes on what each change did"),
   spoken: z.boolean().optional().describe('true = the user said this message out loud (voice typing): it is a raw transcript'),
+  questionsAsked: z.number().optional().describe('how many questions Startly asked in a row, without changing the plan yet'),
   canUndo: z.boolean().optional().describe('true = there is a change of Startly\'s that the undo action can take back'),
   profile: z
     .object({ focusBest: z.string().nullable(), habits: z.string(), dayStart: z.string().nullable().optional() })

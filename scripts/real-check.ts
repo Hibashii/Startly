@@ -23,7 +23,7 @@ const show = (p: Plan) =>
   (p.blocks[TODAY] ?? []).map((b) => `${b.start}-${b.end} ${b.taskId ? p.tasks.find((t) => t.id === b.taskId)?.title : b.type}`).join(' | ') +
   (p.tasks.some((t) => !t.date) ? `  [not placed: ${p.tasks.filter((t) => !t.date).map((t) => t.title).join(', ')}]` : '')
 
-async function scenario(name: string, steps: { at: string; say: string; check: Check }[], lang: Plan['settings']['lang'] = 'en', profile?: Profile) {
+async function scenario(name: string, steps: { at: string; say: string; check: Check }[], lang: Plan['settings']['lang'] = 'en', profile?: Profile, today = TODAY) {
   let plan: Plan = { ...fresh(), settings: { ...fresh().settings, lang, ...(profile && { profile }) } }
   const messages: ChatMessage[] = []
   type Slots = { ref: string; start: string }[] | null
@@ -31,7 +31,7 @@ async function scenario(name: string, steps: { at: string; say: string; check: C
   let failures = 0
   console.log(`\n▶ ${name}`)
   for (const step of steps) {
-    const at = new Date(`${TODAY}T${step.at}:00`)
+    const at = new Date(`${today}T${step.at}:00`)
     const nowMin = at.getHours() * 60 + at.getMinutes()
     const forAi = pending && { question: pending.q.text, options: pending.q.options.map(({ id, label }) => ({ id, label })) }
     const t0 = Date.now()
@@ -42,14 +42,14 @@ async function scenario(name: string, steps: { at: string; say: string; check: C
     // Same flow as the app: answering the open question applies that prepared answer.
     const p = pending
     const option = resolve && p?.q.options.find((o) => o.id === resolve.optionId)
-    const simulate = (extra: AnyAction[]) => applyActions(plan, [...(p?.base ?? []), ...extra], TODAY, nowMin, p?.order ?? null, p?.slots ?? null)
+    const simulate = (extra: AnyAction[]) => applyActions(plan, [...(p?.base ?? []), ...extra], today, nowMin, p?.order ?? null, p?.slots ?? null)
     const [actions, order, slots]: [AnyAction[], string[] | null, Slots] =
-      p && option ? [[...p.base, ...measureAnswer(option.extra, TODAY, simulate)], p.order, p.slots] : [res.actions, res.order, res.slots]
+      p && option ? [[...p.base, ...measureAnswer(option.extra, today, simulate)], p.order, p.slots] : [res.actions, res.order, res.slots]
     pending = null
-    const run = (extra: AnyAction[] = []) => applyActions(plan, [...actions, ...extra], TODAY, nowMin, order, slots)
+    const run = (extra: AnyAction[] = []) => applyActions(plan, [...actions, ...extra], today, nowMin, order, slots)
     const r = run()
     if (r.applied > 0) {
-      const q = findQuestion(plan, r, TODAY, run)
+      const q = findQuestion(plan, r, today, run)
       if (q) {
         asked = `\n        asks: ${translate('en', q.text)} [${q.options.map((o) => translate('en', o.label)).join(' / ')}]`
         pending = { q, base: q.blocking ? actions : [], order: q.blocking ? order : null, slots: q.blocking ? slots : null }
@@ -65,7 +65,7 @@ async function scenario(name: string, steps: { at: string; say: string; check: C
 }
 
 const ONLY = process.argv[2] // npm run check:real -- smart  → just the smart-planning scenarios
-const failures = ONLY === 'smart' ? await smart() : ONLY === 'brief' ? await brief() : ONLY === 'manual' ? await manual() : [
+const failures = ONLY === 'smart' ? await smart() : ONLY === 'brief' ? await brief() : ONLY === 'manual' ? await manual() : ONLY === 'week' ? await week() : [
   await scenario("Evening dump where groceries doesn't fit", [
     {
       at: '17:45',
@@ -530,5 +530,57 @@ async function manual() {
         },
       },
     ]),
+  ].reduce((a, b) => a + b, 0)
+}
+
+/** A messy "organize my week" message, then the answers a real user gave (2026-10-25): plan soon, never forget the tasks. */
+async function week() {
+  const SUN = '2026-10-25'
+  const days = ['2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31', '2026-11-01']
+  const name = (p: Plan, id?: string) => p.tasks.find((t) => t.id === id)?.title ?? ''
+  const layout = (p: Plan) => days.map((d) => `${d.slice(5)}: ${(p.blocks[d] ?? []).filter((b) => b.taskId).map((b) => `${b.start}-${b.end} ${name(p, b.taskId)}`).join(', ')}`).join('\n          ')
+  const planned = (p: Plan) => p.tasks.filter((t) => t.kind === 'task').length >= 6
+  const check = (p: Plan) => {
+    const all = (re: RegExp) => p.tasks.filter((t) => re.test(t.title))
+    if (!all(/exam|stud|revis/i).some((t) => t.date && t.date < '2026-10-29')) return 'no exam study before Thursday'
+    if (!all(/present/i).some((t) => t.kind === 'task' && t.date && t.date < '2026-10-30')) return 'no presentation prep before Friday'
+    if (all(/gym/i).length !== 2) return `gym should be twice, got ${all(/gym/i).length}`
+    for (const re of [/clean/i, /grocer/i, /project/i]) if (!all(re).length) return `missing ${re}`
+    for (const d of days) {
+      const blocks = (p.blocks[d] ?? []).filter((b) => b.type === 'task')
+      const fixed = (p.blocks[d] ?? []).filter((b) => b.type === 'fixed')
+      const clash = blocks.find((b) => fixed.some((f) => f.start < b.end && b.start < f.end))
+      if (clash) return `${d}: ${name(p, clash.taskId)} during class`
+      if (d <= '2026-10-30' && d !== '2026-10-28' && blocks.some((b) => b.start < '09:00')) return `${d}: a task before 09:00, before class\n          ${layout(p)}`
+    }
+    if (p.tasks.some((t) => t.kind === 'task' && !t.date)) return `not placed: ${p.tasks.filter((t) => !t.date).map((t) => t.title).join(', ')}`
+    console.log(`          ${layout(p)}`)
+    return null
+  }
+  const MSG = "Girl I have SO MUCH to do this week 😭 I have an exam on Thursday and I haven't studied enough, I also have a presentation on Friday that I need to prepare for. I wanna go to the gym maybe twice, need to clean my room, do groceries, and somehow work on my personal project. I have classes most mornings and I'm usually tired afterwards. Please help me organize my week, I don't even know where to start."
+  let asked = 0 // questions so far in the current scenario
+  const fresh = <T,>(steps: T[]) => ((asked = 0), steps)
+  const step = (at: string, say: string, last = false) => ({
+    at,
+    say,
+    check: (p: Plan, reply: string) => {
+      if (planned(p)) return check(p)
+      if (/what would you like|what do you want me to (fit|plan)|can.t see|don.t see/i.test(reply)) return `forgot the tasks: ${reply}`
+      if (/which dates|what dates/i.test(reply)) return `asked the dates of "this week": ${reply}`
+      if (++asked > 2) return `still asking after ${asked} questions: ${reply}`
+      return last ? 'nothing planned' : null
+    },
+  })
+  return [
+    await scenario('A messy week, the real conversation', fresh([
+      step('18:00', MSG),
+      step('18:01', 'I have morning class except for Wednesday, I have an evening class and I finish, I start at 2 and I finish at 5 that day'),
+      step('18:02', 'Mon–Fri, 09:00–12:00'),
+      step('18:03', 'broo just create my planning', true),
+    ]), 'en', undefined, SUN),
+    await scenario('A messy week, everything in one message', fresh([
+      step('18:00', MSG + ' Classes are 9 to 12 on Mon, Tue, Thu and Fri, and 14:00–17:00 on Wednesday.'),
+      step('18:01', 'just plan it', true),
+    ]), 'en', undefined, SUN),
   ].reduce((a, b) => a + b, 0)
 }

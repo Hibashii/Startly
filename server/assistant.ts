@@ -5,7 +5,7 @@ import { SYSTEM_PROMPT, formatInput } from './prompt.js'
 
 let client: OpenAI | null = null
 export function getClient() {
-  client ??= new OpenAI({ timeout: 50_000, maxRetries: 0 }) // under the browser's 55 s limit
+  client ??= new OpenAI({ timeout: 105_000, maxRetries: 0 }) // under the browser's 115 s and the server's 120 s limit
   return client
 }
 
