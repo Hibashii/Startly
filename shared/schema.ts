@@ -50,7 +50,11 @@ export const Action = z.discriminatedUnion('type', [
     key: z.string().describe('a date "YYYY-MM-DD" or a weekday "mon".."sun"'),
     windows: z.array(z.object({ start: hhmm, end: hhmm })),
   }),
-  z.object({ type: z.literal('set_end_of_day'), time: hhmm.describe('"01:00" = 1 am tonight') }),
+  z.object({
+    type: z.literal('set_end_of_day'),
+    time: hhmm.describe('"01:00" = 1 am tonight'),
+    date: ymd.nullable().describe('only that day ("tonight", "today", "on Friday"); null = their usual end, every day'),
+  }),
   z.object({
     type: z.literal('set_breaks'),
     afterMin: z.number().int().describe('a break after this many minutes of back-to-back work; 0 = between every task'),
@@ -111,7 +115,8 @@ export const AssistantContext = z.object({
   today: z.string(),
   tasks: z.array(ContextTask),
   availability: z.record(z.string(), z.array(z.object({ start: z.string(), end: z.string() }))),
-  endOfDay: z.string(),
+  endOfDay: z.string().describe('when today ends'),
+  usualEndOfDay: z.string().optional().describe('when other days end, if today ends at a different (one-off) time'),
   pending: z.unknown().nullable(),
   timetable: z.array(z.string()).describe("today's timetable as the app placed it, e.g. \"19:55-20:55 Prepare for interview\", \"20:55-21:10 break\""),
   breaks: z.object({ afterMin: z.number(), lengthMin: z.number() }),

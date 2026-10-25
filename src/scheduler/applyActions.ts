@@ -32,6 +32,8 @@ const availabilityKey = (key: string) => {
 }
 
 const isTime = (s: string) => /^([01]\d|2[0-3]):[0-5]\d$/.test(s)
+/** A finish-by time after midnight belongs to tonight, like the end of the day: "00:00" = "24:00", "01:00" = "25:00". */
+const tonight = (s: string | null) => (s && isTime(s) && toMin(s) < toMin('06:00') ? toHHMM(toMin(s) + 24 * 60) : s)
 /** null, or a real calendar date "YYYY-MM-DD" (rejects 2026-13-45) */
 const isDate = (s: string | null) => {
   if (s === null) return true
@@ -116,7 +118,7 @@ export function applyActions(
           priority: a.priority,
           deadline: a.deadline,
           preferredStart: a.preferredStart,
-          endBy: a.endBy,
+          endBy: tonight(a.endBy),
           date: a.date && a.date > today ? a.date : null, // a past or today's date → today
           start: null,
           status: 'todo',
@@ -161,11 +163,12 @@ export function applyActions(
           priority: a.priority ?? t.priority,
           deadline: a.deadline ?? t.deadline,
           preferredStart: a.preferredStart ?? t.preferredStart,
-          endBy: a.endBy ?? t.endBy ?? null,
+          endBy: tonight(a.endBy) ?? t.endBy ?? null,
         }
         // A new time constraint means the task should be re-placed, even if it was already under way.
+        // On a later day it stays on that day ("move gym to tomorrow, after 19:00").
         if (t.kind === 'task' && (a.preferredStart || a.endBy) && t.status === 'todo') {
-          changed.date = null
+          if (!(t.date && t.date > today)) changed.date = null
           changed.start = null
         }
         replace(changed)
@@ -245,8 +248,14 @@ export function applyActions(
         }
         const m = toMin(a.time)
         const time = m < toMin('06:00') ? toHHMM(m + 24 * 60) : a.time
-        if (toMin(time) < toMin('12:00')) {
+        if (toMin(time) < toMin('12:00') || !isDate(a.date ?? null) || (a.date && a.date < today)) {
           skipped.push(a)
+          break
+        }
+        // "Until 23:30 tonight": just that day; the usual end stays.
+        if (a.date) {
+          plan = { ...plan, dayEnds: { ...plan.dayEnds, [a.date]: time } }
+          applied++
           break
         }
         // A new usual end replaces today's one-off "keep it" override.
@@ -427,10 +436,17 @@ export function applyActions(
   const plannedDays: string[] = []
   const laterUnplaced: ApplyResult['laterUnplaced'] = []
   const laidOut = Object.keys(next.blocks).filter((d) => d > today) // a key in blocks = that day was planned
-  for (const d of [...new Set([...planDays, ...laidOut])].sort()) {
+  // (and a later day with a task at a time you gave: "gym tomorrow after 19:00")
+  const timed = next.tasks.filter((t) => t.date && t.date > today && t.kind === 'task' && t.status === 'todo' && t.preferredStart).map((t) => t.date!)
+  for (const d of [...new Set([...planDays, ...laidOut, ...timed])].sort()) {
     const r = planDay(next, d)
     if (!r) {
       if (planDays.has(d)) unknownDays.push(d)
+      // Laid out before from the times you gave, now with a task without one: back to a list until you say when you're free.
+      if (next.blocks[d]) {
+        const { [d]: _old, ...blocks } = next.blocks
+        next = { ...next, blocks, tasks: next.tasks.map((t) => (t.date === d && t.kind === 'task' && t.status === 'todo' ? { ...t, start: null } : t)) }
+      }
       continue
     }
     next = r.plan

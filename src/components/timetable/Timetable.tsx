@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { useDay, useStore } from '@/state/store'
 import { clock, toMin } from '@/lib/time'
 import { mondayOf, plusDays, weekOf, windowsFor } from '@/scheduler/days'
-import { endOfDayFor } from '@/scheduler/schedule'
+import { endOfDayFor, freeWindows } from '@/scheduler/schedule'
 import { planOf } from '@/state/store'
 import { useShallow } from 'zustand/react/shallow'
 import { TaskCard } from './TaskCard'
@@ -280,7 +280,7 @@ export function Timetable() {
         {notPlaced.length > 0 && (
           <div className="mt-7">
             <h3 className="m-0 mb-1 text-sm font-semibold text-mut">
-              {isToday ? t('noFitBefore', { end: clock(endOfDayFor(plan, today)) }) : t('noFitOn', { day: title })}
+              {isToday ? t('noFitBefore', { end: freeWindows(plan, today) ? null : clock(endOfDayFor(plan, today)) }) : t('noFitOn', { day: title })}
             </h3>
             <ul className="m-0 list-none p-0" aria-label={isToday ? t('noFitToday') : t('noFitOn', { day: title })}>
               {notPlaced.map((task) => (

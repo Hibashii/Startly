@@ -11,12 +11,14 @@ export function getClient() {
 
 export const model = () => process.env.OPENAI_MODEL || 'gpt-6-luna'
 // How long the model thinks before answering. Designing a whole day needs it ("medium": 13–27 s, reliable);
-// a small change to a day that exists ("I need more time") doesn't ("low": 5–10 s).
+// one small change to a day that exists ("I need more time") doesn't ("low": 5–10 s). A longer message to a day
+// that exists is usually several changes at once ("interview moved to 9, gym tomorrow, finish prep today"): medium.
 type Effort = 'low' | 'medium' | 'high'
-const effortFor = (context: AssistantContext): Effort => {
+export const effortFor = (message: string, context: AssistantContext): Effort => {
   const set = process.env.OPENAI_REASONING_EFFORT as Effort | undefined
   if (set) return set
-  return context.tasks.some((t) => t.status === 'todo' && t.date === context.today) ? 'low' : 'medium'
+  const small = message.trim().length <= 60
+  return small && context.tasks.some((t) => t.status === 'todo' && t.date === context.today) ? 'low' : 'medium'
 }
 
 export async function callAssistant(message: string, context: AssistantContext): Promise<AssistantResponse> {
@@ -25,7 +27,7 @@ export async function callAssistant(message: string, context: AssistantContext):
     instructions: SYSTEM_PROMPT,
     input: [{ role: 'user', content: formatInput(message, context) }],
     text: { format: zodTextFormat(AssistantResponse, 'startly') },
-    reasoning: { effort: effortFor(context) },
+    reasoning: { effort: effortFor(message, context) },
   })
   if (!response.output_parsed) throw new Error('empty_output')
   return response.output_parsed

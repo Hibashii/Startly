@@ -95,7 +95,7 @@ export const fr: Dict = {
   tasksOf: (p) => `Tâches : ${p.day}`,
   laterDayHint: 'Je détaillerai cette journée heure par heure le moment venu, ou demande-moi de la planifier maintenant.',
   laterDayEmpty: 'Rien de prévu ce jour-là pour l’instant.',
-  noFitBefore: (p) => `Ne rentre pas avant ${p.end}`,
+  noFitBefore: (p) => `Ne rentre pas ${p.end ? `avant ${p.end}` : 'dans ton temps libre'}`,
   noFitToday: 'Ne rentre pas aujourd’hui',
   noFitOn: (p) => `Ne rentre pas ${p.day.toLowerCase()}`,
   lunch: 'Déjeuner',
@@ -200,7 +200,7 @@ export const fr: Dict = {
   noteWhenFree: (p, f) =>
     `Quand es-tu libre ${f.weekday(p.date)} ?` +
     (p.waiting.length ? ` J’aimerais caser ${f.list(p.waiting.map((x) => f.quote(f.name(x))))} avant l’échéance.` : ' Dis-le-moi et je planifie.'),
-  noteNoFitToday: (p, f) => `Ça ne rentre pas avant ${p.end} aujourd’hui : ${f.list(p.items.map(f.name))}.`,
+  noteNoFitToday: (p, f) => `Ça ne rentre pas ${p.end ? `avant ${p.end}` : 'dans ton temps libre'} aujourd’hui : ${f.list(p.items.map(f.name))}.`,
   noteNoFitOn: (p, f) => `Ça ne rentre pas ${f.weekday(p.date)} : ${f.list(p.items.map(f.name))}.`,
 
   qUntil: (p, f) => `Ça te mène jusqu’à ${p.until}. D’accord, ou je déplace ${f.quote(f.name(p.title))} à ${f.weekday(p.date)} ?`,
@@ -212,7 +212,7 @@ export const fr: Dict = {
       (x): x is string => !!x,
     )
     const choice = ways.slice(0, -1).join(', ') + ' ou ' + ways.at(-1)
-    return `${f.list(p.items.map((x) => f.quote(f.name(x))))} ${one ? 'ne rentre' : 'ne rentrent'} pas avant ${p.end}. ${choice[0].toUpperCase()}${choice.slice(1)} ?`
+    return `${f.list(p.items.map((x) => f.quote(f.name(x))))} ${one ? 'ne rentre' : 'ne rentrent'} pas ${p.end ? `avant ${p.end}` : 'dans ton temps libre'}. ${choice[0].toUpperCase()}${choice.slice(1)} ?`
   },
   stayUntil: (p) => `Rester jusqu’à ${p.until}`,
   dayOption: (p, f) => f.weekday(p.date).replace(/^./, (c) => c.toUpperCase()),

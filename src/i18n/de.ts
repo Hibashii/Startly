@@ -94,7 +94,7 @@ export const de: Dict = {
   tasksOf: (p) => `Aufgaben: ${p.day}`,
   laterDayHint: 'Ich plane diesen Tag Stunde für Stunde, wenn er kommt – oder bitte mich, ihn jetzt zu planen.',
   laterDayEmpty: 'Für diesen Tag ist noch nichts geplant.',
-  noFitBefore: (p) => `Passt nicht vor ${p.end}`,
+  noFitBefore: (p) => `Passt nicht ${p.end ? `vor ${p.end}` : 'in deine freie Zeit'}`,
   noFitToday: 'Passt heute nicht',
   noFitOn: (p) => `Passt nicht: ${p.day}`,
   lunch: 'Mittagessen',
@@ -199,7 +199,7 @@ export const de: Dict = {
   noteWhenFree: (p, f) =>
     `Wann hast du am ${f.weekday(p.date)} Zeit?` +
     (p.waiting.length ? ` Ich möchte ${f.list(p.waiting.map((x) => f.quote(f.name(x))))} vor der Frist einplanen.` : ' Sag es mir und ich plane ihn.'),
-  noteNoFitToday: (p, f) => `Das passt heute nicht vor ${p.end}: ${f.list(p.items.map(f.name))}.`,
+  noteNoFitToday: (p, f) => `Das passt heute nicht ${p.end ? `vor ${p.end}` : 'in deine freie Zeit'}: ${f.list(p.items.map(f.name))}.`,
   noteNoFitOn: (p, f) => `Das passt am ${f.weekday(p.date)} nicht: ${f.list(p.items.map(f.name))}.`,
 
   qUntil: (p, f) => `Dann bist du bis ${p.until} beschäftigt. In Ordnung, oder soll ich ${f.quote(f.name(p.title))} auf ${f.weekday(p.date)} verschieben?`,
@@ -209,7 +209,7 @@ export const de: Dict = {
     const one = p.items.length === 1
     const ways = [p.stay ? `bis ${p.stay} bleiben` : null, `auf ${f.weekday(p.date)} verschieben`, 'streichen'].filter((x): x is string => !!x)
     const choice = ways.slice(0, -1).join(', ') + ' oder ' + ways.at(-1)
-    return `${f.list(p.items.map((x) => f.quote(f.name(x))))} ${one ? 'passt' : 'passen'} nicht vor ${p.end}. ${choice[0].toUpperCase()}${choice.slice(1)}?`
+    return `${f.list(p.items.map((x) => f.quote(f.name(x))))} ${one ? 'passt' : 'passen'} nicht ${p.end ? `vor ${p.end}` : 'in deine freie Zeit'}. ${choice[0].toUpperCase()}${choice.slice(1)}?`
   },
   stayUntil: (p) => `Bis ${p.until} bleiben`,
   dayOption: (p, f) => f.weekday(p.date),

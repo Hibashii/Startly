@@ -97,7 +97,7 @@ export const ar: Dict = {
   tasksOf: (p) => `مهام ${p.day}`,
   laterDayHint: 'سأنظّم هذا اليوم ساعة بساعة عندما يأتي، أو اطلب مني تخطيطه الآن.',
   laterDayEmpty: 'لا شيء مخطط لهذا اليوم بعد.',
-  noFitBefore: (p) => `لا يتّسع قبل ${p.end}`,
+  noFitBefore: (p) => `لا يتّسع ${p.end ? `قبل ${p.end}` : 'في وقت فراغك'}`,
   noFitToday: 'لا يتّسع اليوم',
   noFitOn: (p) => `لا يتّسع يوم ${p.day}`,
   lunch: 'الغداء',
@@ -202,7 +202,7 @@ export const ar: Dict = {
   noteWhenFree: (p, f) =>
     `متى تكون متاحًا يوم ${f.weekday(p.date)}؟` +
     (p.waiting.length ? ` أودّ إدراج ${f.list(p.waiting.map((x) => f.quote(f.name(x))))} قبل الموعد.` : ' أخبرني وسأخطّط له.'),
-  noteNoFitToday: (p, f) => `هذا لا يتّسع قبل ${p.end} اليوم: ${f.list(p.items.map(f.name))}.`,
+  noteNoFitToday: (p, f) => `هذا لا يتّسع ${p.end ? `قبل ${p.end}` : 'في وقت فراغك'} اليوم: ${f.list(p.items.map(f.name))}.`,
   noteNoFitOn: (p, f) => `هذا لا يتّسع يوم ${f.weekday(p.date)}: ${f.list(p.items.map(f.name))}.`,
 
   qUntil: (p, f) => `هذا يجعلك مشغولًا حتى ${p.until}. هل هذا مناسب، أم أنقل ${f.quote(f.name(p.title))} إلى يوم ${f.weekday(p.date)}؟`,
@@ -213,7 +213,7 @@ export const ar: Dict = {
     const ways = [p.stay ? `البقاء حتى ${p.stay}` : null, `${one ? 'نقله' : 'نقلها'} إلى يوم ${f.weekday(p.date)}`, one ? 'حذفه' : 'حذفها'].filter(
       (x): x is string => !!x,
     )
-    return `${f.list(p.items.map((x) => f.quote(f.name(x))))} ${one ? 'لا يتّسع' : 'لا تتّسع'} قبل ${p.end}. ${ways.slice(0, -1).join('، ')} أو ${ways.at(-1)}؟`
+    return `${f.list(p.items.map((x) => f.quote(f.name(x))))} ${one ? 'لا يتّسع' : 'لا تتّسع'} ${p.end ? `قبل ${p.end}` : 'في وقت فراغك'}. ${ways.slice(0, -1).join('، ')} أو ${ways.at(-1)}؟`
   },
   stayUntil: (p) => `البقاء حتى ${p.until}`,
   dayOption: (p, f) => f.weekday(p.date),

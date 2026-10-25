@@ -94,7 +94,7 @@ export const nl: Dict = {
   tasksOf: (p) => `Taken: ${p.day}`,
   laterDayHint: 'Ik deel deze dag uur voor uur in als hij komt, of vraag me om hem nu te plannen.',
   laterDayEmpty: 'Nog niets gepland voor deze dag.',
-  noFitBefore: (p) => `Past niet voor ${p.end}`,
+  noFitBefore: (p) => `Past niet ${p.end ? `voor ${p.end}` : 'in je vrije tijd'}`,
   noFitToday: 'Past vandaag niet',
   noFitOn: (p) => `Past niet: ${p.day}`,
   lunch: 'Lunch',
@@ -199,7 +199,7 @@ export const nl: Dict = {
   noteWhenFree: (p, f) =>
     `Wanneer ben je ${f.weekday(p.date)} vrij?` +
     (p.waiting.length ? ` Ik wil ${f.list(p.waiting.map((x) => f.quote(f.name(x))))} graag voor de deadline inplannen.` : ' Zeg het en ik plan het.'),
-  noteNoFitToday: (p, f) => `Dit past vandaag niet voor ${p.end}: ${f.list(p.items.map(f.name))}.`,
+  noteNoFitToday: (p, f) => `Dit past vandaag niet ${p.end ? `voor ${p.end}` : 'in je vrije tijd'}: ${f.list(p.items.map(f.name))}.`,
   noteNoFitOn: (p, f) => `Dit past ${f.weekday(p.date)} niet: ${f.list(p.items.map(f.name))}.`,
 
   qUntil: (p, f) => `Dan ben je bezig tot ${p.until}. Oké, of zal ik ${f.quote(f.name(p.title))} naar ${f.weekday(p.date)} verplaatsen?`,
@@ -209,7 +209,7 @@ export const nl: Dict = {
     const one = p.items.length === 1
     const ways = [p.stay ? `tot ${p.stay} doorgaan` : null, `naar ${f.weekday(p.date)} verplaatsen`, 'schrappen'].filter((x): x is string => !!x)
     const choice = ways.slice(0, -1).join(', ') + ' of ' + ways.at(-1)
-    return `${f.list(p.items.map((x) => f.quote(f.name(x))))} ${one ? 'past' : 'passen'} niet voor ${p.end}. ${choice[0].toUpperCase()}${choice.slice(1)}?`
+    return `${f.list(p.items.map((x) => f.quote(f.name(x))))} ${one ? 'past' : 'passen'} niet ${p.end ? `voor ${p.end}` : 'in je vrije tijd'}. ${choice[0].toUpperCase()}${choice.slice(1)}?`
   },
   stayUntil: (p) => `Doorgaan tot ${p.until}`,
   dayOption: (p, f) => f.weekday(p.date).replace(/^./, (c) => c.toUpperCase()),

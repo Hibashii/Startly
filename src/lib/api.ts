@@ -3,7 +3,7 @@ import type { ChatMessage, Plan } from '@/types'
 import { toHHMM } from './time'
 import { dayOf, plusDays } from '@/scheduler/days'
 import { translate, type Name } from '@/i18n'
-import { DEFAULT_BREAKS } from '@/scheduler/schedule'
+import { DEFAULT_BREAKS, endOfDayFor } from '@/scheduler/schedule'
 import { format, parseISO } from 'date-fns'
 
 export type AskResult = { ok: true; data: AssistantResponse } | { ok: false; error: 'rate_limited' | 'unavailable' }
@@ -34,7 +34,8 @@ export function buildContext(plan: Plan, messages: ChatMessage[], pending: unkno
       onTimetable: date !== null && (start !== null || date > today),
     })),
     availability: plan.availability,
-    endOfDay: plan.settings.endOfDay,
+    endOfDay: endOfDayFor(plan, today),
+    ...(endOfDayFor(plan, today) !== plan.settings.endOfDay && { usualEndOfDay: plan.settings.endOfDay }),
     pending: pending ?? null,
     timetable: (plan.blocks[today] ?? []).map((b) => {
       const name = b.taskId ? (plan.tasks.find((t) => t.id === b.taskId)?.title ?? '') : b.type

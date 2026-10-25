@@ -3,7 +3,7 @@ import { clock } from '@/lib/time'
 import { msg, nameOf, type Text } from '@/i18n'
 import type { AnyAction, ApplyResult } from './applyActions'
 import { plusDays } from './days'
-import { endOfDayFor } from './schedule'
+import { endOfDayFor, freeWindows } from './schedule'
 
 /** "Keep it": let today run exactly as late as needed (measured when the answer is picked). */
 export const AS_NEEDED = 'as-needed'
@@ -53,8 +53,10 @@ export function findQuestion(
   const before = prev.tasks.find((t) => t.id === id)
   const tomorrow = plusDays(today, 1)
   const toTomorrow: AnyAction = { type: 'move_to_day', id, date: tomorrow }
+  // You said when you're free today ("only 18:00–21:00"): staying up later isn't a way out, only you can change those hours.
+  const hoursGiven = freeWindows(result.plan, today) !== null
 
-  if (before?.date === today && before.start) {
+  if (before?.date === today && before.start && !hoursGiven) {
     // It was on the timetable: how late would the day run if it stays?
     const late = simulate([{ type: 'set_day_end', date: today, time: '30:00' }])
     if (!late.unplaced.includes(id)) {
@@ -74,10 +76,10 @@ export function findQuestion(
   const tasks = ids.map((x) => result.plan.tasks.find((t) => t.id === x)!)
   const one = tasks.length === 1
   const late = simulate([{ type: 'set_day_end', date: today, time: '30:00' }])
-  const canStay = ids.every((x) => !late.unplaced.includes(x))
+  const canStay = !hoursGiven && ids.every((x) => !late.unplaced.includes(x))
   const until = clock((late.plan.blocks[today] ?? []).reduce((max, b) => (b.end > max ? b.end : max), ''))
   return {
-    text: msg('qNoFit', { items: tasks.map(nameOf), end: clock(endOfDayFor(result.plan, today)), stay: canStay ? until : null, date: tomorrow }),
+    text: msg('qNoFit', { items: tasks.map(nameOf), end: hoursGiven ? null : clock(endOfDayFor(result.plan, today)), stay: canStay ? until : null, date: tomorrow }),
     options: [
       ...(canStay ? [{ id: 'stay', label: msg('stayUntil', { until }), extra: [{ type: 'set_day_end', date: today, time: AS_NEEDED } as AnyAction] }] : []),
       { id: 'tomorrow', label: msg('dayOption', { date: tomorrow }), extra: tasks.map((t): AnyAction => ({ type: 'move_to_day', id: t.id, date: tomorrow })) },

@@ -12,7 +12,7 @@ import { cheerStage, pickCelebration, pickCheer } from '@/lib/messages'
 import { detectLang, msg, nameOf, translate, type Lang, type Text } from '@/i18n'
 import { diffToday, toastText } from '@/scheduler/diff'
 import { findQuestion, measureAnswer, type QuestionOption } from '@/scheduler/questions'
-import { endOfDayFor, reshuffleToday } from '@/scheduler/schedule'
+import { endOfDayFor, freeWindows, reshuffleToday } from '@/scheduler/schedule'
 import type { Timer } from '@/scheduler/timer'
 
 type Slots = { ref: string; start: string; date?: string | null }[] | null
@@ -249,7 +249,7 @@ export const useStore = create<Store>()(
         }
         // (The one Startly is asking about is covered by its question.)
         const unasked = newlyUnplaced.filter((id) => !pending?.options.some((o) => o.extra.some((a) => 'id' in a && a.id === id)))
-        if (unasked.length) notes.push(msg('noteNoFitToday', { end: clock(endOfDayFor(next, today)), items: unasked.map(title) }))
+        if (unasked.length) notes.push(msg('noteNoFitToday', { end: freeWindows(next, today) ? null : clock(endOfDayFor(next, today)), items: unasked.map(title) }))
         const moved = diff.moved.filter((m) => m.to !== null)
         if (moved.length) reply.moved = moved
         if (notes.length) reply.notes = notes

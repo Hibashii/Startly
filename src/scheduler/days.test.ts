@@ -3,6 +3,7 @@ import type { Action } from '../../shared/schema'
 import type { Block, Plan, Task } from '@/types'
 import { toMin } from '@/lib/time'
 import { applyActions, type AnyAction } from './applyActions'
+import { windowsFor } from './days'
 import { findQuestion, measureAnswer } from './questions'
 import { translate, type Text } from '@/i18n'
 /** What the user reads, in English. */
@@ -12,7 +13,7 @@ const words = (x: Text | null | undefined) => (x ? translate('en', x) : x)
 const TODAY = '2026-10-17' // a Saturday
 const SUN = '2026-10-18'
 const MON = '2026-10-19'
-const add = (title: string, durationMin: number, deadline: string | null = null): Action => ({
+const add = (title: string, durationMin: number, deadline: string | null = null): Extract<Action, { type: 'add_task' }> => ({
   type: 'add_task', title, durationMin, priority: 'medium', deadline, preferredStart: null, endBy: null, date: null, focus: true,
 })
 const empty = (): Plan => ({ tasks: [], blocks: {}, availability: {}, settings: { lang: 'en', accent: 'iris', theme: null, endOfDay: '23:00' } })
@@ -169,7 +170,7 @@ describe('review fixes (slice 3)', () => {
 
   it('"stay up until 1 am" after "keep it" wins over today\'s one-off end', () => {
     const { plan } = applyActions(empty(), [{ type: 'set_day_end', date: TODAY, time: '23:40' }], TODAY, toMin('19:00'))
-    const r = applyActions(plan, [{ type: 'set_end_of_day', time: '01:00' }, add('Long', 300)], TODAY, toMin('19:05'))
+    const r = applyActions(plan, [{ type: 'set_end_of_day', time: '01:00', date: null }, add('Long', 300)], TODAY, toMin('19:05'))
     expect(r.plan.dayEnds).toEqual({})
     expect(byTitle(r.plan, 'Long').start).not.toBeNull()
   })
@@ -236,5 +237,74 @@ describe('final review: things that don\'t fit', () => {
     expect(stay.unplaced).toEqual([])
     const sunday = run(q.options[1].extra)
     expect(sunday.plan.tasks.every((t) => t.date === SUN)).toBe(true)
+  })
+})
+
+describe('free time you give for today', () => {
+  const blocksOf = (p: Plan, date = TODAY) =>
+    (p.blocks[date] ?? []).filter((b) => b.taskId).map((b) => `${b.start}-${b.end} ${p.tasks.find((t) => t.id === b.taskId)?.title}`)
+  const window = (key: string, ...w: [string, string][]): Action => ({ type: 'set_availability', key, windows: w.map(([start, end]) => ({ start, end })) })
+
+  it('"only 18:00–21:00 tonight": nothing before or after it, and what does not fit is left out, not squeezed', () => {
+    const r = applyActions(empty(), [window(TODAY, ['18:00', '21:00']), add('Study', 120), add('Exercise', 60), add('Cook dinner', 45)], TODAY, toMin('16:35'))
+    for (const b of r.plan.blocks[TODAY] ?? []) {
+      expect(b.start >= '18:00' && b.end <= '21:00', `${b.start}-${b.end}`).toBe(true)
+    }
+    expect(r.unplaced.length).toBe(1)
+    expect(findQuestion(empty(), r, TODAY, (extra) => applyActions(empty(), [window(TODAY, ['18:00', '21:00']), add('Study', 120), add('Exercise', 60), add('Cook dinner', 45), ...extra], TODAY, toMin('16:35')))).not.toBeNull()
+  })
+
+  it('hours given and a task no longer fits: no "stay until", it says your free time', () => {
+    const { plan } = applyActions(empty(), [add('Study', 120), add('Exercise', 60), add('Cook dinner', 45)], TODAY, toMin('16:35'))
+    const hours = [window(TODAY, ['18:00', '21:00'], ['23:30', '24:00']), { type: 'set_end_of_day', time: '00:00', date: TODAY } as Action]
+    const run = (extra: AnyAction[] = []) => applyActions(plan, [...hours, ...extra], TODAY, toMin('16:37'))
+    const r = run()
+    for (const b of (r.plan.blocks[TODAY] ?? []).filter((x) => x.taskId)) expect(b.start >= '18:00' && b.end <= '21:00', `${b.start}-${b.end}`).toBe(true)
+    const q = findQuestion(plan, r, TODAY, run)!
+    expect(words(q.text)).toMatch(/doesn't fit in your free time/)
+    expect(q.options.map((o) => o.id)).toEqual(['tomorrow', 'drop'])
+  })
+
+  it('a task already planned before the window (but not started) moves into it', () => {
+    const { plan } = applyActions(empty(), [add('Exercise', 60)], TODAY, toMin('16:35'))
+    expect(byTitle(plan, 'Exercise').start).toBe('16:35')
+    const r = applyActions(plan, [window(TODAY, ['18:00', '21:00'])], TODAY, toMin('16:30'))
+    expect(blocksOf(r.plan)).toEqual(['18:00-19:00 Exercise'])
+  })
+
+  it('"shower before I sleep at midnight": a finish-by time of 00:00 is tonight', () => {
+    const shower: Action = { ...add('Shower', 20), preferredStart: '23:30', endBy: '00:00' }
+    const r = applyActions(empty(), [{ type: 'set_end_of_day', time: '00:00', date: TODAY }, window(TODAY, ['18:00', '21:00'], ['23:30', '24:00']), shower], TODAY, toMin('16:35'))
+    expect(byTitle(r.plan, 'Shower')).toMatchObject({ start: '23:30', endBy: '24:00' })
+  })
+
+  it('two windows: the shower goes in the late one', () => {
+    const shower: Action = { ...add('Shower', 20), preferredStart: '23:30' }
+    const r = applyActions(empty(), [{ type: 'set_end_of_day', time: '00:00', date: TODAY }, window(TODAY, ['18:00', '21:00'], ['23:30', '24:00']), add('Study', 120), shower], TODAY, toMin('16:35'))
+    expect(blocksOf(r.plan)).toEqual(['18:00-20:00 Study', '23:30-23:50 Shower'])
+  })
+
+  it('free "from 9" follows a later one-day end; "until 21:00" does not', () => {
+    const late = { ...empty(), dayEnds: { [SUN]: '25:00' }, availability: { [SUN]: [{ start: '09:00', end: '23:00' }], [MON]: [{ start: '09:00', end: '21:00' }] } }
+    expect(windowsFor(late, SUN)).toEqual([{ start: '09:00', end: '25:00' }])
+    expect(windowsFor({ ...late, dayEnds: { [MON]: '25:00' } }, MON)).toEqual([{ start: '09:00', end: '21:00' }])
+    expect(windowsFor({ ...late, dayEnds: { [SUN]: '22:00' } }, SUN)).toEqual([{ start: '09:00', end: '22:00' }])
+  })
+})
+
+describe('a later day whose free time is unknown', () => {
+  const gymTomorrow: Action = { ...add('Gym', 60), date: SUN, preferredStart: '19:00', focus: false }
+
+  it('"gym tomorrow after 19:00" is placed at 19:00 without asking', () => {
+    const r = applyActions(empty(), [gymTomorrow], TODAY, toMin('16:26'))
+    expect(byTitle(r.plan, 'Gym')).toMatchObject({ date: SUN, start: '19:00' })
+    expect(r.needFreeTime).toEqual([])
+  })
+
+  it('a task without a time joining it: back to a list until you say when you are free', () => {
+    const { plan } = applyActions(empty(), [gymTomorrow], TODAY, toMin('16:26'))
+    const r = applyActions(plan, [{ ...add('Laundry', 60), date: SUN }], TODAY, toMin('16:27'))
+    expect(r.plan.blocks[SUN]).toBeUndefined()
+    expect(byTitle(r.plan, 'Gym')).toMatchObject({ date: SUN, start: null, preferredStart: '19:00' })
   })
 })

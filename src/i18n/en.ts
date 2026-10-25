@@ -106,7 +106,7 @@ export const en = {
   tasksOf: (p: { day: string }) => `${p.day}'s tasks`,
   laterDayHint: "I'll lay this day out hour by hour when it comes, or ask me to plan it now.",
   laterDayEmpty: 'Nothing planned for this day yet.',
-  noFitBefore: (p: { end: string }) => `Doesn't fit before ${p.end}`,
+  noFitBefore: (p: { end: string | null }) => `Doesn't fit ${p.end ? `before ${p.end}` : 'in your free time'}`,
   noFitToday: "Doesn't fit today",
   noFitOn: (p: { day: string }) => `Doesn't fit on ${p.day}`,
   lunch: 'Lunch',
@@ -217,7 +217,7 @@ export const en = {
   noteWhenFree: (p: { date: string; waiting: Name[] }, f: Fmt) =>
     `When are you free on ${f.weekday(p.date)}?` +
     (p.waiting.length ? ` I'd like to fit ${f.list(p.waiting.map((x) => f.quote(f.name(x))))} in before it's due.` : " Tell me and I'll plan it."),
-  noteNoFitToday: (p: { end: string; items: Name[] }, f: Fmt) => `These don't fit before ${p.end} today: ${f.list(p.items.map(f.name))}.`,
+  noteNoFitToday: (p: { end: string | null; items: Name[] }, f: Fmt) => `These don't fit ${p.end ? `before ${p.end} today` : 'in your free time today'}: ${f.list(p.items.map(f.name))}.`,
   noteNoFitOn: (p: { date: string; items: Name[] }, f: Fmt) => `These don't fit on ${f.weekday(p.date)}: ${f.list(p.items.map(f.name))}.`,
 
   // Startly asks
@@ -225,12 +225,12 @@ export const en = {
     `That puts you until ${p.until}. OK, or should I move ${f.quote(f.name(p.title))} to ${f.weekday(p.date)}?`,
   keepIt: 'Keep it',
   moveIt: 'Move it',
-  qNoFit: (p: { items: Name[]; end: string; stay: string | null; date: string }, f: Fmt) => {
+  qNoFit: (p: { items: Name[]; end: string | null; stay: string | null; date: string }, f: Fmt) => {
     const one = p.items.length === 1
     const ways = [p.stay ? `stay until ${p.stay}` : null, `move ${s(p.items.length, 'it', 'them')} to ${f.weekday(p.date)}`, `drop ${one ? 'it' : 'them'}`]
       .filter((x): x is string => !!x)
     const choice = ways.slice(0, -1).join(', ') + ', or ' + ways.at(-1)
-    return `${f.list(p.items.map((x) => f.quote(f.name(x))))} ${one ? "doesn't" : "don't"} fit before ${p.end}. ${choice[0].toUpperCase()}${choice.slice(1)}?`
+    return `${f.list(p.items.map((x) => f.quote(f.name(x))))} ${one ? "doesn't" : "don't"} fit ${p.end ? `before ${p.end}` : 'in your free time'}. ${choice[0].toUpperCase()}${choice.slice(1)}?`
   },
   stayUntil: (p: { until: string }) => `Stay until ${p.until}`,
   dayOption: (p: { date: string }, f: Fmt) => f.weekday(p.date),

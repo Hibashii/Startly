@@ -1,7 +1,7 @@
 import { addDays, format, parseISO } from 'date-fns'
 import type { Plan, Task, Window } from '@/types'
 import { toMin } from '@/lib/time'
-import { endOfDayFor, scheduleDay, type DayEnds } from './schedule'
+import { endOfDayFor, freeWindows, gapsBetween, scheduleDay, type DayEnds } from './schedule'
 import { dateKey } from '@/lib/time'
 
 // Days after today: free time, overflow by deadline, and laying a day out hour by hour.
@@ -16,8 +16,8 @@ export const weekOf = (monday: string) => Array.from({ length: 7 }, (_, i) => pl
 
 /** Your free time on a date: set for that date, else for that weekday, else your usual day (start → end), else unknown (null). */
 export function windowsFor(plan: Plan, date: string): Window[] | null {
-  const w = plan.availability[date] ?? plan.availability[weekdayKey(date)]
-  if (w && w.length) return [...w].sort((a, b) => toMin(a.start) - toMin(b.start))
+  const w = freeWindows(plan, date)
+  if (w) return w
   const start = plan.settings.profile?.dayStart
   const end = endOfDayFor(plan, date)
   return start && toMin(start) < toMin(end) ? [{ start, end }] : null
@@ -69,12 +69,20 @@ export function overflowLater(plan: Plan, unplaced: string[], today: string): Ov
   return { plan, movedLater, needFreeTime }
 }
 
+/** Free time unknown, but every task that day has a time you gave ("gym tomorrow after 19:00"): from the first one. */
+function timedOnly(plan: Plan, date: string): Window[] | null {
+  const ts = plan.tasks.filter((t) => t.date === date && t.kind === 'task' && t.status === 'todo')
+  if (!ts.length || ts.some((t) => !t.preferredStart)) return null
+  const start = ts.map((t) => t.preferredStart!).sort((a, b) => toMin(a) - toMin(b))[0]
+  const end = endOfDayFor(plan, date)
+  return toMin(start) < toMin(end) ? [{ start, end }] : null
+}
+
 /** Lay a later day out hour by hour inside its free time. Returns null if the free time is unknown. */
 export function planDay(plan: Plan, date: string): { plan: Plan; unplaced: string[] } | null {
-  const w = windowsFor(plan, date)
+  const w = windowsFor(plan, date) ?? timedOnly(plan, date)
   if (!w) return null
-  const gaps: Window[] = []
-  for (let i = 1; i < w.length; i++) if (toMin(w[i].start) > toMin(w[i - 1].end)) gaps.push({ start: w[i - 1].end, end: w[i].start })
+  const gaps = gapsBetween(w)
   // Re-place from scratch: tasks on that day lose their old start (fixed ones keep theirs).
   const tasks = plan.tasks.map((t) => (t.date === date && t.kind === 'task' && t.status === 'todo' ? { ...t, start: null } : t))
   const r = scheduleDay({

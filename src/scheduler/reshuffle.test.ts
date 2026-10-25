@@ -230,10 +230,23 @@ describe('review fixes (slice 2)', () => {
     const { plan: before, unplaced } = applyActions(empty(), [add('A', 240), add('Groceries', 45)], TODAY, toMin('18:45'))
     expect(unplaced).toEqual([byTitle(before, 'Groceries').id])
     for (const time of ['24:00', '00:00']) {
-      const { plan } = applyActions(before, [{ type: 'set_end_of_day', time }], TODAY, toMin('18:50'))
+      const { plan } = applyActions(before, [{ type: 'set_end_of_day', time, date: null }], TODAY, toMin('18:50'))
       expect(plan.settings.endOfDay).toBe('24:00')
       expect(byTitle(plan, 'Groceries').start).not.toBeNull()
     }
+  })
+
+  it('"until 23:30 tonight" only changes tonight; the usual end stays for later days', () => {
+    const { plan: before, unplaced } = applyActions(empty(), [add('A', 240), add('Groceries', 45)], TODAY, toMin('18:45'))
+    expect(unplaced).toEqual([byTitle(before, 'Groceries').id])
+    const { plan } = applyActions(before, [{ type: 'set_end_of_day', time: '23:45', date: TODAY }], TODAY, toMin('18:50'))
+    expect(plan.settings.endOfDay).toBe('23:00')
+    expect(plan.dayEnds).toEqual({ [TODAY]: '23:45' })
+    expect(byTitle(plan, 'Groceries').start).not.toBeNull()
+    // After midnight is stored past 24:00, like the usual end; a past date is ignored.
+    const late = applyActions(before, [{ type: 'set_end_of_day', time: '01:00', date: TODAY }], TODAY, toMin('18:50'))
+    expect(late.plan.dayEnds?.[TODAY]).toBe('25:00')
+    expect(applyActions(before, [{ type: 'set_end_of_day', time: '23:30', date: '2020-01-01' }], TODAY, toMin('18:50')).applied).toBe(0)
   })
 
   it('move_to_day: today re-places it, a later day keeps it for that day', () => {
@@ -243,6 +256,15 @@ describe('review fixes (slice 2)', () => {
     expect(byTitle(later, 'Gym')).toMatchObject({ date: '2026-10-18', start: null })
     const { plan: back } = applyActions(later, [{ type: 'move_to_day', id: gym, date: TODAY }], TODAY, toMin('14:00'))
     expect(byTitle(back, 'Gym').date).toBe(TODAY)
+  })
+
+  it('"move gym to tomorrow, after 19:00": a new time keeps it on that later day', () => {
+    const before = demoDay()
+    const gym = byTitle(before, 'Gym').id
+    const set = { type: 'update_task', id: gym, title: null, durationMin: null, priority: null, deadline: null, preferredStart: '19:00', endBy: null } as const
+    const { plan } = applyActions(before, [{ type: 'move_to_day', id: gym, date: '2026-10-18' }, set], TODAY, toMin('14:00'))
+    expect(byTitle(plan, 'Gym')).toMatchObject({ date: '2026-10-18', start: '19:00', preferredStart: '19:00' })
+    expect((plan.blocks[TODAY] ?? []).some((b) => b.taskId === gym)).toBe(false)
   })
 
   it('a past break with no work before it anymore is dropped', () => {
@@ -272,7 +294,7 @@ describe('review fixes (slice 2)', () => {
   it('"I can stay until 1 am" runs the day past midnight', () => {
     const { plan: before, unplaced } = applyActions(empty(), [add('A', 180), add('Hackathon', 120)], TODAY, toMin('19:00'))
     expect(unplaced).toHaveLength(1)
-    const { plan } = applyActions(before, [{ type: 'set_end_of_day', time: '01:00' }], TODAY, toMin('19:05'))
+    const { plan } = applyActions(before, [{ type: 'set_end_of_day', time: '01:00', date: null }], TODAY, toMin('19:05'))
     expect(plan.settings.endOfDay).toBe('25:00')
     const h = byTitle(plan, 'Hackathon')
     expect(h.start).not.toBeNull()

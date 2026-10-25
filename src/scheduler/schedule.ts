@@ -86,7 +86,7 @@ export function scheduleDay(input: DayInput): DayResult {
   const breakLen = input.breaks?.lengthMin ?? BREAK_MIN
   const winStart = toMin(window.start)
   const winEnd = toMin(window.end)
-  const fromMin = Math.max(input.fromMin, winStart)
+  const fromMin = input.fromMin // what started before this is under way
 
   const solid: Span[] = [] // fixed appointments and done tasks: never move, never cut
   const inProgress: Task[] = [] // started before now and not done: keep their start
@@ -154,7 +154,7 @@ export function scheduleDay(input: DayInput): DayResult {
     const prev = locked.find((s) => s.end === t && s.block.type !== 'lunch' && s.block.type !== 'break')
     return prev ? prev.end - prev.start + workedUpTo(prev.start) : 0
   }
-  let cursor = roundUp5(fromMin)
+  let cursor = roundUp5(Math.max(fromMin, winStart))
   let streak = workedUpTo(cursor) // minutes of back-to-back work since the last rest
 
   while (queue.length && cursor < winEnd) {
@@ -259,14 +259,45 @@ export interface ReshuffleResult {
 export type DayEnds = { settings: { endOfDay: string }; dayEnds?: Record<string, string> }
 export const endOfDayFor = (plan: DayEnds, date: string) => plan.dayEnds?.[date] ?? plan.settings.endOfDay
 
+const WEEKDAY_KEYS = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+
+/**
+ * The free time you gave for a date (that date, else its weekday), sorted, or null if you never said.
+ * A window that runs to your usual bedtime ("free from 9") follows that day's end ("I can stay until 1 tonight");
+ * one that ends earlier ("only until 21:00") stays, and nothing runs past a shorter one-day end.
+ */
+export function freeWindows(plan: Pick<Plan, 'availability' | 'settings' | 'dayEnds'>, date: string): Window[] | null {
+  const given = plan.availability[date] ?? plan.availability[WEEKDAY_KEYS[new Date(`${date}T12:00:00`).getDay()]]
+  if (!given?.length) return null
+  const end = toMin(endOfDayFor(plan, date))
+  const usual = toMin(plan.settings.endOfDay)
+  const oneDay = plan.dayEnds?.[date] !== undefined
+  const w = [...given]
+    .sort((a, b) => toMin(a.start) - toMin(b.start))
+    .map((x) => {
+      const e = toMin(x.end)
+      return { start: x.start, end: toHHMM(e >= usual ? (oneDay ? end : e) : Math.min(e, end)) }
+    })
+    .filter((x) => toMin(x.start) < toMin(x.end))
+  return w.length ? w : null
+}
+
+export const gapsBetween = (w: Window[]): Window[] =>
+  w.slice(1).flatMap((x, i) => (toMin(x.start) > toMin(w[i].end) ? [{ start: w[i].end, end: x.start }] : []))
+
 /** Re-place today from `fromMin` (now) to the end of the day and write the result back into the plan. */
 export function reshuffleToday(plan: Plan, today: string, fromMin: number): ReshuffleResult {
   // (Unfinished tasks from a past day stay there until you answer Startly's morning question.)
+  // Free time you gave for today ("I only have 18:00–21:00 tonight") is kept; otherwise the whole day until its end.
+  const free = freeWindows(plan, today) ?? [{ start: '00:00', end: endOfDayFor(plan, today) }]
+  // An unfinished task the app put before your hours moves into them, even one shown as "now".
+  const early = (t: Task) => t.date === today && t.kind === 'task' && t.status === 'todo' && !!t.start && toMin(t.start) < toMin(free[0].start)
   const result = scheduleDay({
     date: today,
-    tasks: plan.tasks,
+    tasks: plan.tasks.map((t) => (early(t) ? { ...t, start: null } : t)),
     prevBlocks: plan.blocks[today] ?? [],
-    window: { start: '00:00', end: endOfDayFor(plan, today) },
+    window: { start: free[0].start, end: free[free.length - 1].end },
+    gaps: gapsBetween(free),
     breaks: plan.settings.breaks,
     fromMin,
     includeUnplaced: true,
