@@ -185,7 +185,10 @@ export function scheduleDay(input: DayInput): DayResult {
     let i = queue.findIndex((t) => t.preferredStart !== null && toMin(t.preferredStart) <= cursor && fitsBy(t, limit))
     // A finish-by task that would miss its time if lunch, a break or the next task in order came first goes now.
     if (i < 0) {
-      const nextUp = queue.find((t) => !holdOf(t) && fits(t))
+      // What would go next (as picked below): a task Startly planned for now or earlier, else the next in order.
+      const nextUp =
+        queue.find((t) => holdOf(t) !== null && toMin(holdOf(t)!) <= cursor && fitsBy(t, limit)) ??
+        queue.find((t) => !holdOf(t) && fits(t))
       const wait = Math.max(LUNCH_MIN, nextUp && !nextUp.endBy ? nextUp.durationMin : 0)
       const urgent = queue
         // (Startly's planned time doesn't protect it from that: only a time you set yourself does.)

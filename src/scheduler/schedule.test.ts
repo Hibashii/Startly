@@ -120,6 +120,22 @@ describe('scheduleDay', () => {
     expect(r.starts[tasks[1].id]).toBe('21:00')
   })
 
+  it('a finish-by task goes before a long task whose planned time has passed', () => {
+    // Live run: jobs (planned 15:00) didn't fit before the gym, so at 18:15 it came next and pushed groceries past 20:00.
+    const tasks = [
+      task('Demo', 120, { rank: 0, slot: '09:50' }),
+      task('Apply to 3 jobs', 135, { rank: 1, slot: '15:00' }),
+      task('Gym', 60, { rank: 2, preferredStart: '17:00' }),
+      task('Groceries', 45, { rank: 3, slot: '18:15', endBy: '20:00' }),
+      task('Call mom', 20, { rank: 4, slot: '19:30' }),
+      fixed('Team meeting', '14:00', '15:00'),
+    ]
+    const r = day(tasks, '09:50')
+    expect(r.unplaced).toEqual([])
+    expect(toMin(r.starts[tasks[3].id]) + 45).toBeLessThanOrEqual(toMin('20:00'))
+    assertNoOverlap(r.blocks)
+  })
+
   it('ignores fixed appointments on other days', () => {
     const tasks = [task('A', 60), fixed('Interview', '09:30', '10:00', '2026-10-21')]
     const r = day(tasks, '09:00')
